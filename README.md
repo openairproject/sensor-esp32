@@ -96,3 +96,4 @@ and configure your local WiFi network access. Sensor will reboot and connect to 
 
 Happy DIY time!
 	
+![Schema](doc/prototype.jpg?raw=true)
