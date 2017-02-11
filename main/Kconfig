@@ -1,0 +1,71 @@
+menu "OAP Main"
+
+menu "Publishing results"
+
+config OAP_THING_SPEAK_API_KEY
+    string "ThingSpeak API KEY"
+    default "<NOT_SET>"
+    help
+        API KEY for your channel obtained from ThingSpeak.com site
+    
+endmenu    
+
+menu "PM Measurement"
+
+choice OAP_PM_SENSOR_MODE
+    bool "used outdoor"
+    default OAP_PM_SENSOR_MODE_INDOOR
+    help
+		PMS sensor has two modes: atmospheric (outdoor) and standard (indoor).
+		Mode has to be set manually to properly compensate results.
+
+	config OAP_PM_SENSOR_MODE_OUTDOOR
+    	bool "Outdoor"
+	config OAP_PM_SENSOR_MODE_INDOOR
+    	bool "Indoor"
+endchoice    
+
+config OAP_PM_SENSOR_OUTDOOR
+    int
+    default 0 if OAP_PM_SENSOR_MODE_INDOOR
+    default 1 if OAP_PM_SENSOR_MODE_OUTDOOR
+    
+config OAP_PM_WARM_UP_TIME
+	int "PM sensor warm-up time (sec)"
+	default 10
+	help
+		PM sensor starts sending results imediatelly after enabling it (set line), but due
+		to its mechanical construction first results are not reliable due to insufficient
+		air flow. We ignore samples sends during warm-up period (suggested values: 10-30 sec)
+		and let its working conditions to stabilise.
+
+config OAP_PM_MEAS_TIME
+	int "PM sensor measurement time (sec)"
+	default 30
+	help
+		Time of a single measurments including warm-up time. Samples collected during this period (after warm-up)
+		are be used to compute average result.
+
+config OAP_PM_MEAS_INTERVAL
+	int "PM sensor measurement interval (sec)"
+	default 300
+	help
+		Time between subsequent measurements
+		
+config OAP_PM_SAMPLE_BUF_SIZE
+	int "PM sensor sample buffer size"
+	default 120
+	help		
+		Max number of samples that are stored during measurement period. PMSx003 sensor sends ~1 sample / sec.
+		If more samples are collected during measurement, older samples get overriden.
+		
+config OAP_RESULT_BUFFER_SIZE
+	int "measurements buffer size"
+	default 1
+	help		
+		Buffer for data that cannot be immediately published because sensor is offline.
+		For some services that can accept only real-time data, this should be set to 1.
+		
+endmenu
+		
+endmenu

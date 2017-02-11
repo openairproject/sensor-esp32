@@ -1,0 +1,27 @@
+menu "OAP Peripherals"
+
+config OAP_LED_R_PIN
+    int "led Red pin"
+    default 12
+    help
+        ESP32 R/W gpio
+        
+config OAP_LED_G_PIN
+    int "led Green pin"
+    default 27
+    help
+        ESP32 R/W gpio
+
+config OAP_LED_B_PIN
+    int "led Blue pin"
+    default 14
+    help
+        ESP32 R/W gpio
+
+config OAP_BTN_0_PIN
+    int "button pin"
+    default 35
+    help
+        ESP32 gpio
+        
+endmenu

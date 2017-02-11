@@ -1,0 +1,117 @@
+/*
+ * config.h
+ *
+ *  Created on: Feb 9, 2017
+ *      Author: kris
+ *
+ *  This file is part of OpenAirProject-ESP32.
+ *
+ *  OpenAirProject-ESP32 is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  OpenAirProject-ESP32 is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef MAIN_CONFIG_H_
+#define MAIN_CONFIG_H_
+
+/*
+ * the hardware configuration was tested on official ESP32 DevKit (with WROOM32 module).
+ * For other boards pin assignments may require changes.
+ */
+
+
+/* -------------------------------------------------------
+ * PM SENSOR
+ */
+
+/*
+ * UART configuration. Do not use UART0
+ */
+//#define OAP_PM_UART_NUM UART_NUM_1
+//
+//#define OAP_PM_UART_RXD_PIN  (34) 		//this pin can be R/O (>=34) . we care only about RX
+//#define OAP_PM_UART_TXD_PIN  (4)		//any free 'safe' pin
+//#define OAP_PM_UART_RTS_PIN  (18)       //any free 'safe' pin
+//#define OAP_PM_UART_CTS_PIN  (19)       //any free 'safe' pin
+
+/*
+ * pmsX003 sensor need to know whether it is outdoor or indoor
+ * to compensate values
+ */
+//#define OAP_PM_SENSOR_OUTDOOR 0
+
+/*
+ * output GPIO pin to enable/disable PM sensor.
+ * same pins that work with LEDC are ok.
+ */
+//#define OAP_PM_SENSOR_CONTROL_PIN (10)
+
+/*
+ * max number of samples to compute average from during measurement
+ * sampling interval is ~1sec, so for measurement times > 2min you might want to increase this number
+ * (otherwise earlier samples will be overridden)
+ */
+//#define OAP_PM_SAMPLE_BUF_SIZE 120
+
+
+
+
+/* -------------------------------------------------------
+ * BMx280 SENSOR
+ */
+
+/*
+ * be careful with choosing gpio. i2c pin must be R/W (<34)
+ *
+ * so far I've tested:
+ * safe pins: 25,26,27,14,10
+ * problems :
+ * 12		=>Warning: Could not auto-detect Flash size (FlashID=0xffffff, SizeID=0xff), defaulting to 4MB \nFlash params set to 0x0220
+ * 32,33 	=> (i2c err)
+ * 13,11	=> (i2c err)
+ * 9		=> (rebooting) Guru Meditation Error of type IllegalInstruction occurred on core  0. Exception was unhandled
+ */
+
+
+
+/* -------------------------------------------------------
+ * CONTROL BUTTON(S)
+ */
+
+/*
+ * we're good with most pins here, even those that do not work with LEDC/IC2 (32, 33)
+ */
+//#define OAP_BTN_0_PIN     (35)
+//#define OAP_BTN_1_PIN     (33)
+
+
+/* -------------------------------------------------------
+ * RGB LED
+ */
+
+/*
+ * careful with choosing gpio...
+ * safe: 12,14,27
+ * problems: 9,11 - reboots
+ */
+//#define OAP_LED_PINS 12,27,14
+
+
+/* -------------------------------------------------------
+ * THING SPEAK CLIENT
+ */
+//#define OAP_THING_SPEAK_API_KEY ""
+
+//#define OAP_RESULT_BUFFER_SIZE 100
+
+#endif /* MAIN_CONFIG_H_ */
+
