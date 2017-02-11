@@ -26,15 +26,16 @@ RGB Led (common kathode) + 3 resistors (330ohms+)
 
 ### Wiring
 
-![Schema](blob/master/doc/schema.jpg?raw=true)
+Here. I draw it myself.
 
-Assembling is rather trivial (easier than drawing the schema itself actually).
+![Schema](doc/schema.jpg?raw=true)
+
+Assembling is rather trivial.
 
 PMSx003 sensor requires 5V power, although it communicates with standard 3V3, so no TTL converter is required.
 Connect RGB led via resistors to ESP32 and to GND.
 Connect BMP280 directly to ESP32.
 Connect button to one of pins to pull up when pressed.
-
 
 ESP32 chip features GPIO matrix which means (theoretically) that programmatically we can change a function of any I/O pin.
 That being said, on ESP32 DevKit board some pins are already designated to perform specific function and may not work
