@@ -26,17 +26,23 @@ RGB Led (common kathode) + 3 resistors (330ohms+)
 
 ### Wiring
 
-Schema is coming soon.
+For schema check /doc folder.
 
-Although... assembling is rather trivial. 
-PMSx003 sensor requires 5V power, although it communicates with standard 3V3, so no converter is required.
-You need to connect 5V, GND, TX and SET line to ESP32 board.
-ESP32 chip features GPIO matrix which means (theoretically) that programatically we can change a function of any I/O pin.
+Assembling is rather trivial.
+
+
+PMSx003 sensor requires 5V power, although it communicates with standard 3V3, so no TTL converter is required.
 Connect RGB led via resistors to ESP32 and to GND.
 Connect BMP280 directly to ESP32.
 Connect button to one of pins to pull up when pressed.
 
-Firmware is pre-configured to use following GPIO (tested with ESP32 DevKit board).
+
+ESP32 chip features GPIO matrix which means (theoretically) that programmatically we can change a function of any I/O pin.
+That being said, on ESP32 DevKit board some pins are already designated to perform specific function and may not work
+properly (or cause side effects) when assigned to other interfaces. 
+
+Firmware is pre-configured to use following GPIO which were tested with ESP32 DevKit board.
+
 These assignments can be changed via 'make menuconfig'.
 
 	PMSx003 TX  => 34
@@ -53,7 +59,8 @@ These assignments can be changed via 'make menuconfig'.
 
 ## Building firmware
 
-Firmware was written with native espressif-sdk. After installing and setting up SDK, connect your ESP32 board.
+Firmware was written with native espressif-sdk [https://github.com/espressif/esp-idf].
+After installing and setting up SDK, connect your ESP32 board to your PC.
 This may require installing custom USB driver (it depends on uart chipset used on your ESP32 board, for DevKit it 
 should be Silabs chip - [http://www.silabs.com/products/mcu/pages/usbtouartbridgevcpdrivers.aspx]).
 
@@ -61,8 +68,9 @@ To configure and build sources
 	
 	make -j5
 	
-During the first run, menuconfig should appear where you need to configure some parameters of your setup,
+During the first run, a menuconfig should appear where you need to configure some parameters of your setup,
 most notably - UART port (in my case - "/dev/tty.SLAB_USBtoUART").
+
 In components submenu there's a few configuration settings related to OAP hardware setup (e.g. gpio pin assignments),
 and "OAP Main" menu where you can change various functional parameters.
 All settings are saved in sdkconfig file.
