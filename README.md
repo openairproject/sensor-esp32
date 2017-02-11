@@ -26,7 +26,7 @@ RGB Led (common kathode) + 3 resistors (330ohms+)
 
 ### Wiring
 
-For schema check /doc folder.
+!(Schema)[blob/master/doc/schema.jpg?raw=true]
 
 Assembling is rather trivial.
 
