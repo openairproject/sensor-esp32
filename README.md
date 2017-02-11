@@ -26,10 +26,9 @@ RGB Led (common kathode) + 3 resistors (330ohms+)
 
 ### Wiring
 
-!(Schema)[blob/master/doc/schema.jpg?raw=true]
+![Schema](blob/master/doc/schema.jpg?raw=true)
 
-Assembling is rather trivial.
-
+Assembling is rather trivial (easier than drawing the schema itself actually).
 
 PMSx003 sensor requires 5V power, although it communicates with standard 3V3, so no TTL converter is required.
 Connect RGB led via resistors to ESP32 and to GND.
