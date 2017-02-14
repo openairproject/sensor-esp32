@@ -23,6 +23,7 @@
 							<builder id="cdt.managedbuild.builder.gnu.cross.1795088847" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.532690482" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler">
 								<option id="gnu.c.compiler.option.include.paths.402367510" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/build/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/esp32/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/newlib/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/freertos/include&quot;"/>
@@ -30,8 +31,8 @@
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/driver/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/log/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/lwip/include/lwip&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/build/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/tcpip_adapter/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${IDF_PATH}/components/json/include&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.239769992" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

@@ -16,15 +16,10 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
- *
- *
- * Bootwifi - Boot the WiFi environment.
- *
- * Compile with -DOAP_BTN_0_PIN=<num> where <num> is a GPIO pin number
- * to use a GPIO override.
- * See the README.md for full information.
- *
  */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_log.h>
@@ -43,12 +38,24 @@
 #include "http_utils.h"
 #include "oap_storage.h"
 
-extern const uint8_t select_wifi_html_start[] asm("_binary_select_wifi_html_start");
-extern const uint8_t select_wifi_html_end[] asm("_binary_select_wifi_html_end");
+/**
+ * based on https://github.com/nkolban/esp32-snippets/tree/master/networking/bootwifi
+ *
+ * Check stored wifi settings on startup and turn sensor into Access Point if there's no SSID defined.
+ * The same effect can be achieved by pressing down control button during startup.
+ *
+ * In AP mode, sensor creates OpenAirProject-XXXX network (default password: cleanair),
+ * where it listens at http://192.168.1.4:80 and exposes simple html/rest API to modify settings.
+ */
 
-#define KEY_CONNECTION_INFO "connectionInfo" // Key used in NVS for connection info
+extern const uint8_t index_html_start[] asm("_binary_index_html_start");
+extern const uint8_t index_html_end[] asm("_binary_index_html_end");
+
 #define SSID_SIZE (32) // Maximum SSID size
 #define PASSWORD_SIZE (64) // Maximum password size
+
+typedef uint8_t u8_t;
+typedef uint16_t u16_t;
 
 typedef struct {
 	char ssid[SSID_SIZE];
@@ -56,13 +63,11 @@ typedef struct {
 	tcpip_adapter_ip_info_t ipInfo; // Optional static IP information
 } oap_connection_info_t;
 
-static bootwifi_callback_t g_callback = NULL; // Callback function to be invoked when we have finished.
-
 static int g_mongooseStarted = 0; // Has the mongoose server started?
 static int g_mongooseStopRequest = 0; // Request to stop the mongoose server.
 
 // Forward declarations
-static void saveConnectionInfo(oap_connection_info_t *pConnectionInfo);
+static int is_station = 0;
 static void become_access_point();
 static void restore_wifi_setup();
 
@@ -76,6 +81,42 @@ static void initialize_sntp(void)
     sntp_init();
 }
 
+static void handler_index(struct mg_connection *nc) {
+	size_t resp_size = index_html_end-index_html_start;
+	mg_send_head(nc, 200, resp_size, "Content-Type: text/html");
+	mg_send(nc, index_html_start, resp_size);
+}
+
+static void handler_get_config(struct mg_connection *nc, struct http_message *message) {
+	ESP_LOGD(tag, "handler_get_config");
+	char* json = storage_get_config_str();
+	if (json) {
+		mg_send_head(nc, 200, strlen(json), "Content-Type: application/json");
+		mg_send(nc, json, strlen(json));
+		free(json);
+	} else {
+		mg_http_send_error(nc, 500, "failed to load config");
+	}
+}
+
+static void handler_reboot(struct mg_connection *nc) {
+	mg_send_head(nc, 200, 0, "Content-Type: text/plain");
+	ESP_LOGW(tag, "received reboot request!");
+	esp_restart();
+}
+
+static void handler_set_config(struct mg_connection *nc, struct http_message *message) {
+	ESP_LOGD(tag, "handler_set_config");
+	char *body = mgStrToStr(message->body);
+	if (storage_set_config_str(body) == ESP_OK) {
+		handler_get_config(nc, message);
+		//reboot_delayed();
+	} else {
+		mg_http_send_error(nc, 500, "failed to store config");
+	}
+	free(body);
+}
+
 /**
  * Handle mongoose events.  These are mostly requests to process incoming
  * browser requests.  The ones we handle are:
@@ -85,75 +126,41 @@ static void initialize_sntp(void)
  */
 static void mongoose_event_handler(struct mg_connection *nc, int ev, void *evData) {
 	ESP_LOGV(tag, "- Event: %s", mongoose_eventToString(ev));
+	uint8_t handled = 0;
 	switch (ev) {
 		case MG_EV_HTTP_REQUEST: {
 			struct http_message *message = (struct http_message *) evData;
+
+			//mg_str is not terminated with '\0'
 			char *uri = mgStrToStr(message->uri);
-			ESP_LOGD(tag, " - uri: %s", uri);
+			char *method = mgStrToStr(message->method);
 
-			if (strcmp(uri, "/set") ==0 ) {
-				oap_connection_info_t connectionInfo;
-//fix
-				saveConnectionInfo(&connectionInfo);
-				ESP_LOGD(tag, "- Set the new connection info to ssid: %s, password: %s",
-					connectionInfo.ssid, connectionInfo.password);
-				mg_send_head(nc, 200, 0, "Content-Type: text/plain");
-			} if (strcmp(uri, "/") == 0) {
-				size_t resp_size = select_wifi_html_end-select_wifi_html_start;
+			ESP_LOGD(tag, "%s %s", method, uri);
 
-				ESP_LOGI(tag, "size %d, start: %d, end:%d", resp_size, (int)select_wifi_html_start, (int)select_wifi_html_end);
-
-				mg_send_head(nc, 200, resp_size, "Content-Type: text/html");
-				mg_send(nc, select_wifi_html_start, resp_size);
+			if (strcmp(uri, "/") == 0) {
+				handler_index(nc);
+				handled = 1;
 			}
-			// Handle /ssidSelected
-			// This is an incoming form with properties:
-			// * ssid - The ssid of the network to connect against.
-			// * password - the password to use to connect.
-			// * ip - Static IP address ... may be empty
-			// * gw - Static GW address ... may be empty
-			// * netmask - Static netmask ... may be empty
-			if(strcmp(uri, "/ssidSelected") == 0) {
-				// We have received a form page containing the details.  The form body will
-				// contain:
-				// ssid=<value>&password=<value>
-				ESP_LOGD(tag, "- body: %.*s", message->body.len, message->body.p);
-				oap_connection_info_t connectionInfo;
-				mg_get_http_var(&message->body, "ssid",	connectionInfo.ssid, SSID_SIZE);
-				mg_get_http_var(&message->body, "password", connectionInfo.password, PASSWORD_SIZE);
-
-				char ipBuf[20];
-				if (mg_get_http_var(&message->body, "ip", ipBuf, sizeof(ipBuf)) > 0) {
-					inet_pton(AF_INET, ipBuf, &connectionInfo.ipInfo.ip);
-				} else {
-					connectionInfo.ipInfo.ip.addr = 0;
-				}
-
-				if (mg_get_http_var(&message->body, "gw", ipBuf, sizeof(ipBuf)) > 0) {
-					inet_pton(AF_INET, ipBuf, &connectionInfo.ipInfo.gw);
-				}
-				else {
-					connectionInfo.ipInfo.gw.addr = 0;
-				}
-
-				if (mg_get_http_var(&message->body, "netmask", ipBuf, sizeof(ipBuf)) > 0) {
-					inet_pton(AF_INET, ipBuf, &connectionInfo.ipInfo.netmask);
-				}
-				else {
-					connectionInfo.ipInfo.netmask.addr = 0;
-				}
-
-				ESP_LOGD(tag, "ssid: %s, password: %s", connectionInfo.ssid, connectionInfo.password);
-
-				mg_send_head(nc, 200, 0, "Content-Type: text/plain");
-				saveConnectionInfo(&connectionInfo);
-				restore_wifi_setup();
+			if (strcmp(uri, "/reboot") == 0) {
+				handler_reboot(nc);
+				handled = 1;
 			}
-			else {
+			if(strcmp(uri, "/config") == 0) {
+				if (strcmp(method, "GET") == 0) {
+					handler_get_config(nc, message);
+					handled = 1;
+				} else if (strcmp(method, "POST") == 0) {
+					handler_set_config(nc, message);
+					handled = 1;
+				}
+			}
+
+			if (!handled) {
 				mg_send_head(nc, 404, 0, "Content-Type: text/plain");
 			}
 			nc->flags |= MG_F_SEND_AND_CLOSE;
 			free(uri);
+			free(method);
 			break;
 		}
 	}
@@ -189,11 +196,6 @@ static void mongooseTask(void *data) {
 	// We have received a stop request, so stop being a web server.
 	mg_mgr_free(&mgr);
 	g_mongooseStarted = 0;
-
-	// Since we HAVE ended mongoose, time to invoke the callback.
-	if (g_callback) {
-		g_callback(1);
-	}
 
 	ESP_LOGD(tag, "<< mongooseTask");
 	vTaskDelete(NULL);
@@ -254,13 +256,13 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
 
 			ESP_LOGI(tag, "**********************************************");
 			ESP_LOGI(tag, "* We are now an access point and you can point")
-			ESP_LOGI(tag, "* your browser to http://" IPSTR, IP2STR(&ip_info.ip));
+			ESP_LOGI(tag, "* your browser to http://"IPSTR, IP2STR(&ip_info.ip));
 			ESP_LOGI(tag, "**********************************************");
 			// Start Mongoose ...
 			if (!g_mongooseStarted)
 			{
 				g_mongooseStarted = 1;
-				xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 8000, NULL, 5, NULL, 0);
+				xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL, 0);
 			}
 			break;
 		} // SYSTEM_EVENT_AP_START
@@ -293,13 +295,6 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
 			initialize_sntp();
 
 			g_mongooseStopRequest = 1; // Stop mongoose (if it is running).
-			// Invoke the callback if Mongoose has NOT been started ... otherwise
-			// we will invoke the callback when mongoose has ended.
-			if (!g_mongooseStarted) {
-				if (g_callback) {
-					g_callback(1);
-				}
-			} // Mongoose was NOT started
 			break;
 		}
 
@@ -314,22 +309,45 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
  * Retrieve the connection info.  A rc==0 means ok.
  */
 static int getConnectionInfo(oap_connection_info_t *pConnectionInfo) {
-	size_t size = sizeof(oap_connection_info_t);
-	if (storage_get_blob(KEY_CONNECTION_INFO, pConnectionInfo, size) != ESP_OK) {
-		return -1;
+	memset(pConnectionInfo, 0, sizeof(oap_connection_info_t));
+	ESP_LOGD(tag, "retrieve wifi config");
+	cJSON* wifi = storage_get_config("wifi");
+	if (!wifi) return ESP_FAIL;
+	cJSON* field;
+	if ((field = cJSON_GetObjectItem(wifi, "ssid"))) strcpy(pConnectionInfo->ssid, field->valuestring);
+	if ((field = cJSON_GetObjectItem(wifi, "password"))) strcpy(pConnectionInfo->password, field->valuestring);
+
+	if ((field = cJSON_GetObjectItem(wifi, "ip"))) {
+		inet_pton(AF_INET, field->valuestring, &pConnectionInfo->ipInfo.ip);
 	}
+	if ((field = cJSON_GetObjectItem(wifi, "gw"))) {
+		inet_pton(AF_INET, field->valuestring, &pConnectionInfo->ipInfo.gw);
+	}
+	if ((field = cJSON_GetObjectItem(wifi, "netmask"))) {
+		inet_pton(AF_INET, field->valuestring, &pConnectionInfo->ipInfo.netmask);
+	}
+
+	ESP_LOGD(tag, "wifi.ssid: %s", pConnectionInfo->ssid);
+	ESP_LOGD(tag, "wifi.pass.lenght: [%d]", strlen(pConnectionInfo->password));
+
+	ESP_LOGD(tag, "wifi.ip:" IPSTR, IP2STR(&pConnectionInfo->ipInfo.ip));
+	ESP_LOGD(tag, "wifi.gateway:" IPSTR, IP2STR(&pConnectionInfo->ipInfo.gw));
+	ESP_LOGD(tag, "wifi.netmask:" IPSTR, IP2STR(&pConnectionInfo->ipInfo.netmask));
+
 	if (strlen(pConnectionInfo->ssid) == 0) {
 		ESP_LOGW(tag, "NULL ssid detected");
-		return -1;
+		return ESP_FAIL;
 	}
+
 	return ESP_OK;
 }
 
-static void saveConnectionInfo(oap_connection_info_t *pConnectionInfo) {
-	storage_put_blob(KEY_CONNECTION_INFO, pConnectionInfo, sizeof(oap_connection_info_t));
-}
+//static void saveConnectionInfo(oap_connection_info_t *pConnectionInfo) {
+//	storage_put_blob(KEY_CONNECTION_INFO, pConnectionInfo, sizeof(oap_connection_info_t));
+//}
 
 static void become_station(oap_connection_info_t *pConnectionInfo) {
+	is_station = 1;
 	ESP_LOGD(tag, "- Connecting to access point \"%s\" ...", pConnectionInfo->ssid);
 	assert(strlen(pConnectionInfo->ssid) > 0);
 
@@ -353,6 +371,7 @@ static void become_station(oap_connection_info_t *pConnectionInfo) {
 }
 
 static void become_access_point() {
+	is_station = 0;
 	ESP_LOGD(tag, "- Starting being an access point ...");
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
 
@@ -387,7 +406,7 @@ static void restore_wifi_setup() {
 		ESP_LOGI(tag, "GPIO override detected");
 		become_access_point();
 	} else {
-		oap_connection_info_t connectionInfo;
+		oap_connection_info_t connectionInfo = {};
 		int rc = getConnectionInfo(&connectionInfo);
 		if (rc == 0) {
 			become_station(&connectionInfo);
@@ -405,13 +424,8 @@ static void init_wifi() {
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 }
 
-/**
- * Main entry into bootWiFi
- */
-void bootWiFi(bootwifi_callback_t callback) {
+void bootWiFi() {
 	ESP_LOGD(tag, ">> bootWiFi");
-
-	g_callback = callback;
 
 	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
 	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
@@ -421,4 +435,4 @@ void bootWiFi(bootwifi_callback_t callback) {
 	restore_wifi_setup();
 
 	ESP_LOGD(tag, "<< bootWiFi");
-} // bootWiFi
+}
