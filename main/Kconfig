@@ -1,15 +1,5 @@
 menu "OAP Main"
 
-menu "Publishing results"
-
-config OAP_THING_SPEAK_API_KEY
-    string "ThingSpeak API KEY"
-    default "<NOT_SET>"
-    help
-        API KEY for your channel obtained from ThingSpeak.com site
-    
-endmenu    
-
 menu "PM Measurement"
 
 choice OAP_PM_SENSOR_MODE

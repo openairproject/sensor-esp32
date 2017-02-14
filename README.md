@@ -28,7 +28,7 @@ RGB Led (common kathode) + 3 resistors (330ohms+)
 
 Here. I draw it myself.
 
-![Schema](doc/schema.jpg?raw=true)
+![Schema](doc/images/schema.jpg?raw=true)
 
 Assembling is rather trivial.
 
@@ -56,6 +56,17 @@ These assignments can be changed via 'make menuconfig'.
 	LED B		=> 14
 	
 	BUTTON		=> 35
+	
+### Power consumption
+	
+Sensor requires 5V+ and consumes ~150mA up to ~170mA. During booting power consumption can be 
+slightly higher (~250mA), but it is still low enough to be powered directly from any decent
+USB phone charger or from PC.
+
+Despite low voltage, if you are going to use sensor outdoor 
+or in any unfriendly environment (e.g. high humidity), please
+take it under consideration during build, isolate all connections properly
+ and use appropriate case/enclosure (more on that soon).
 
 ## Building firmware
 
@@ -92,8 +103,13 @@ After connecting to this network, open following url
 
 	http://192.168.1.4
 
-and configure your local WiFi network access. Sensor will reboot and connect to the wifi. If there's a need to reconfigure wifi settings, reboot the device with a button pressed down - it will switch into AP mode.
+and configure sensor settings using sensor control panel.
+If there's a need to reconfigure wifi settings, reboot the device with a control button pressed down -
+it will switch into AP mode.
+
+![Schema](doc/images/sensor_settings.png?raw=true)
 
 Happy DIY time!
 	
-![Schema](doc/prototype.jpg?raw=true)
+---	
+![Schema](doc/images/prototype.jpg?raw=true)

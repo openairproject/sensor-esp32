@@ -24,6 +24,7 @@
 #define COMPONENTS_OAP_COMMON_INCLUDE_OAP_STORAGE_H_
 
 #include <stdlib.h>
+#include "cJSON.h"
 
 /*
  * Achtung!
@@ -35,5 +36,11 @@
 int storage_get_blob(const char* key, void* out_value, size_t length);
 void storage_put_blob(const char* key, void* value, size_t length);
 
+int storage_set_config_str(const char* config);
+char* storage_get_config_str();
+
+cJSON* storage_get_config(const char* module);
+
+void storage_init();
 
 #endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_STORAGE_H_ */

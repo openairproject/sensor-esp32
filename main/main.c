@@ -39,6 +39,7 @@
 #include "bmx280.h"
 #include "pmsx003.h"
 #include "pm_meter.h"
+#include "oap_storage.h"
 
 static const char *TAG = "app";
 
@@ -148,8 +149,9 @@ void app_main()
 {
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
+	storage_init();
 	ESP_LOGI(TAG,"starting app...");
-	nvs_flash_init();
+
 
 	//wifi/mongoose requires plenty of mem, start it here
 	bootWiFi(); //deprecated wifiInit();

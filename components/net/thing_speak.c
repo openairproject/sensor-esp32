@@ -39,6 +39,7 @@
 
 #include "thing_speak.h"
 #include "oap_common.h"
+#include "oap_storage.h"
 
 #define OAP_THING_SPEAK_HOST "api.thingspeak.com"
 #define OAP_THING_SPEAK_PORT 80
@@ -46,6 +47,7 @@
 
 static const char *TAG = "thingspk";
 
+static char* apikey = NULL;
 static xQueueHandle measurements_queue;
 
 static int post_data(oap_meas meas) {
@@ -88,7 +90,7 @@ static int post_data(oap_meas meas) {
 	freeaddrinfo(res);
 
 	char payload[200];
-	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f", CONFIG_OAP_THING_SPEAK_API_KEY,
+	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f", apikey,
 			meas.pm.pm1_0,
 			meas.pm.pm2_5,
 			meas.pm.pm10,
@@ -144,8 +146,34 @@ static void thing_speak_task() {
 	}
 }
 
+static int thing_speak_configure() {
+	cJSON* thingspeak = storage_get_config("thingspeak");
+	if (!thingspeak) {
+		ESP_LOGI(TAG, "config not found");
+		return ESP_FAIL;
+	}
+
+	cJSON* field;
+	if (!(field = cJSON_GetObjectItem(thingspeak, "enabled")) || !field->valueint) {
+		ESP_LOGI(TAG, "client disabled");
+		return ESP_FAIL;
+	}
+
+	if ((field = cJSON_GetObjectItem(thingspeak, "apikey")) && field->valuestring) {
+		apikey = malloc(strlen(field->valuestring)+1);
+		strcpy(apikey,field->valuestring);
+		ESP_LOGI(TAG, "apikey: %s", apikey);
+		return ESP_OK;
+	} else {
+		ESP_LOGW(TAG, "apikey not configured");
+		return ESP_FAIL;
+	}
+}
+
 void thing_speak_init(xQueueHandle _measurements_queue)
 {
-	measurements_queue = _measurements_queue;
-    xTaskCreate(&thing_speak_task, "thing_speak_task", 1024*10, NULL, 5, NULL);
+	if (thing_speak_configure() == ESP_OK) {
+		measurements_queue = _measurements_queue;
+    	xTaskCreate(&thing_speak_task, "thing_speak_task", 1024*10, NULL, 5, NULL);
+	}
 }
