@@ -32,6 +32,7 @@ typedef struct {
 typedef struct {
 	double temp;
 	double pressure;
+	double humidity;
 } env_data;
 
 typedef struct {

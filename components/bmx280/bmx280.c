@@ -29,6 +29,19 @@
 #include "sdkconfig.h"
 #include "oap_common.h"
 #include "include/bmx280.h"
+#include "i2c_bme280.h"
+
+#define BME280_W					0xEC
+#define BME280_R					0xED
+#define BME280_CHIP_ID_REG			0xD0
+#define BME280_CHIP_ID				0x60
+
+#define BME280_REG_CTRL_HUM			0xF2
+#define BME280_REG_CTRL_MEAS		0xF4
+#define BME280_REG_CONFIG			0xF5
+
+#define BME280_MODE_NORMAL			0x03 //reads sensors at set interval
+#define BME280_MODE_FORCED			0x01 //reads sensors once when you write this register
 
 static char* TAG = "bmx280";
 static QueueHandle_t samples_queue;
@@ -152,12 +165,11 @@ static esp_err_t get_sensor_data(env_data* result)
 
 	// Select control measurement register(0xF4)
 	// Normal mode, temp and pressure over sampling rate = 1(0x27)
-	CONT_IF_OK(write_i2c_byte(0xF4, 0x27));
+	CONT_IF_OK(write_i2c_byte(BME280_REG_CTRL_MEAS, 0x27));
 
 	// Select config register(0xF5)
 	// Stand_by time = 1000 ms(0xA0)
-
-	CONT_IF_OK(write_i2c_byte(0xF5, 0xA0));
+	CONT_IF_OK(write_i2c_byte(BME280_REG_CONFIG, 0xA0));
 	vTaskDelay(10/portTICK_PERIOD_MS);
 
 	// Read 8 bytes of data from register(0xF7)
@@ -195,6 +207,7 @@ static esp_err_t get_sensor_data(env_data* result)
 	return ESP_OK;
 }
 
+/*
 static void bmx280_task() {
 	env_data result = {};
 
@@ -223,8 +236,39 @@ QueueHandle_t bmx280_init() {
 	conf.master.clk_speed = 100000;
 	i2c_param_config(CONFIG_OAP_BMX280_I2C_NUM, &conf);
 	i2c_driver_install(CONFIG_OAP_BMX280_I2C_NUM, I2C_MODE_MASTER, 0, 0, 0);
+
+	uint8_t chipID;
+	read_i2c(BME280_CHIP_ID_REG,&chipID,1);
+	if (chipID == BME280_CHIP_ID) {
+		ESP_LOGI(TAG, "chip identified as BME280");
+	} else {
+		ESP_LOGW(TAG, "chip identified itself as [%d]", chipID);
+	}
+
     xTaskCreate(bmx280_task, "bmx280_task", 1024*2, NULL, 10, NULL);
     return samples_queue;
 }
+*/
 
+//--- new
+static void bmx280_task() {
+	BME280_Init(BME280_MODE_FORCED);
+	while(1) {
+		BME280_readSensorData();
+		env_data result = BME280_data();
+
+		ESP_LOGD(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity %.2f", result.temp, result.pressure, result.humidity);
+		if (!xQueueSend(samples_queue, &result, 10000/portTICK_PERIOD_MS)) {
+			ESP_LOGW(TAG, "env queue overflow");
+		}
+
+		vTaskDelay(5000/portTICK_PERIOD_MS);
+	}
+}
+
+QueueHandle_t bmx280_init() {
+	samples_queue = xQueueCreate(1, sizeof(env_data));
+	xTaskCreate(bmx280_task, "bmx280_task", 1024*2, NULL, 10, NULL);
+	return samples_queue;
+}
 

@@ -90,12 +90,13 @@ static int post_data(oap_meas meas) {
 	freeaddrinfo(res);
 
 	char payload[200];
-	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f", apikey,
+	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f&field6=%.2f", apikey,
 			meas.pm.pm1_0,
 			meas.pm.pm2_5,
 			meas.pm.pm10,
 			meas.env.temp,
-			meas.env.pressure);
+			meas.env.pressure,
+			meas.env.humidity);
 
 	char request[512];
 
