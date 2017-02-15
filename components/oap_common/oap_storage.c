@@ -35,6 +35,7 @@ extern const uint8_t default_config_json_end[] asm("_binary_default_config_json_
 
 static char* NAMESPACE = "OAP";
 static char* TAG = "storage";
+static char* PASSWORD_NOT_CHANGED = "<not-changed>";
 
 int storage_get_blob(const char* key, void* out_value, size_t length) {
 	nvs_handle handle;
@@ -124,13 +125,65 @@ cJSON* storage_get_config(const char* module) {
 	}
 }
 
-int storage_set_config_str(const char* config) {
+static void storage_set_config(cJSON *config) {
+	if (_config) cJSON_Delete(_config);
+	_config = config;
+	char* _configStr = cJSON_Print(_config);
+	storage_put_str("config", _configStr);
+	free(_configStr);
+}
+
+/*
+ * returns entire config as a string.
+ * free result after use.
+ */
+char* storage_get_config_str() {
+	cJSON* copy = cJSON_Duplicate(_config, 1);
+	cJSON* wifi = cJSON_GetObjectItem(copy, "wifi");
+	//replace existing password (security)
+	if (wifi && cJSON_GetObjectItem(wifi, "password")) {
+		cJSON_DeleteItemFromObject(wifi, "password");
+		cJSON_AddStringToObject(wifi, "password", PASSWORD_NOT_CHANGED);
+	}
+	char* str = cJSON_Print(copy);
+	cJSON_Delete(copy);
+	return str;
+}
+
+//static void set_str_value(cJSON* node, char* str) {
+//	if (!node) return;
+//	if (node->valuestring) free(node->valuestring);
+//	node->valuestring = malloc(strlen(str)+1);
+//	strcpy(node->valuestring, str);
+//}
+
+/*
+ * deserialises json string and stores as a new config.
+ * it also checks password field if it that didn't change - it leaves the old value.
+ */
+int storage_set_config_str(const char* configStr) {
 	ESP_LOGD(TAG, "set config");
-	cJSON *configJson = cJSON_Parse(config);
-	if (configJson) {
-		if (_config) cJSON_Delete(_config);
-		_config = configJson;
-		storage_put_str("config", config);
+
+//	char* c= storage_get_config_str();
+//	ESP_LOGD(TAG, "current config: %s", c);
+//	free(c);
+
+	cJSON *config = cJSON_Parse(configStr);
+	if (config) {
+		if (_config) {
+			cJSON* wifi = cJSON_GetObjectItem(config, "wifi");
+			cJSON* passwordNode = cJSON_GetObjectItem(wifi, "password");
+			if (passwordNode && strcmp(passwordNode->valuestring, PASSWORD_NOT_CHANGED) == 0) {
+				cJSON* _wifi = cJSON_GetObjectItem(_config, "wifi");
+				cJSON* _passwordNode = cJSON_GetObjectItem(_wifi, "password");
+				ESP_LOGD(TAG,"detected '%s' token, we need to keep old password (%s)", PASSWORD_NOT_CHANGED, _passwordNode->valuestring);
+				if (_passwordNode) {
+					cJSON_DeleteItemFromObject(wifi, "password");
+					cJSON_AddStringToObject(wifi, "password", _passwordNode->valuestring);
+				}
+			}
+		}
+		storage_set_config(config);
 		return ESP_OK;
 	} else {
 		ESP_LOGE(TAG, "malformed config, ignore");
@@ -138,10 +191,7 @@ int storage_set_config_str(const char* config) {
 	}
 }
 
-//free result after use
-char* storage_get_config_str() {
-	return cJSON_Print(_config);
-}
+
 
 static char* default_config() {
 	int len = default_config_json_end-default_config_json_start;
@@ -154,7 +204,6 @@ static char* default_config() {
 static void storage_init_config() {
 	char* str = NULL;
 	ESP_LOGD(TAG, "get config");
-
 
 	int err;
 	if ((err = storage_get_str("config", &str)) != ESP_OK) {
