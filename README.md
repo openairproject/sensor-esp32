@@ -107,9 +107,9 @@ and configure sensor settings using sensor control panel.
 If there's a need to reconfigure wifi settings, reboot the device with a control button pressed down -
 it will switch into AP mode.
 
-![Schema](doc/images/sensor_settings.png?raw=true)
+![Schema](doc/images/sensor_settings.png?raw=true =320x)
 
 Happy DIY time!
 	
 ---	
-![Schema](doc/images/prototype.jpg?raw=true)
+![Schema](doc/images/prototype.jpg?raw=true =600x)
