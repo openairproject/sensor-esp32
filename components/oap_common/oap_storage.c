@@ -218,6 +218,7 @@ static void storage_init_config() {
 		if (!_config) {
 			ESP_LOGE(TAG,"config is not a proper json, replace with default\n%s", str);
 		} else {
+			//TODO here we should "merge" it with defaults - in case of new firmware
 			ESP_LOGI(TAG,"config\n%s",str);
 		}
 		free(str);

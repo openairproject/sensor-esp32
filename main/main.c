@@ -61,6 +61,33 @@ static QueueHandle_t pm_queue;
 //	ESP_LOGI(TAG, "timestamp: %ld", tv.tv_sec);
 //}
 
+typedef struct {
+	int led;
+	int indoor;
+	int warmUpTime;
+	int measTime;
+	int measInterval;
+	int measStrategy;
+	int test;
+} oc_sensor_config_t;
+
+static oc_sensor_config_t get_config() {
+	oc_sensor_config_t sensor_config = {};
+	ESP_LOGD(TAG, "retrieve sensor config");
+	cJSON* sensor = storage_get_config("sensor");
+	cJSON* sconfig = cJSON_GetObjectItem(sensor, "config");
+	cJSON* field;
+
+	if ((field = cJSON_GetObjectItem(sconfig, "led"))) sensor_config.led = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "indoor"))) sensor_config.indoor = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "warmUpTime"))) sensor_config.warmUpTime = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "measTime"))) sensor_config.measTime = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "measInterval"))) sensor_config.measInterval = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "measStrategy"))) sensor_config.measStrategy = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "test"))) sensor_config.test = field->valueint;
+	return sensor_config;
+}
+
 static led_cmd led_state = {
 	.color = {.v = {0,0,1}} //initial color (when no samples collected)
 };
@@ -80,16 +107,17 @@ static void update_led_color(led_mode mode, float r, float g, float b) {
 }
 
 static void pm_meter_trigger_task() {
-	pm_meter_init(pms_init(CONFIG_OAP_PM_SENSOR_OUTDOOR));
+	oc_sensor_config_t sensor_config = get_config();
+
+	pm_meter_init(pms_init(sensor_config.indoor));
 	while (1) {
-		//TODO add semaphore
 		update_led_mode(LED_PULSE);
-		pm_meter_start(CONFIG_OAP_PM_WARM_UP_TIME);
-		vTaskDelay(CONFIG_OAP_PM_MEAS_TIME * 1000 / portTICK_PERIOD_MS);
+		pm_meter_start(sensor_config.warmUpTime);
+		vTaskDelay(sensor_config.measTime * 1000 / portTICK_PERIOD_MS);
 		pm_data pm = pm_meter_stop();
 		update_led_mode(LED_SET);
 		xQueueSend(pm_queue, &pm, 1000 / portTICK_PERIOD_MS); //1sec
-		vTaskDelay((CONFIG_OAP_PM_MEAS_INTERVAL-CONFIG_OAP_PM_MEAS_TIME) * 1000 / portTICK_PERIOD_MS);
+		vTaskDelay((sensor_config.measInterval-sensor_config.measTime) * 1000 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -102,7 +130,7 @@ static void main_task() {
 
 	thing_speak_init(result_queue);
 	QueueHandle_t env_queue = bmx280_init();
-	led_init(led_queue);
+	led_init(get_config().led, led_queue);
 	update_led();
 
 	gpio_num_t btn_gpio[] = {CONFIG_OAP_BTN_0_PIN};
@@ -151,7 +179,6 @@ void app_main()
 
 	storage_init();
 	ESP_LOGI(TAG,"starting app...");
-
 
 	//wifi/mongoose requires plenty of mem, start it here
 	bootWiFi(); //deprecated wifiInit();

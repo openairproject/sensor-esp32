@@ -106,7 +106,7 @@ static void led_cycle() {
 	}
 }
 
-void led_init(xQueueHandle _cmd_queue)
+void led_init(int enabled, xQueueHandle _cmd_queue)
 {
 	cmd_queue = _cmd_queue;
 	MAX_DUTY = pow(2,ledc_timer.bit_num)-1;
@@ -133,9 +133,10 @@ void led_init(xQueueHandle _cmd_queue)
 		ledc_channel_config(&ledc_channel);
 	}
 
-    //initialize fade service.
-    ledc_fade_func_install(0);
-
-    xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, 10, NULL);
+    if (enabled) {
+        //initialize fade service.
+        ledc_fade_func_install(0);
+    	xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, 10, NULL);
+    }
 }
 

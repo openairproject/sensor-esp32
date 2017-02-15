@@ -40,6 +40,6 @@ typedef struct {
 	uint32_t freq;
 } led_cmd;
 
-void led_init(xQueueHandle cmd_queue);
+void led_init(int enabled, xQueueHandle cmd_queue);
 
 #endif /* MAIN_LED_H_ */

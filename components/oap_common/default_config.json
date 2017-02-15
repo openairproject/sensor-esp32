@@ -9,5 +9,16 @@
 	"thingspeak": {
 		"enabled": 0,
 		"apikey": ""
+	},
+	"sensor" : {
+		"config" : {
+			"indoor" 	: 	true,
+			"led"		:	true,
+			"measTime"	: 	60,
+			"warmUpTime":	30,
+			"measInterval": 300,
+			"test"		:	0,
+			"measStrategy":	0
+		}
 	}
 }
