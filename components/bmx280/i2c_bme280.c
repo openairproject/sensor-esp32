@@ -78,6 +78,18 @@ uint8_t spi3w_en = 0;           //3-wire SPI Disable
 
 uint8_t BME280_OperationMode = BME280_MODE_NORMAL;
 
+#define BME280_W					0xEC
+#define BME280_R					0xED
+#define BME280_CHIP_ID_REG			0xD0
+#define BME280_CHIP_ID				0x60
+
+#define BME280_REG_CTRL_HUM			0xF2
+#define BME280_REG_CTRL_MEAS		0xF4
+#define BME280_REG_CONFIG			0xF5
+
+#define BMP280_CHIP_ID1				(0x56)
+#define BMP280_CHIP_ID2				(0x57)
+#define BMP280_CHIP_ID3				(0x58)
 
 signed long int t_fine;
 signed long int temp_act;
@@ -128,18 +140,22 @@ static esp_err_t write_i2c_byte(uint8_t address, uint8_t value) {
 	return ESP_OK;
 }
 
-bool  BME280_verifyChipId(void){
+int  BME280_verifyChipId(void){
 	uint8_t chipID;
 	read_i2c(BME280_CHIP_ID_REG,&chipID,1);
-
-	if (chipID != BME280_CHIP_ID ) {
-		#ifdef BME280_DEBUG
-		ESP_LOGD(TAG,"BME280: expected chip id 0x%X, found chip id 0x%X\r\n", BME280_CHIP_ID, chipID);
-		#endif
-	    return 0;
+	switch (chipID) {
+		case BME280_CHIP_ID:
+			ESP_LOGI(TAG,"detected BME280 (0x%X)", chipID);
+			return ESP_OK;
+		case BMP280_CHIP_ID1:
+		case BMP280_CHIP_ID2:
+		case BMP280_CHIP_ID3:
+			ESP_LOGI(TAG,"detected BMP280 - no humidity data (0x%X)", chipID);
+			return ESP_OK;
+		default:
+			ESP_LOGW(TAG,"detected unknown chip (0x%X), disable env data", chipID);
+			return ESP_FAIL;
 	}
-
-	return 1;
 }
 
 void  BME280_writeConfigRegisters(void){
@@ -293,7 +309,7 @@ bool BME280_Init(uint8_t operationMode)
 	i2c_param_config(CONFIG_OAP_BMX280_I2C_NUM, &conf);
 	i2c_driver_install(CONFIG_OAP_BMX280_I2C_NUM, I2C_MODE_MASTER, 0, 0, 0);
 
-	if(!BME280_verifyChipId()){
+	if (BME280_verifyChipId() != ESP_OK) {
 		return 0;
 	}
 
