@@ -50,14 +50,7 @@ THE SOFTWARE.
 #include <esp_log.h>
 #include "oap_common.h"
 
-#define BME280_W					0xEC
-#define BME280_R					0xED
-#define BME280_CHIP_ID_REG			0xD0
-#define BME280_CHIP_ID				0x60
 
-#define BME280_REG_CTRL_HUM			0xF2
-#define BME280_REG_CTRL_MEAS		0xF4
-#define BME280_REG_CONFIG			0xF5
 
 #define BME280_MODE_NORMAL			0x03 //reads sensors at set interval
 #define BME280_MODE_FORCED			0x01 //reads sensors once when you write this register
