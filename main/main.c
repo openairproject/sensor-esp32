@@ -150,7 +150,7 @@ static void main_task() {
 		gettimeofday(&time, NULL);
 		if (xQueueReceive(env_queue, &env, 100)) {
 			env_timestamp = time.tv_sec;
-			ESP_LOGI(TAG,"Temperature : %.2f C, Pressure: %.2f hPa", env.temp, env.pressure);
+			ESP_LOGI(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", env.temp, env.pressure, env.humidity);
 		}
 
 		pm_data pm;
