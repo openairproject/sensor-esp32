@@ -41,7 +41,7 @@
 static const char* TAG = "pmsX003";
 
 static int enabled = 0;
-static int outdoor = 0;
+static int indoor = 0;
 static QueueHandle_t samples;
 
 static void pms_init_uart(void) {
@@ -83,7 +83,7 @@ static void pms_uart_read()
         if (!enabled) continue;
         if (len >= 24 && data[0]==0x42 && data[1]==0x4d) {
         		//ESP_LOGI(TAG, "got frame of %d bytes", len);
-        		pm_data pm = decodepm_data(data, outdoor ? 10 : 4);	//atmospheric from 10th byte, standard from 4th
+        		pm_data pm = decodepm_data(data, indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
 				if (!xQueueSend(samples, &pm, 100)) {
 					ESP_LOGW(TAG, "sample queue overflow");
 				}
@@ -99,8 +99,8 @@ void pms_enable(int _enabled) {
 	gpio_set_level(CONFIG_OAP_PM_SENSOR_CONTROL_PIN, enabled); //low state = disabled, high state = enabled
 }
 
-QueueHandle_t pms_init(int _outdoor) {
-	outdoor = _outdoor;
+QueueHandle_t pms_init(int _indoor) {
+	indoor = _indoor;
 	samples = xQueueCreate(1, sizeof(pm_data));
 	pms_init_gpio();
 	pms_enable(0);

@@ -54,14 +54,14 @@ extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 #define SSID_SIZE (32) // Maximum SSID size
 #define PASSWORD_SIZE (64) // Maximum password size
 
-typedef uint8_t u8_t;
-typedef uint16_t u16_t;
-
 typedef struct {
 	char ssid[SSID_SIZE];
 	char password[PASSWORD_SIZE];
 	tcpip_adapter_ip_info_t ipInfo; // Optional static IP information
-} oap_connection_info_t;
+} oc_wifi_t;
+
+typedef uint8_t u8_t;
+typedef uint16_t u16_t;
 
 static int g_mongooseStarted = 0; // Has the mongoose server started?
 static int g_mongooseStopRequest = 0; // Request to stop the mongoose server.
@@ -294,7 +294,14 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
 
 			initialize_sntp();
 
-			g_mongooseStopRequest = 1; // Stop mongoose (if it is running).
+			//g_mongooseStopRequest = 1; // Stop mongoose (if it is running).
+
+			if (!g_mongooseStarted)
+			{
+				g_mongooseStarted = 1;
+				xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL, 0);
+			}
+
 			break;
 		}
 
@@ -308,33 +315,33 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
 /**
  * Retrieve the connection info.  A rc==0 means ok.
  */
-static int getConnectionInfo(oap_connection_info_t *pConnectionInfo) {
-	memset(pConnectionInfo, 0, sizeof(oap_connection_info_t));
+static int get_config(oc_wifi_t *oc_wifi) {
+	memset(oc_wifi, 0, sizeof(oc_wifi_t));
 	ESP_LOGD(tag, "retrieve wifi config");
 	cJSON* wifi = storage_get_config("wifi");
 	if (!wifi) return ESP_FAIL;
 	cJSON* field;
-	if ((field = cJSON_GetObjectItem(wifi, "ssid"))) strcpy(pConnectionInfo->ssid, field->valuestring);
-	if ((field = cJSON_GetObjectItem(wifi, "password"))) strcpy(pConnectionInfo->password, field->valuestring);
+	if ((field = cJSON_GetObjectItem(wifi, "ssid"))) strcpy(oc_wifi->ssid, field->valuestring);
+	if ((field = cJSON_GetObjectItem(wifi, "password"))) strcpy(oc_wifi->password, field->valuestring);
 
 	if ((field = cJSON_GetObjectItem(wifi, "ip"))) {
-		inet_pton(AF_INET, field->valuestring, &pConnectionInfo->ipInfo.ip);
+		inet_pton(AF_INET, field->valuestring, &oc_wifi->ipInfo.ip);
 	}
 	if ((field = cJSON_GetObjectItem(wifi, "gw"))) {
-		inet_pton(AF_INET, field->valuestring, &pConnectionInfo->ipInfo.gw);
+		inet_pton(AF_INET, field->valuestring, &oc_wifi->ipInfo.gw);
 	}
 	if ((field = cJSON_GetObjectItem(wifi, "netmask"))) {
-		inet_pton(AF_INET, field->valuestring, &pConnectionInfo->ipInfo.netmask);
+		inet_pton(AF_INET, field->valuestring, &oc_wifi->ipInfo.netmask);
 	}
 
-	ESP_LOGD(tag, "wifi.ssid: %s", pConnectionInfo->ssid);
-	ESP_LOGD(tag, "wifi.pass.lenght: [%d]", strlen(pConnectionInfo->password));
+	ESP_LOGD(tag, "wifi.ssid: %s", oc_wifi->ssid);
+	ESP_LOGD(tag, "wifi.pass.lenght: [%d]", strlen(oc_wifi->password));
 
-	ESP_LOGD(tag, "wifi.ip:" IPSTR, IP2STR(&pConnectionInfo->ipInfo.ip));
-	ESP_LOGD(tag, "wifi.gateway:" IPSTR, IP2STR(&pConnectionInfo->ipInfo.gw));
-	ESP_LOGD(tag, "wifi.netmask:" IPSTR, IP2STR(&pConnectionInfo->ipInfo.netmask));
+	ESP_LOGD(tag, "wifi.ip:" IPSTR, IP2STR(&oc_wifi->ipInfo.ip));
+	ESP_LOGD(tag, "wifi.gateway:" IPSTR, IP2STR(&oc_wifi->ipInfo.gw));
+	ESP_LOGD(tag, "wifi.netmask:" IPSTR, IP2STR(&oc_wifi->ipInfo.netmask));
 
-	if (strlen(pConnectionInfo->ssid) == 0) {
+	if (strlen(oc_wifi->ssid) == 0) {
 		ESP_LOGW(tag, "NULL ssid detected");
 		return ESP_FAIL;
 	}
@@ -342,11 +349,11 @@ static int getConnectionInfo(oap_connection_info_t *pConnectionInfo) {
 	return ESP_OK;
 }
 
-//static void saveConnectionInfo(oap_connection_info_t *pConnectionInfo) {
-//	storage_put_blob(KEY_CONNECTION_INFO, pConnectionInfo, sizeof(oap_connection_info_t));
+//static void saveConnectionInfo(oc_wifi_t *pConnectionInfo) {
+//	storage_put_blob(KEY_CONNECTION_INFO, pConnectionInfo, sizeof(oc_wifi_t));
 //}
 
-static void become_station(oap_connection_info_t *pConnectionInfo) {
+static void become_station(oc_wifi_t *pConnectionInfo) {
 	is_station = 1;
 	ESP_LOGD(tag, "- Connecting to access point \"%s\" ...", pConnectionInfo->ssid);
 	assert(strlen(pConnectionInfo->ssid) > 0);
@@ -406,10 +413,10 @@ static void restore_wifi_setup() {
 		ESP_LOGI(tag, "GPIO override detected");
 		become_access_point();
 	} else {
-		oap_connection_info_t connectionInfo = {};
-		int rc = getConnectionInfo(&connectionInfo);
+		oc_wifi_t oc_wifi = {};
+		int rc = get_config(&oc_wifi);
 		if (rc == 0) {
-			become_station(&connectionInfo);
+			become_station(&oc_wifi);
 		} else {
 			become_access_point();
 		}

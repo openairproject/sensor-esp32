@@ -20,6 +20,7 @@
             border:1px solid #999;
         }
         legend {
+            font-size:1.25em;
             padding:0.5em;
         }
         row {
@@ -27,6 +28,7 @@
             padding: 0.5em;
         }
         row label {
+            font-size: 0.8em;
             display: inline-block;
             width: 200px;
         }
@@ -50,6 +52,13 @@
             border:none;
             min-width:150px;
         }
+
+        input[type=text],input[type=number] {
+            width:200px;
+        }
+        input.short {
+            width:120px;
+        }
     </style>
 </head>
 <body>
@@ -70,17 +79,56 @@
 
             <row>
             <label>IP address</label>
-            <input type="text" name="wifi.ip">
+            <input type="text" name="wifi.ip"  class="short">
             </row>
 
             <row>
             <label>Gateway address</label>
-            <input type="text" name="wifi.gw">
+            <input type="text" name="wifi.gw" class="short">
             </row>
 
             <row>
             <label>Netmask</label>
-            <input type="text" name="wifi.netmask"/>
+            <input type="text" name="wifi.netmask" class="short"/>
+            </row>
+        </fieldset>
+
+        <fieldset>
+            <legend>Measurement</legend>
+
+            <row>
+                <label>Indoor</label>
+                <input type="checkbox" value="1" name="sensor.config.indoor" checked>
+            </row>
+
+            <row>
+                <label>LED enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.led" checked>
+            </row>
+
+            <row>
+                <label>Test flag</label>
+                <input type="number" name="sensor.config.test" class="short"/>
+            </row>
+
+            <row>
+                <label>Measurement time (sec)</label>
+                <input type="number" name="sensor.config.measTime" class="short"/>
+            </row>
+
+            <row>
+                <label>Warm-up time (sec)</label>
+                <input type="number" name="sensor.config.warmUpTime" class="short"/>
+            </row>
+
+            <row>
+                <label>Measurement interval (sec)</label>
+                <input type="number" name="sensor.config.measInterval" class="short"/>
+            </row>
+
+            <row>
+                <label>Measurement strategy (adv)</label>
+                <input type="number" name="sensor.config.measStrategy" class="short"/>
             </row>
         </fieldset>
 
@@ -171,7 +219,7 @@
                     if (isMultiSelect(el)) {
                         val = getSelectValues(el);
                     } else if (el.type === 'number' || (el.type === 'checkbox' && parseFloat(el.value))) {
-                        val = parseFloat(el.value);
+                        val = parseFloat(el.value) || 0;
                     } else {
                         val = el.value;
                     }
@@ -191,7 +239,7 @@
                     if (isCheckbox(el)) {
                         el.checked = el.value == val;
                     } else {
-                        el.value = el.type === 'number' ? parseFloat(val) : val;
+                        el.value = val;
                     }
                 }
             });
