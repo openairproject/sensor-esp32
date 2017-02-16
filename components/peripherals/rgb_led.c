@@ -74,7 +74,37 @@ void fade_to_color(rgb color, int time) {
 	}
 }
 
+static void setup_ledc() {
+	MAX_DUTY = pow(2,ledc_timer.bit_num)-1;
+	    ledc_timer_config(&ledc_timer);
+
+	    ledc_channel_config_t ledc_channel = {
+	        .channel = -1,
+	        .duty = -1,
+	        .gpio_num = -1,
+	        //GPIO INTR TYPE, as an example, we enable fade_end interrupt here.
+	        .intr_type = LEDC_INTR_FADE_END,
+	        //set LEDC mode, from ledc_mode_t
+	        .speed_mode = speed_mode,
+	        //set LEDC timer source, if different channel use one timer,
+	        //the frequency and bit_num of these channels should be the same
+	        .timer_sel = LEDC_TIMER_0
+	    };
+
+		for (int c = 0; c < 3; c++) {
+			ledc_channel.channel = c; //LEDC_CHANNEL_0 to LEDC_CHANNEL_2
+			ledc_channel.gpio_num = led_gpio[c];
+			ledc_channel.duty = 0;
+			gpio_intr_disable(led_gpio[c]);
+			ledc_channel_config(&ledc_channel);
+		}
+	    //initialize fade service.
+	    ledc_fade_func_install(0);
+}
+
 static void led_cycle() {
+
+
 	rgb color = {.v={1,1,1}};
 	led_cmd cmd = {
 		.mode = LED_SET,
@@ -109,33 +139,8 @@ static void led_cycle() {
 void led_init(int enabled, xQueueHandle _cmd_queue)
 {
 	cmd_queue = _cmd_queue;
-	MAX_DUTY = pow(2,ledc_timer.bit_num)-1;
-    ledc_timer_config(&ledc_timer);
-
-    ledc_channel_config_t ledc_channel = {
-        .channel = -1,
-        .duty = -1,
-        .gpio_num = -1,
-        //GPIO INTR TYPE, as an example, we enable fade_end interrupt here.
-        .intr_type = LEDC_INTR_FADE_END,
-        //set LEDC mode, from ledc_mode_t
-        .speed_mode = speed_mode,
-        //set LEDC timer source, if different channel use one timer,
-        //the frequency and bit_num of these channels should be the same
-        .timer_sel = LEDC_TIMER_0
-    };
-
-	for (int c = 0; c < 3; c++) {
-		ledc_channel.channel = c; //LEDC_CHANNEL_0 to LEDC_CHANNEL_2
-		ledc_channel.gpio_num = led_gpio[c];
-		ledc_channel.duty = 0;
-		gpio_intr_disable(led_gpio[c]);
-		ledc_channel_config(&ledc_channel);
-	}
-
     if (enabled) {
-        //initialize fade service.
-        ledc_fade_func_install(0);
+    	setup_ledc();	//this often conflicts with other i/o operations? e.g. bme280 init.
     	xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, 10, NULL);
     }
 }
