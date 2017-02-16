@@ -1,7 +1,4 @@
 /**
- *  Created on: Nov 25, 2016
- *     Author: kolban
- *
  *  This file is part of OpenAirProject-ESP32.
  *
  *  OpenAirProject-ESP32 is free software: you can redistribute it and/or modify
@@ -45,7 +42,7 @@
  * The same effect can be achieved by pressing down control button during startup.
  *
  * In AP mode, sensor creates OpenAirProject-XXXX network (default password: cleanair),
- * where it listens at http://192.168.1.4:80 and exposes simple html/rest API to modify settings.
+ * where it listens at http://192.168.1.1:80 and exposes simple html/rest API to modify settings.
  */
 
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
@@ -53,6 +50,10 @@ extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
 #define SSID_SIZE (32) // Maximum SSID size
 #define PASSWORD_SIZE (64) // Maximum password size
+
+#define OAP_ACCESS_POINT_IP "192.168.1.1"
+#define OAP_ACCESS_POINT_NETMASK "255.255.255.0"
+
 
 typedef struct {
 	char ssid[SSID_SIZE];
@@ -202,6 +203,21 @@ static void mongooseTask(void *data) {
 	return;
 } // mongooseTask
 
+int set_access_point_ip()
+{
+    tcpip_adapter_ip_info_t info = {};
+    inet_pton(AF_INET, OAP_ACCESS_POINT_IP, &info.ip);
+    inet_pton(AF_INET, OAP_ACCESS_POINT_NETMASK, &info.netmask);
+    inet_pton(AF_INET, OAP_ACCESS_POINT_IP, &info.gw);
+
+    esp_err_t err;
+
+    tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP);
+    err = tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &info);
+    tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP);
+    return err;
+}
+
 
 /**
  * An ESP32 WiFi event handler.
@@ -226,38 +242,21 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 	switch(event->event_id) {
 		// When we have started being an access point, then start being a web server.
 		case SYSTEM_EVENT_AP_START: { // Handle the AP start event
+			esp_err_t err;
+			if ((err=set_access_point_ip()) != ESP_OK) {
+				ESP_LOGW(tag, "failed to set ip address [err %x], use default", err);
+			}
 			tcpip_adapter_ip_info_t ip_info;
 			tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip_info);
 
 			//192.168.4.1 this is the default IP of all esp devices
 			//http://www.esp8266.com/viewtopic.php?f=29&t=12124
-			/*
-from arduino-esp32
-bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress subnet)
-{
-
-    if(!WiFi.enableAP(true)) {
-        // enable AP failed
-        return false;
-    }
-
-    tcpip_adapter_ip_info_t info;
-    info.ip.addr = static_cast<uint32_t>(local_ip);
-    info.gw.addr = static_cast<uint32_t>(gateway);
-    info.netmask.addr = static_cast<uint32_t>(subnet);
-    tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP);
-    if(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &info)) {
-        return tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP);
-    }
-    return false;
-}
-
-			 */
 
 			ESP_LOGI(tag, "**********************************************");
-			ESP_LOGI(tag, "* We are now an access point and you can point")
-			ESP_LOGI(tag, "* your browser to http://"IPSTR, IP2STR(&ip_info.ip));
+			ESP_LOGI(tag, "* ACCESS POINT MODE")
+			ESP_LOGI(tag, "* point your browser to http://"IPSTR, IP2STR(&ip_info.ip));
 			ESP_LOGI(tag, "**********************************************");
+
 			// Start Mongoose ...
 			if (!g_mongooseStarted)
 			{
@@ -270,26 +269,21 @@ bool WiFiAPClass::softAPConfig(IPAddress local_ip, IPAddress gateway, IPAddress 
 		// If we fail to connect to an access point as a station, become an access point.
 		case SYSTEM_EVENT_STA_DISCONNECTED: {
 			ESP_LOGD(tag, "Station disconnected - reconnecting");
-
 			/*
 			 * we cannot just switch to APi every time when wifi fails, in most cases we should try to reconnect.
 			 * although if the failure happened just after user configured wifi, there's a good chance
 			 * that he made a mistake and we should switch to AP.
 			 *
 			 * TODO remember successful connection to wifi and do not fallback to AP if we ever managed connect to wifi.
-			 *
 			 */
-			//become_access_point();
 			restore_wifi_setup();
 			break;
-		} // SYSTEM_EVENT_AP_START
+		}
 
-		// If we connected as a station then we are done and we can stop being a
-		// web server.
 		case SYSTEM_EVENT_STA_GOT_IP: {
 			ESP_LOGD(tag, "********************************************");
-			ESP_LOGD(tag, "* We are now connected and ready to do work!")
-			ESP_LOGD(tag, "* - Our IP address is: " IPSTR, IP2STR(&event->event_info.got_ip.ip_info.ip));
+			ESP_LOGD(tag, "* Connected with WIFI network")
+			ESP_LOGD(tag, "* Sensor IP address: " IPSTR, IP2STR(&event->event_info.got_ip.ip_info.ip));
 			ESP_LOGD(tag, "********************************************");
 
 			initialize_sntp();
@@ -386,7 +380,7 @@ static void become_access_point() {
 		.ap = {
 			.ssid="",
 			.ssid_len=0,
-			.password="cleanair", //>= 8 chars
+			.password=CONFIG_OAP_AP_PASSWORD, //>= 8 chars
 			.channel=0,
 			.authmode=WIFI_AUTH_WPA_WPA2_PSK,
 			.ssid_hidden=0,

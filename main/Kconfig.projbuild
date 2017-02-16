@@ -1,0 +1,25 @@
+menu "OpenAirProject"
+
+config OAP_AP_PASSWORD
+	string "AccessPoint password"
+	default "cleanair"
+	help
+		Password to authenticate to WiFi Access Point when sensor runs in this mode.
+		Minimum 8 characters.
+
+config OAP_PM_SAMPLE_BUF_SIZE
+	int "PM sensor sample buffer size"
+	default 120
+	help		
+		Max number of samples that are stored during measurement period. PMSx003 sensor sends ~1 sample / sec.
+		If more samples are collected during measurement, older samples get overriden.
+		
+config OAP_RESULT_BUFFER_SIZE
+	int "measurements buffer size"
+	default 1
+	help		
+		Buffer for data that cannot be immediately published because sensor is offline.
+		For some services that can accept only real-time data, this should be set to 1.
+			
+		
+endmenu
