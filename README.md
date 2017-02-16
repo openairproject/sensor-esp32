@@ -97,15 +97,18 @@ That's it.
 After booting the sensor for the first time, it will switch into Access Point mode and be visible as 
 
 	ssid: OpenAirProject-XXXX
-	pass: cleanair
+	pass: cleanair				//configurable via menuconfig
 	
 After connecting to this network, open following url
 
-	http://192.168.1.4
+	http://192.168.1.1
 
-and configure sensor settings using sensor control panel.
-If there's a need to reconfigure wifi settings, reboot the device with a control button pressed down -
-it will switch into AP mode.
+and configure sensor settings using web control panel (most notably - your home wifi ssid/pass).
+After rebooting sensor will connect to your wifi. Web control panel will still be available, but at IP that was specified or assigned to sensor by your router.
+
+
+If there's a need to force sensor into Access Point mode again (e.g. when it can't connect to specified wifi),
+reboot the device with a control button pressed down.
 
 ![Schema](doc/images/sensor_settings.png?raw=true =320x)
 
