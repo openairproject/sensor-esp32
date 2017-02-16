@@ -37,7 +37,6 @@
 static xQueueHandle cmd_queue;
 static gpio_num_t led_gpio[] = {CONFIG_OAP_LED_R_PIN,CONFIG_OAP_LED_G_PIN,CONFIG_OAP_LED_B_PIN};
 
-#define BRIGHTNESS 1.0
 #define DEFAULT_FREQ 1500;
 
 static ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE;
@@ -56,8 +55,13 @@ static ledc_timer_config_t ledc_timer = {
 static int MAX_DUTY = 0;
 static rgb LED_OFF = {.v={0,0,0}};
 
+//brightness for each of R/G/B. LED Green tends to be the brightest
+//so if we use the same resistors we need to compensate for it to get proper orange.
+//this probably should be configureble since it depends on particular LED and resistors.
+static float brightness[] = {1.0f,0.3f,1.0f};
+
 static int calc_duty(rgb color, uint8_t c) {
-	return lroundf(MAX_DUTY * fminf(color.v[c] * BRIGHTNESS, 1.0));
+	return lroundf(MAX_DUTY * fminf(color.v[c] * brightness[c], 1.0));
 }
 
 void set_color(rgb color) {
