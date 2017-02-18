@@ -14,9 +14,6 @@
             font-family:"Helvetica Neue",Arial;
             font-size:18px;
         }
-        textarea {
-            font-family: "Courier New";
-        }
         fieldset {
             margin: 1em 0;
             border:1px solid #999;
@@ -33,6 +30,10 @@
             font-size: 0.8em;
             display: inline-block;
             width: 200px;
+        }
+        row.vert label {
+            display:block;
+            padding-bottom:0.5em;
         }
         .header {
             background: #673ab7;
@@ -68,6 +69,16 @@
         input.short {
             width:120px;
         }
+        input, textarea {
+            border:1px solid #aaa;
+        }
+        textarea {
+            font-family: "Courier New";
+            font-size:11px;
+            width: 445px;
+            height: 340px;
+            white-space: nowrap;
+        }
         .logo64-grey {
             display: inline-block;
             width: 64px;
@@ -86,12 +97,12 @@
             <legend>WiFi</legend>
             <row>
             <label>SSID *</label>
-            <input type="text" name="wifi.ssid" maxlength="32">
+            <input type="text" name="wifi.ssid" maxlength="32" autocorrect="off" autocapitalize="off" spellcheck="false">
             </row>
 
             <row>
             <label>Password *</label>
-            <input type="text" name="wifi.password" maxlength="64">
+            <input type="text" name="wifi.password" maxlength="64" autocorrect="off" autocapitalize="off" spellcheck="false">
             </row>
 
             <row>
@@ -150,15 +161,38 @@
         </fieldset>
 
         <fieldset>
-            <legend>ThingSpeak Client</legend>
+            <legend>AWS IoT</legend>
             <row>
             <label>Enabled</label>
-            <input type="checkbox" value="1" name="thingspeak.enabled" checked>
+            <input type="checkbox" value="1" name="awsiot.enabled" checked>
             </row>
 
             <row>
-            <label>Api Key *</label>
-            <input type="text" name="thingspeak.apikey"/>
+            <label>Thing Name *</label>
+            <input type="text" name="awsiot.thingName" required autocorrect="off" autocapitalize="off" spellcheck="false">
+            </row>
+
+            <row class="vert">
+                <label>Certificate (PEM) *</label>
+                <textarea type="text" name="awsiot.cert" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+            </row>
+
+            <row class="vert">
+                <label>Private Key (PEM) *</label>
+                <textarea type="text" name="awsiot.pkey" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+            </row>
+        </fieldset>
+
+        <fieldset>
+            <legend>ThingSpeak Client</legend>
+            <row>
+                <label>Enabled</label>
+                <input type="checkbox" value="1" name="thingspeak.enabled" checked>
+            </row>
+
+            <row>
+                <label>Api Key *</label>
+                <input type="text" name="thingspeak.apikey" required autocorrect="off" autocapitalize="off" spellcheck="false">
             </row>
         </fieldset>
 

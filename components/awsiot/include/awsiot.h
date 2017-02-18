@@ -1,7 +1,7 @@
 /*
- * http.h
+ * awsiot_client.h
  *
- *  Created on: Feb 6, 2017
+ *  Created on: Feb 18, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,9 +20,11 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_HTTP_H_
-#define MAIN_HTTP_H_
+#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
 
-QueueHandle_t thing_speak_init();
+QueueHandle_t awsiot_init();
 
-#endif /* MAIN_HTTP_H_ */
+
+
+#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */

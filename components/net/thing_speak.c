@@ -48,7 +48,7 @@
 static const char *TAG = "thingspk";
 
 static char* apikey = NULL;
-static xQueueHandle measurements_queue;
+static QueueHandle_t input_queue;
 
 static int post_data(oap_meas meas) {
     const struct addrinfo hints = {
@@ -135,9 +135,9 @@ static int post_data(oap_meas meas) {
 static void thing_speak_task() {
 	oap_meas meas;
 	while (1) {
-		if(xQueuePeek(measurements_queue, &meas, 1000)) {
+		if(xQueuePeek(input_queue, &meas, 1000)) {
 			if (post_data(meas)) {
-				xQueueReceive(measurements_queue, &meas, 1000);
+				xQueueReceive(input_queue, &meas, 1000);
 				ESP_LOGI(TAG, "data sent successfully");
 			} else {
 				ESP_LOGW(TAG, "data post failed");
@@ -171,10 +171,13 @@ static int thing_speak_configure() {
 	}
 }
 
-void thing_speak_init(xQueueHandle _measurements_queue)
+QueueHandle_t thing_speak_init()
 {
 	if (thing_speak_configure() == ESP_OK) {
-		measurements_queue = _measurements_queue;
+		input_queue = xQueueCreate(1, sizeof(oap_meas));
     	xTaskCreate(&thing_speak_task, "thing_speak_task", 1024*10, NULL, 5, NULL);
+    	return input_queue;
+	} else {
+		return NULL;
 	}
 }

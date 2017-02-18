@@ -40,11 +40,11 @@
 #include "pmsx003.h"
 #include "pm_meter.h"
 #include "oap_storage.h"
-#include "awsiot_rest.h"
+#include "awsiot.h"
 
 static const char *TAG = "app";
 
-static QueueHandle_t result_queue;
+//static QueueHandle_t result_queue;
 static QueueHandle_t led_queue;
 static QueueHandle_t pm_queue;
 
@@ -126,10 +126,12 @@ static void main_task() {
 	pm_queue = xQueueCreate(1, sizeof(pm_data));
 
 	//buffer up to 100 measurements
-	result_queue = xQueueCreate(CONFIG_OAP_RESULT_BUFFER_SIZE, sizeof(oap_meas));
+	//result_queue = xQueueCreate(CONFIG_OAP_RESULT_BUFFER_SIZE, sizeof(oap_meas));
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
-	thing_speak_init(result_queue);
+	QueueHandle_t thing_speak_queue = thing_speak_init();
+	QueueHandle_t awsiot_queue = awsiot_init();
+
 	QueueHandle_t env_queue = bmx280_init();
 	led_init(get_config().led, led_queue);
 	update_led();
@@ -167,8 +169,17 @@ static void main_task() {
 				.env = env,			//TODO allow null, check last timestamp
 				.local_time = time.tv_sec
 			};
-			if (!xQueueSend(result_queue, &meas, 1)) {
-				ESP_LOGE(TAG,"result queue overflow");
+
+			//broadcast
+			if (thing_speak_queue) {
+				if (!xQueueSend(thing_speak_queue, &meas, 1)) {
+					ESP_LOGW(TAG,"thing_speak_queue queue overflow");
+				}
+			}
+			if (awsiot_queue) {
+				if (!xQueueSend(awsiot_queue, &meas, 1)) {
+					ESP_LOGW(TAG,"awsiot_queue queue overflow");
+				}
 			}
 		}
 	}
