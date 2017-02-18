@@ -69,7 +69,7 @@
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
 
-#include "include/awsiot_rest.h"
+#include "awsiot_rest.h"
 
 #define WEB_SERVER "a32on3oilq3poc.iot.eu-west-1.amazonaws.com"
 #define WEB_PORT "8443"
@@ -92,14 +92,8 @@ static const char *REQUEST = "GET " WEB_URL " HTTP/1.1\n"
    To embed it in the app binary, the PEM file is named
    in the component.mk COMPONENT_EMBED_TXTFILES variable.
 */
-extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
-extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
-
-extern const uint8_t b352220a79_certificate_pem_crt_start[] asm("_binary_b352220a79_certificate_pem_crt_start");
-extern const uint8_t b352220a79_certificate_pem_crt_end[]   asm("_binary_b352220a79_certificate_pem_crt_end");
-
-extern const uint8_t b352220a79_private_pem_key_start[] asm("_binary_b352220a79_private_pem_key_start");
-extern const uint8_t b352220a79_private_pem_key_end[]   asm("_binary_b352220a79_private_pem_key_end");
+extern const uint8_t verisign_root_ca_pem_start[] asm("_binary_verisign_root_ca_pem_start");
+extern const uint8_t verisign_root_ca_pem_end[]   asm("_binary_verisign_root_ca_pem_end");
 
 
 #ifdef MBEDTLS_DEBUG_C
@@ -148,7 +142,9 @@ static void mbedtls_debug(void *ctx, int level,
 #endif
 
 
-static void https_get_task(void *pvParameters)
+
+
+esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, cJSON* payload)
 {
     char buf[512];
     int ret, flags, len;
@@ -169,30 +165,30 @@ static void https_get_task(void *pvParameters)
 
     mbedtls_entropy_init(&entropy);
     if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                    NULL, 0)) != 0)
+                                    NULL, 0)) != ESP_OK)
     {
         ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
-        abort();
+        return ret;
     }
 
     ESP_LOGI(TAG, "Loading the CA root certificate...");
 
-    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start,
-                                 server_root_cert_pem_end-server_root_cert_pem_start);
+    ret = mbedtls_x509_crt_parse(&cacert, verisign_root_ca_pem_start,
+    		verisign_root_ca_pem_end-verisign_root_ca_pem_start);
 
     if(ret < 0)
     {
-        ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
-        abort();
+        ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x", -ret);
+        return ret;
     }
 
     ESP_LOGI(TAG, "Setting hostname for TLS session...");
 
      /* Hostname set here should match CN in server certificate */
-    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
+    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != ESP_OK)
     {
         ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
-        abort();
+        return ret;
     }
 
     ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
@@ -229,31 +225,31 @@ static void https_get_task(void *pvParameters)
     mbedtls_x509_crt_init( &clicert );
     mbedtls_pk_init( &pkey );
 
-    if ((ret = mbedtls_x509_crt_parse( &clicert, (const unsigned char *) b352220a79_certificate_pem_crt_start,
-    		b352220a79_certificate_pem_crt_end-b352220a79_certificate_pem_crt_start )) != ESP_OK) {
-    	ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+    //requires 0 at the end?
+    if ((ret = mbedtls_x509_crt_parse( &clicert, (unsigned char*)awsiot_config.cert, strlen(awsiot_config.cert)+1)) != ESP_OK) {
+    	ESP_LOGE(TAG, "cannot parse AWS Thing certificate (-0x%x)", -ret);
     	        goto exit;
     }
-    if ((ret = mbedtls_pk_parse_key( &pkey, (const unsigned char *) b352220a79_private_pem_key_start,
-    		b352220a79_private_pem_key_end-b352220a79_private_pem_key_start, NULL, 0 )) != ESP_OK) {
-    	ESP_LOGE(TAG, "mbedtls_pk_parse_key returned -0x%x\n\n", -ret);
+    //requires 0 at the end?
+    if ((ret = mbedtls_pk_parse_key( &pkey, (unsigned char*)awsiot_config.pkey, strlen(awsiot_config.pkey)+1, NULL, 0 )) != ESP_OK) {
+    	ESP_LOGE(TAG, "cannot parse AWS Thing private key (-0x%x)", -ret);
     	    	        goto exit;
     }
 
     if( ( ret = mbedtls_ssl_conf_own_cert( &conf, &clicert, &pkey ) ) != ESP_OK)
     {
-    	ESP_LOGE(TAG, " failed\n  ! mbedtls_ssl_conf_own_cert returned %d\n\n", ret );
+    	ESP_LOGE(TAG, "mbedtls_ssl_conf_own_cert returned %d", ret );
         goto exit;
     }
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
     {
-        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x", -ret);
         goto exit;
     }
 
+    // making request
 
-    while(1) {
         mbedtls_net_init(&server_fd);
 
         ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
@@ -351,21 +347,23 @@ static void https_get_task(void *pvParameters)
         mbedtls_ssl_session_reset(&ssl);
         mbedtls_net_free(&server_fd);
 
+
         if(ret != 0)
         {
             mbedtls_strerror(ret, buf, 100);
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
+        return ret;
 
-        for(int countdown = 5; countdown >= 0; countdown--) {
-            ESP_LOGI(TAG, "%d...", countdown);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-        ESP_LOGI(TAG, "Starting again!");
-    }
 }
 
-void awsiot_init()
-{
-    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
-}
+//QueueHandle_t awsiot_init()
+//{
+//	if (awsiot_configure() == ESP_OK) {
+//		input_queue = xQueueCreate(1, sizeof(oap_meas));
+//    	xTaskCreate(&https_get_task, "https_get_task", 1024*10, NULL, 5, NULL);
+//    	return input_queue;
+//	} else {
+//		return NULL;
+//	}
+//}

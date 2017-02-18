@@ -7,6 +7,4 @@
 # please read the ESP-IDF documents if you need to do this.
 #
 
-COMPONENT_EMBED_TXTFILES := server_root_cert.pem
-COMPONENT_EMBED_TXTFILES += b352220a79_private.pem.key
-COMPONENT_EMBED_TXTFILES += b352220a79_certificate.pem.crt
+COMPONENT_EMBED_TXTFILES := verisign_root_ca.pem

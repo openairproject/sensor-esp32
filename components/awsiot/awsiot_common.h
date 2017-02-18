@@ -1,7 +1,7 @@
 /*
- * http.h
+ * awsiot_common.h
  *
- *  Created on: Feb 6, 2017
+ *  Created on: Feb 18, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,9 +20,15 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_HTTP_H_
-#define MAIN_HTTP_H_
+#ifndef COMPONENTS_AWSIOT_AWSIOT_COMMON_H_
+#define COMPONENTS_AWSIOT_AWSIOT_COMMON_H_
 
-QueueHandle_t thing_speak_init();
 
-#endif /* MAIN_HTTP_H_ */
+typedef struct {
+	char* thingName;
+	char* cert;
+	char* pkey;
+} awsiot_config_t;
+
+
+#endif /* COMPONENTS_AWSIOT_AWSIOT_COMMON_H_ */
