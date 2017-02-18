@@ -69,15 +69,13 @@
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
 
-#include "include/awsiot_rest.h";
+#include "include/awsiot_rest.h"
 
+#define WEB_SERVER "a32on3oilq3poc.iot.eu-west-1.amazonaws.com"
+#define WEB_PORT "8443"
+#define WEB_URL "/things/pm_wro_2/shadow"
 
-/* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "www.howsmyssl.com"
-#define WEB_PORT "443"
-#define WEB_URL "https://www.howsmyssl.com/a/check"
-
-static const char *TAG = "example";
+static const char *TAG = "awsiot";
 
 static const char *REQUEST = "GET " WEB_URL " HTTP/1.1\n"
     "Host: "WEB_SERVER"\n"
@@ -97,9 +95,16 @@ static const char *REQUEST = "GET " WEB_URL " HTTP/1.1\n"
 extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
 extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
 
+extern const uint8_t b352220a79_certificate_pem_crt_start[] asm("_binary_b352220a79_certificate_pem_crt_start");
+extern const uint8_t b352220a79_certificate_pem_crt_end[]   asm("_binary_b352220a79_certificate_pem_crt_end");
+
+extern const uint8_t b352220a79_private_pem_key_start[] asm("_binary_b352220a79_private_pem_key_start");
+extern const uint8_t b352220a79_private_pem_key_end[]   asm("_binary_b352220a79_private_pem_key_end");
+
+
 #ifdef MBEDTLS_DEBUG_C
 
-#define MBEDTLS_DEBUG_LEVEL 4
+#define MBEDTLS_DEBUG_LEVEL 1
 
 /* mbedtls debug function that translates mbedTLS debug output
    to ESP_LOGx debug output.
@@ -201,12 +206,15 @@ static void https_get_task(void *pvParameters)
         goto exit;
     }
 
+
+
+
     /* MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
        a warning if CA verification fails but it will continue to connect.
 
        You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
     */
-    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
 #ifdef MBEDTLS_DEBUG_C
@@ -214,11 +222,36 @@ static void https_get_task(void *pvParameters)
     mbedtls_ssl_conf_dbg(&conf, mbedtls_debug, NULL);
 #endif
 
+    /* client certs */
+    mbedtls_x509_crt clicert;
+    mbedtls_pk_context pkey;
+
+    mbedtls_x509_crt_init( &clicert );
+    mbedtls_pk_init( &pkey );
+
+    if ((ret = mbedtls_x509_crt_parse( &clicert, (const unsigned char *) b352220a79_certificate_pem_crt_start,
+    		b352220a79_certificate_pem_crt_end-b352220a79_certificate_pem_crt_start )) != ESP_OK) {
+    	ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+    	        goto exit;
+    }
+    if ((ret = mbedtls_pk_parse_key( &pkey, (const unsigned char *) b352220a79_private_pem_key_start,
+    		b352220a79_private_pem_key_end-b352220a79_private_pem_key_start, NULL, 0 )) != ESP_OK) {
+    	ESP_LOGE(TAG, "mbedtls_pk_parse_key returned -0x%x\n\n", -ret);
+    	    	        goto exit;
+    }
+
+    if( ( ret = mbedtls_ssl_conf_own_cert( &conf, &clicert, &pkey ) ) != ESP_OK)
+    {
+    	ESP_LOGE(TAG, " failed\n  ! mbedtls_ssl_conf_own_cert returned %d\n\n", ret );
+        goto exit;
+    }
+
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
     {
         ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
         goto exit;
     }
+
 
     while(1) {
         mbedtls_net_init(&server_fd);
@@ -308,6 +341,8 @@ static void https_get_task(void *pvParameters)
             for(int i = 0; i < len; i++) {
                 putchar(buf[i]);
             }
+            ret = ESP_OK;
+            break;
         } while(1);
 
         mbedtls_ssl_close_notify(&ssl);
@@ -322,7 +357,7 @@ static void https_get_task(void *pvParameters)
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
 
-        for(int countdown = 10; countdown >= 0; countdown--) {
+        for(int countdown = 5; countdown >= 0; countdown--) {
             ESP_LOGI(TAG, "%d...", countdown);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
