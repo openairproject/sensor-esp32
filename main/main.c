@@ -40,6 +40,7 @@
 #include "pmsx003.h"
 #include "pm_meter.h"
 #include "oap_storage.h"
+#include "awsiot_rest.h"
 
 static const char *TAG = "app";
 
@@ -183,8 +184,9 @@ void app_main()
 	//wifi/mongoose requires plenty of mem, start it here
 	bootWiFi(); //deprecated wifiInit();
 
-	xTaskCreate(main_task, "main_task", 1024*10, NULL, 10, NULL);
-	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*8, NULL, 10, NULL);
+	awsiot_init();
+	//xTaskCreate(main_task, "main_task", 1024*10, NULL, 10, NULL);
+	//xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*8, NULL, 10, NULL);
 	while (1) {
 		vTaskDelay(10000 / portTICK_PERIOD_MS);
 	}

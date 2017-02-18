@@ -1,7 +1,7 @@
 /*
- * wifi.h
+ * awsiot_rest.h
  *
- *  Created on: Feb 3, 2017
+ *  Created on: Feb 18, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,9 +20,11 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_WIFI_H_
-#define MAIN_WIFI_H_
+#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
+#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
 
-void wifiInit(void);
 
-#endif /* MAIN_WIFI_H_ */
+
+void awsiot_init();
+
+#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_ */
