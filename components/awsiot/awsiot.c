@@ -34,18 +34,78 @@
 #include "awsiot_rest.h"
 #include "oap_storage.h"
 #include "oap_common.h"
+#include "cJSON.h"
+
 
 QueueHandle_t input_queue;
 
 static const char *TAG = "awsiot";
 
 static awsiot_config_t awsiot_config = {};
+static oap_sensor_config_t sensor_config;
 
 static void awsiot_task() {
+	oap_meas meas;
+	int updated = 0;
 
 	while (1) {
-		awsiot_update_shadow(awsiot_config, NULL);
-		vTaskDelay(5000);
+		if(xQueuePeek(input_queue, &meas, 1000)) {
+
+			cJSON* shadow = cJSON_CreateObject();
+			cJSON* state = cJSON_CreateObject();
+			cJSON* reported = cJSON_CreateObject();
+			cJSON* results = cJSON_CreateObject();
+			cJSON* config = cJSON_CreateObject();
+			cJSON* pm = cJSON_CreateObject();
+			cJSON* weather = cJSON_CreateObject();
+
+
+			cJSON_AddItemToObject(shadow, "state", state);
+			cJSON_AddItemToObject(state, "reported", reported);
+			cJSON_AddItemToObject(reported, "results", results);
+			cJSON_AddItemToObject(reported, "config", config);
+
+			cJSON_AddItemToObject(results, "pm", pm);
+			cJSON_AddItemToObject(results, "weather", weather);
+
+			if (meas.local_time) {
+				cJSON_AddNumberToObject(reported, "localTime", meas.local_time);
+			} else {
+				ESP_LOGW(TAG, "localTime not set, skip");
+			}
+
+			if (!updated) {
+				//send it only once. of course if we want two-way configuration, we need versioning
+				cJSON_AddBoolToObject(config, "indoor", sensor_config.indoor);
+				cJSON_AddNumberToObject(config, "test", sensor_config.test);
+			}
+
+			cJSON_AddNumberToObject(pm, "pm1_0", meas.pm.pm1_0);
+			cJSON_AddNumberToObject(pm, "pm2_5", meas.pm.pm2_5);
+			cJSON_AddNumberToObject(pm, "pm10", meas.pm.pm10);
+
+			cJSON_AddNumberToObject(weather, "temp", meas.env.temp);
+			cJSON_AddNumberToObject(weather, "pressure", meas.env.pressure);
+			cJSON_AddNumberToObject(weather, "humidity", meas.env.humidity);
+
+			char *body = cJSON_Print(shadow);
+
+			cJSON_Delete(shadow);
+
+			ESP_LOGD(TAG, "shadow update: %s", body);
+
+			esp_err_t res = awsiot_update_shadow(awsiot_config, body);
+			free(body);
+
+			if (res == ESP_OK) {
+				ESP_LOGI(TAG, "data sent successfully");
+				xQueueReceive(input_queue, &meas, 1000);
+				updated = 1;
+			} else {
+				ESP_LOGW(TAG, "data post failed");
+				vTaskDelay(5000 / portTICK_PERIOD_MS);
+			}
+		}
 	}
 }
 
@@ -96,12 +156,12 @@ static esp_err_t awsiot_configure(awsiot_config_t* awsiot_config) {
 	return ESP_OK;
 }
 
-
-QueueHandle_t awsiot_init()
+QueueHandle_t awsiot_init(oap_sensor_config_t _sensor_config)
 {
 	if (awsiot_configure(&awsiot_config) == ESP_OK) {
+		sensor_config = _sensor_config;
 		input_queue = xQueueCreate(1, sizeof(oap_meas));
-    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*10, NULL, 5, NULL);
+    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*20, NULL, 5, NULL);
     	return input_queue;
 	} else {
 		release(awsiot_config);

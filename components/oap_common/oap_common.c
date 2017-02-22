@@ -1,7 +1,7 @@
 /*
- * common.h
+ * oap_common.c
  *
- *  Created on: Feb 9, 2017
+ *  Created on: Feb 22, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,38 +20,22 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_COMMON_COMMON_H_
-#define MAIN_COMMON_COMMON_H_
 
-typedef struct {
-	unsigned int pm1_0;
-	unsigned int pm2_5;
-	unsigned int pm10;
-} pm_data;
+#include <string.h>
+#include <stdlib.h>
+#include "freertos/FreeRTOS.h"
+#include <sys/time.h>
+#include "oap_common.h"
 
-typedef struct {
-	double temp;
-	double pressure;
-	double humidity;
-} env_data;
+static const long FEB22_2017 = 1487795557;
 
-typedef struct {
-	pm_data pm;
-	env_data env;
-	long int local_time;
-} oap_meas;
+long oap_epoch_sec() {
+	struct timeval tv_start;
+	gettimeofday(&tv_start, NULL);
+	return tv_start.tv_sec;
+}
 
-typedef struct {
-	int led;
-	int indoor;
-	int warmUpTime;
-	int measTime;
-	int measInterval;
-	int measStrategy;
-	int test;
-} oap_sensor_config_t;
-
-long oap_epoch_sec();
-long oap_epoch_sec_valid();
-
-#endif /* MAIN_COMMON_COMMON_H_ */
+long oap_epoch_sec_valid() {
+	long epoch = oap_epoch_sec();
+	return epoch > FEB22_2017 ? epoch : 0;
+}

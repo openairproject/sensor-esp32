@@ -62,18 +62,10 @@ static QueueHandle_t pm_queue;
 //	ESP_LOGI(TAG, "timestamp: %ld", tv.tv_sec);
 //}
 
-typedef struct {
-	int led;
-	int indoor;
-	int warmUpTime;
-	int measTime;
-	int measInterval;
-	int measStrategy;
-	int test;
-} oc_sensor_config_t;
+static oap_sensor_config_t sensor_config;
 
-static oc_sensor_config_t get_config() {
-	oc_sensor_config_t sensor_config = {};
+static oap_sensor_config_t get_config() {
+	oap_sensor_config_t sensor_config = {};
 	ESP_LOGD(TAG, "retrieve sensor config");
 	cJSON* sensor = storage_get_config("sensor");
 	cJSON* sconfig = cJSON_GetObjectItem(sensor, "config");
@@ -108,8 +100,6 @@ static void update_led_color(led_mode mode, float r, float g, float b) {
 }
 
 static void pm_meter_trigger_task() {
-	oc_sensor_config_t sensor_config = get_config();
-
 	pm_meter_init(pms_init(sensor_config.indoor));
 	while (1) {
 		update_led_mode(LED_PULSE);
@@ -129,8 +119,8 @@ static void main_task() {
 	//result_queue = xQueueCreate(CONFIG_OAP_RESULT_BUFFER_SIZE, sizeof(oap_meas));
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
-	QueueHandle_t thing_speak_queue = thing_speak_init();
-	QueueHandle_t awsiot_queue = awsiot_init();
+	QueueHandle_t thing_speak_queue = NULL;//thing_speak_init();
+	QueueHandle_t awsiot_queue = awsiot_init(sensor_config);
 
 	QueueHandle_t env_queue = bmx280_init();
 	led_init(get_config().led, led_queue);
@@ -145,14 +135,13 @@ static void main_task() {
 //		}
 //	}
 
-	struct timeval time;
 	env_data env = {};
 	long env_timestamp = 0;
 
 	while (1) {
-		gettimeofday(&time, NULL);
+		long localTime = oap_epoch_sec_valid();
 		if (xQueueReceive(env_queue, &env, 100)) {
-			env_timestamp = time.tv_sec;
+			env_timestamp = localTime;
 			ESP_LOGI(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", env.temp, env.pressure, env.humidity);
 		}
 
@@ -167,7 +156,7 @@ static void main_task() {
 			oap_meas meas = {
 				.pm = pm,
 				.env = env,			//TODO allow null, check last timestamp
-				.local_time = time.tv_sec
+				.local_time = localTime
 			};
 
 			//broadcast
@@ -188,16 +177,15 @@ static void main_task() {
 void app_main()
 {
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-	storage_init();
 	ESP_LOGI(TAG,"starting app...");
 
-	//wifi/mongoose requires plenty of mem, start it here
-	bootWiFi(); //deprecated wifiInit();
+	storage_init();
+	sensor_config = get_config();
 
-	awsiot_init();
-	//xTaskCreate(main_task, "main_task", 1024*10, NULL, 10, NULL);
-	//xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*8, NULL, 10, NULL);
+	//wifi/mongoose requires plenty of mem, start it here
+	bootWiFi();
+	xTaskCreate(main_task, "main_task", 1024*10, NULL, 10, NULL);
+	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*8, NULL, 10, NULL);
 	while (1) {
 		vTaskDelay(10000 / portTICK_PERIOD_MS);
 	}

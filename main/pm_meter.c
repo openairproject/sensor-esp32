@@ -32,6 +32,7 @@
 #include "esp_log.h"
 #include <math.h>
 
+#include "oap_common.h"
 #include "pm_meter.h"
 #include "pmsx003.h"
 
@@ -52,24 +53,25 @@ static QueueHandle_t samples_queue;
 
 static char* TAG = "pm_meter";
 
-static long pmsEpochSec() {
-	struct timeval tv_start;
-	gettimeofday(&tv_start, NULL);
-
-	return tv_start.tv_sec;
-}
-
 static void pm_data_print(char* str, pm_data pm) {
 	ESP_LOGI(TAG, "%s pm1.0=%d pm2.5=%d pm10=%d", str, pm.pm1_0, pm.pm2_5, pm.pm10);
 }
 
 static void pm_data_collector_task() {
+	pm_data pm;
+	long localTime;
 	while (1) {
-		pm_data pm;
 		if (xQueueReceive(samples_queue, &pm, 100)) {
 			pm_data* buf = sampleBuffer+(sampleIndex % CONFIG_OAP_PM_SAMPLE_BUF_SIZE);
 			memcpy(buf, &pm, sizeof(pm));
-			if (pmsEpochSec() - startedAt > warmingTime) {
+			localTime = oap_epoch_sec();
+
+			if (localTime - startedAt > 3600 * 24) {
+				//localTime was set to proper value in a meantime. start over to avoid invalid warming time.
+				startedAt = localTime;
+			}
+
+			if (localTime - startedAt > warmingTime) {
 				sampleIndex++;
 				pm_data_print("collect: ", *buf);
 			} else {
@@ -81,7 +83,7 @@ static void pm_data_collector_task() {
 
 void pm_meter_start(unsigned int _warmingTime) {
 	sampleIndex = 0;
-	startedAt = pmsEpochSec();
+	startedAt = oap_epoch_sec();
 	warmingTime = _warmingTime;
 	pms_enable(1);
 }

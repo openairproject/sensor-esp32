@@ -24,8 +24,7 @@
 #define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
 
 #include "awsiot_common.h"
-#include "cJSON.h"
 
-esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, cJSON* payload);
+esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body);
 
 #endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_ */
