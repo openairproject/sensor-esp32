@@ -161,7 +161,7 @@ QueueHandle_t awsiot_init(oap_sensor_config_t _sensor_config)
 	if (awsiot_configure(&awsiot_config) == ESP_OK) {
 		sensor_config = _sensor_config;
 		input_queue = xQueueCreate(1, sizeof(oap_meas));
-    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*20, NULL, 5, NULL);
+    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*10, NULL, 5, NULL);
     	return input_queue;
 	} else {
 		release(awsiot_config);

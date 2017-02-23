@@ -119,8 +119,16 @@ static void main_task() {
 	//result_queue = xQueueCreate(CONFIG_OAP_RESULT_BUFFER_SIZE, sizeof(oap_meas));
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
-	QueueHandle_t thing_speak_queue = NULL;//thing_speak_init();
+	QueueHandle_t thing_speak_queue = thing_speak_init();
 	QueueHandle_t awsiot_queue = awsiot_init(sensor_config);
+
+//	while (1) {
+//		oap_meas meas = {};
+//		if (!xQueueSend(awsiot_queue, &meas, 1)) {
+//			ESP_LOGW(TAG,"awsiot_queue queue overflow");
+//		}
+//		vTaskDelay(1000);
+//	}
 
 	QueueHandle_t env_queue = bmx280_init();
 	led_init(get_config().led, led_queue);
@@ -140,7 +148,7 @@ static void main_task() {
 
 	while (1) {
 		long localTime = oap_epoch_sec_valid();
-		if (xQueueReceive(env_queue, &env, 100)) {
+		if (env_queue != NULL && xQueueReceive(env_queue, &env, 100)) {
 			env_timestamp = localTime;
 			ESP_LOGI(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", env.temp, env.pressure, env.humidity);
 		}
