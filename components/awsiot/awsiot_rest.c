@@ -64,6 +64,7 @@
 #include "mbedtls/net.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/ssl_internal.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/error.h"
@@ -74,6 +75,20 @@
 #define WEB_SERVER "a32on3oilq3poc.iot.eu-west-1.amazonaws.com"
 #define WEB_PORT "8443"
 #define WEB_URL "/things/pm_wro_2/shadow"
+
+typedef struct sslclient_context {
+    int socket;
+    mbedtls_net_context net_ctx;
+    mbedtls_ssl_context ssl_ctx;
+    mbedtls_ssl_config ssl_conf;
+
+    mbedtls_ctr_drbg_context drbg_ctx;
+    mbedtls_entropy_context entropy_ctx;
+
+    mbedtls_x509_crt ca_cert;
+    mbedtls_x509_crt client_cert;
+    mbedtls_pk_context client_key;
+} sslclient_context;
 
 static const char *TAG = "awsiot";
 
@@ -138,7 +153,7 @@ static void mbedtls_debug(void *ctx, int level,
 #endif
 
 
-static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
+static esp_err_t make_request(mbedtls_ssl_context* ssl_ctx, char* body) {
 	char buf[1024];
 	int len,flags;
 
@@ -157,13 +172,21 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
 		goto request_complete;
 	}
 
+	struct timeval timeout = {.tv_sec = 5};
+	int nodelay = 0;
+	int keepalive = 0; //does not seem to work. timeout is a must.
+	setsockopt(server_fd.fd , SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	setsockopt(server_fd.fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+	setsockopt(server_fd.fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+	setsockopt(server_fd.fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+
+
 	ESP_LOGI(TAG, "Connected.");
 
-	mbedtls_ssl_set_bio(&ssl_ctx, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+	mbedtls_ssl_set_bio(ssl_ctx, &server_fd.fd, mbedtls_net_send, mbedtls_net_recv, NULL); //2nd param????
 
 	ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-
-	while ((ret = mbedtls_ssl_handshake(&ssl_ctx)) != ESP_OK)
+	while ((ret = mbedtls_ssl_handshake(ssl_ctx)) != ESP_OK)
 	{
 		if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
 		{
@@ -172,9 +195,16 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
 		}
 	}
 
+	ESP_LOGI(TAG, "Protocol is %s \nCiphersuite is %s", mbedtls_ssl_get_version(ssl_ctx), mbedtls_ssl_get_ciphersuite(ssl_ctx));
+	if ((ret = mbedtls_ssl_get_record_expansion(ssl_ctx)) >= 0) {
+		ESP_LOGD(TAG, "Record expansion is %d", ret);
+	} else {
+		ESP_LOGD(TAG, "Record expansion is unknown (compression)");
+	}
+
 	ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
 
-	if ((flags = mbedtls_ssl_get_verify_result(&ssl_ctx)) != ESP_OK)
+	if ((flags = mbedtls_ssl_get_verify_result(ssl_ctx)) != ESP_OK)
 	{
 		ESP_LOGW(TAG, "Failed to verify peer certificate!");
 		bzero(buf, sizeof(buf));
@@ -197,12 +227,14 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
 		"Content-Length: %d\n"
 	    "\r\n%s", WEB_URL, WEB_SERVER, strlen(body), body);
 
-	while((ret = mbedtls_ssl_write(&ssl_ctx, (unsigned char*)request, strlen(request))) <= 0)
+	while((ret = mbedtls_ssl_write(ssl_ctx, (unsigned char*)request, strlen(request))) <= 0)
 	{
-		if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+		if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret == -0x4C)
 		{
 			ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
 			goto request_complete;
+		} else {
+			vTaskDelay(10);
 		}
 	}
 
@@ -210,22 +242,13 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
 	ESP_LOGI(TAG, "%d bytes written", len);
 	ESP_LOGI(TAG, "Reading HTTP response...");
 
-	//	leaving response unread causes crash.
-	//	I guess non-blocking read func is being invoked despite destroyed ssl context
-	//	goto request_complete;
-
-
-	struct timeval timeout = {.tv_sec = 1};
-	setsockopt(server_fd.fd , SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(struct timeval));
-
     do
     {
         len = sizeof(buf) - 1;
         bzero(buf, sizeof(buf));
-        ret = mbedtls_ssl_read(&ssl_ctx, (unsigned char *)buf, len);
+        ret = mbedtls_ssl_read(ssl_ctx, (unsigned char *)buf, len);
 
         if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-        	ESP_LOGD(TAG, "ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE");
             continue;
         }
 
@@ -233,6 +256,12 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
             ret = 0;
             break;
         }
+
+        if (ret == -0x4C) {
+			ret = 0;
+			ESP_LOGD(TAG, "connection timeout");
+			break;
+		}
 
         if(ret < 0)
         {
@@ -248,7 +277,6 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
 
         len = ret;
         ESP_LOGI(TAG, "%d bytes read", len);
-        /* Print response directly to stdout as it is read */
         for(int i = 0; i < len; i++) {
             putchar(buf[i]);
         }
@@ -256,7 +284,7 @@ static esp_err_t make_request(mbedtls_ssl_context ssl_ctx, char* body) {
 
 	request_complete:
     	ESP_LOGD(TAG,"mbedtls_ssl_close_notify");
-    	mbedtls_ssl_close_notify(&ssl_ctx);
+    	mbedtls_ssl_close_notify(ssl_ctx);
 
 		ESP_LOGD(TAG,"mbedtls_net_free");
 		mbedtls_net_free(&server_fd);
@@ -359,8 +387,7 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body)
     }
 
 
-    ret = make_request(ssl_ctx, body);
-
+    ret = make_request(&ssl_ctx, body);
 
     exit:
 		if(ret != 0)
@@ -373,10 +400,22 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body)
 		}
 
 		//ESP_LOGD(TAG,"mbedtls_ssl_session_reset");
-		//this fails if response wasn't fully read!
 		//mbedtls_ssl_session_reset(&ssl_ctx); //reset for reuse.
 
     	//free for good
+
+		ESP_LOGD(TAG,"mbedtls_ssl_free");
+    	mbedtls_ssl_free(&ssl_ctx);
+
+		ESP_LOGD(TAG,"mbedtls_ssl_config_free");
+		mbedtls_ssl_config_free(&ssl_conf);
+
+		ESP_LOGD(TAG,"mbedtls_ctr_drbg_free");
+		mbedtls_ctr_drbg_free(&ctr_drbg);
+
+		ESP_LOGD(TAG,"mbedtls_entropy_free");
+        mbedtls_entropy_free(&entropy);
+
 		ESP_LOGD(TAG,"mbedtls_x509_crt_free (cacert)");
 		mbedtls_x509_crt_free(&cacert);
 
@@ -385,19 +424,6 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body)
 
 		ESP_LOGD(TAG,"mbedtls_pk_free");
         mbedtls_pk_free(&pkey);
-
-		ESP_LOGD(TAG,"mbedtls_entropy_free");
-        mbedtls_entropy_free(&entropy);
-
-		ESP_LOGD(TAG,"mbedtls_ctr_drbg_free");
-		mbedtls_ctr_drbg_free(&ctr_drbg);
-
-		ESP_LOGD(TAG,"mbedtls_ssl_config_free");
-		mbedtls_ssl_config_free(&ssl_conf);
-
-		ESP_LOGD(TAG,"mbedtls_ssl_free");
-    	mbedtls_ssl_free(&ssl_ctx);
-
 
         return ret;
 
