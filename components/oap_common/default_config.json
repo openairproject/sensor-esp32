@@ -10,6 +10,11 @@
 		"enabled": 0,
 		"apikey": ""
 	},
+	"awsiot" : {
+		"enabled": 0,
+		"endpoint" : "a32on3oilq3poc.iot.eu-west-1.amazonaws.com",
+		"port" : 8443
+	},
 	"sensor" : {
 		"config" : {
 			"indoor" 	: 	true,

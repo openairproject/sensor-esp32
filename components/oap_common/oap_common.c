@@ -26,6 +26,8 @@
 #include "freertos/FreeRTOS.h"
 #include <sys/time.h>
 #include "oap_common.h"
+#include "esp_attr.h"
+#include "freertos/task.h"
 
 static const long FEB22_2017 = 1487795557;
 
@@ -38,4 +40,55 @@ long oap_epoch_sec() {
 long oap_epoch_sec_valid() {
 	long epoch = oap_epoch_sec();
 	return epoch > FEB22_2017 ? epoch : 0;
+}
+
+char* str_make(void* data, int len) {
+	char* str = malloc(len+1);
+	memcpy(str, data, len);
+	str[len] = 0;
+	return str;
+}
+
+char* str_dup(char* src) {
+	char* dest = malloc(strlen(src)+1);
+	strcpy(dest, src);
+	return dest;
+}
+
+void yield()
+{
+    vPortYield();
+}
+
+uint32_t IRAM_ATTR micros()
+{
+    uint32_t ccount;
+    __asm__ __volatile__ ( "rsr     %0, ccount" : "=a" (ccount) );
+    return ccount / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
+}
+
+uint32_t IRAM_ATTR millis()
+{
+    return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+void delay(uint32_t ms)
+{
+    vTaskDelay(ms / portTICK_PERIOD_MS);
+}
+
+void IRAM_ATTR delayMicroseconds(uint32_t us)
+{
+    uint32_t m = micros();
+    if(us){
+        uint32_t e = (m + us) % ((0xFFFFFFFF / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ) + 1);
+        if(m > e){ //overflow
+            while(micros() > e){
+                NOP();
+            }
+        }
+        while(micros() < e){
+            NOP();
+        }
+    }
 }
