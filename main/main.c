@@ -116,13 +116,12 @@ static void main_task() {
 	pm_queue = xQueueCreate(1, sizeof(pm_data));
 
 	//buffer up to 100 measurements
-	//result_queue = xQueueCreate(CONFIG_OAP_RESULT_BUFFER_SIZE, sizeof(oap_meas));
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
 	QueueHandle_t thing_speak_queue = thing_speak_init();
 	QueueHandle_t awsiot_queue = awsiot_init(sensor_config);
 
-//	while (1) {
+//	while (awsiot_queue && 1) {
 //		oap_meas meas = {};
 //		if (!xQueueSend(awsiot_queue, &meas, 1)) {
 //			ESP_LOGW(TAG,"awsiot_queue queue overflow");

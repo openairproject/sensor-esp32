@@ -106,7 +106,7 @@ QueueHandle_t pms_init(int _indoor) {
 	pms_enable(0);
 	pms_init_uart();
 
-	xTaskCreate(pms_uart_read, "pms_uart_read", 1024, NULL, 10, NULL);
+	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*2, NULL, 10, NULL);
 	return samples;
 }
 

@@ -25,6 +25,8 @@
 
 
 typedef struct {
+	char* endpoint;
+	int port;
 	char* thingName;
 	char* cert;
 	char* pkey;

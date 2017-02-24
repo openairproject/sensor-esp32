@@ -54,4 +54,26 @@ typedef struct {
 long oap_epoch_sec();
 long oap_epoch_sec_valid();
 
+//from esp-arduino
+
+/**
+ * creates a new string terminated with 0 from passed data.
+ * free it after use.
+ */
+char* str_make(void* data, int len);
+
+/*
+ * allocates mem and copies src->dest
+ */
+char* str_dup(char* src);
+
+//#define ESP_REG(addr) *((volatile uint32_t *)(addr))
+#define NOP() asm volatile ("nop")
+
+uint32_t micros();
+uint32_t millis();
+void delay(uint32_t);
+void delayMicroseconds(uint32_t us);
+
+
 #endif /* MAIN_COMMON_COMMON_H_ */

@@ -41,7 +41,7 @@ QueueHandle_t input_queue;
 
 static const char *TAG = "awsiot";
 
-static awsiot_config_t awsiot_config = {};
+static awsiot_config_t awsiot_config = {0};
 static oap_sensor_config_t sensor_config;
 
 static void awsiot_task() {
@@ -92,7 +92,7 @@ static void awsiot_task() {
 
 			cJSON_Delete(shadow);
 
-			ESP_LOGD(TAG, "shadow update: %s", body);
+			//ESP_LOGD(TAG, "shadow update: %s", body);
 
 			esp_err_t res = awsiot_update_shadow(awsiot_config, body);
 			free(body);
@@ -113,6 +113,7 @@ static void release(awsiot_config_t awsiot_config) {
 	if (awsiot_config.thingName) free(awsiot_config.thingName);
 	if (awsiot_config.cert) free(awsiot_config.cert);
 	if (awsiot_config.pkey) free(awsiot_config.pkey);
+	if (awsiot_config.endpoint) free(awsiot_config.endpoint);
 }
 
 static esp_err_t awsiot_configure(awsiot_config_t* awsiot_config) {
@@ -128,9 +129,23 @@ static esp_err_t awsiot_configure(awsiot_config_t* awsiot_config) {
 		return ESP_FAIL;
 	}
 
+	if ((field = cJSON_GetObjectItem(awsiot, "endpoint")) && field->valuestring) {
+		awsiot_config->endpoint = str_dup(field->valuestring);
+		ESP_LOGI(TAG, "endpoint: %s", awsiot_config->endpoint);
+	} else {
+		ESP_LOGW(TAG, "endpoint not configured");
+		return ESP_FAIL;
+	}
+
+	if ((field = cJSON_GetObjectItem(awsiot, "port")) && field->valueint) {
+		awsiot_config->port = field->valueint;
+	} else {
+		ESP_LOGW(TAG, "port not configured");
+		return ESP_FAIL;
+	}
+
 	if ((field = cJSON_GetObjectItem(awsiot, "thingName")) && field->valuestring) {
-		awsiot_config->thingName = malloc(strlen(field->valuestring)+1);
-		strcpy(awsiot_config->thingName,field->valuestring);
+		awsiot_config->thingName = str_dup(field->valuestring);
 		ESP_LOGI(TAG, "thingName: %s", awsiot_config->thingName);
 	} else {
 		ESP_LOGW(TAG, "apikey not configured");
@@ -138,16 +153,14 @@ static esp_err_t awsiot_configure(awsiot_config_t* awsiot_config) {
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "cert")) && field->valuestring) {
-		awsiot_config->cert = malloc(strlen(field->valuestring)+1);
-		strcpy(awsiot_config->cert,field->valuestring);
+		awsiot_config->cert = str_dup(field->valuestring);
 	} else {
 		ESP_LOGW(TAG, "cert not configured");
 		return ESP_FAIL;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "pkey")) && field->valuestring) {
-		awsiot_config->pkey = malloc(strlen(field->valuestring)+1);
-		strcpy(awsiot_config->pkey,field->valuestring);
+		awsiot_config->pkey = str_dup(field->valuestring);
 	} else {
 		ESP_LOGW(TAG, "pkey not configured");
 		return ESP_FAIL;
