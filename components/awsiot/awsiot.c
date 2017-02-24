@@ -65,8 +65,10 @@ static void awsiot_task() {
 			cJSON_AddItemToObject(reported, "results", results);
 			cJSON_AddItemToObject(reported, "config", config);
 
+
 			cJSON_AddItemToObject(results, "pm", pm);
 			cJSON_AddItemToObject(results, "weather", weather);
+			cJSON_AddNumberToObject(results, "uid", rand()); //what about 0?
 
 			if (meas.local_time) {
 				cJSON_AddNumberToObject(reported, "localTime", meas.local_time);
