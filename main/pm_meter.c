@@ -88,8 +88,8 @@ void pm_meter_start(unsigned int _warmingTime) {
 	pms_enable(1);
 }
 
-pm_data pm_meter_stop() {
-	pms_enable(0);
+pm_data pm_meter_sample(int disable_sensor) {
+	if (disable_sensor) pms_enable(0);
 	pm_data avg = {
 		.pm1_0 = 0,
 		.pm2_5 = 0,
@@ -121,4 +121,3 @@ void pm_meter_init(QueueHandle_t _samples_queue) {
 	sampleBuffer = malloc(CONFIG_OAP_PM_SAMPLE_BUF_SIZE * sizeof(pm_data));
 	xTaskCreate(pm_data_collector_task, "pm_data_collector_task", 1024*4, NULL, 10, NULL);
 }
-

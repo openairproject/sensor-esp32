@@ -86,6 +86,7 @@ static void handler_index(struct mg_connection *nc) {
 	size_t resp_size = index_html_end-index_html_start;
 	mg_send_head(nc, 200, resp_size, "Content-Type: text/html");
 	mg_send(nc, index_html_start, resp_size);
+	ESP_LOGD(tag, "served %d bytes", resp_size);
 }
 
 static void handler_get_config(struct mg_connection *nc, struct http_message *message) {
@@ -218,6 +219,17 @@ int set_access_point_ip()
     return err;
 }
 
+static void start_mongoose() {
+	if (CONFIG_OAP_CONTROL_PANEL) {
+		if (!g_mongooseStarted) {
+			g_mongooseStarted = 1;
+			xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL, 0);
+			//xTaskCreate(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL);
+		}
+	} else {
+		ESP_LOGW(tag, "control panel disabled by config flag");
+	}
+}
 
 /**
  * An ESP32 WiFi event handler.
@@ -257,12 +269,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			ESP_LOGI(tag, "* point your browser to http://"IPSTR, IP2STR(&ip_info.ip));
 			ESP_LOGI(tag, "**********************************************");
 
-			// Start Mongoose ...
-			if (!g_mongooseStarted)
-			{
-				g_mongooseStarted = 1;
-				xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL, 0);
-			}
+			start_mongoose();
 			break;
 		} // SYSTEM_EVENT_AP_START
 
@@ -287,14 +294,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			ESP_LOGD(tag, "********************************************");
 
 			initialize_sntp();
-
-			//g_mongooseStopRequest = 1; // Stop mongoose (if it is running).
-
-			if (!g_mongooseStarted)
-			{
-				g_mongooseStarted = 1;
-				xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL, 0);
-			}
+			start_mongoose();
 
 			break;
 		}
@@ -368,7 +368,7 @@ static void become_station(oc_wifi_t *pConnectionInfo) {
   memcpy(sta_config.sta.password, pConnectionInfo->password, PASSWORD_SIZE);
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
   ESP_ERROR_CHECK(esp_wifi_start());
-  ESP_ERROR_CHECK(esp_wifi_connect());
+  ESP_ERROR_CHECK(esp_wifi_connect());//FIXERR 0x3006 : ESP_ERR_WIFI_CONN (happens after reboot via control panel)
 }
 
 static void become_access_point() {

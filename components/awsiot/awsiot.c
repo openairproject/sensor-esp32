@@ -34,6 +34,7 @@
 #include "awsiot_rest.h"
 #include "oap_storage.h"
 #include "oap_common.h"
+#include "oap_debug.h"
 #include "cJSON.h"
 
 
@@ -51,6 +52,8 @@ static void awsiot_task() {
 	while (1) {
 		if(xQueuePeek(input_queue, &meas, 1000)) {
 
+			log_task_stack(TAG);
+
 			cJSON* shadow = cJSON_CreateObject();
 			cJSON* state = cJSON_CreateObject();
 			cJSON* reported = cJSON_CreateObject();
@@ -58,17 +61,20 @@ static void awsiot_task() {
 			cJSON* config = cJSON_CreateObject();
 			cJSON* pm = cJSON_CreateObject();
 			cJSON* weather = cJSON_CreateObject();
-
+			cJSON* status = cJSON_CreateObject();
 
 			cJSON_AddItemToObject(shadow, "state", state);
 			cJSON_AddItemToObject(state, "reported", reported);
 			cJSON_AddItemToObject(reported, "results", results);
 			cJSON_AddItemToObject(reported, "config", config);
-
+			cJSON_AddItemToObject(reported, "status", status);
 
 			cJSON_AddItemToObject(results, "pm", pm);
 			cJSON_AddItemToObject(results, "weather", weather);
 			cJSON_AddNumberToObject(results, "uid", rand()); //what about 0?
+			cJSON_AddNumberToObject(status, "heap", xPortGetFreeHeapSize());
+			cJSON_AddNumberToObject(status, "heap_min", xPortGetMinimumEverFreeHeapSize());
+
 
 			if (meas.local_time) {
 				cJSON_AddNumberToObject(reported, "localTime", meas.local_time);
@@ -176,7 +182,8 @@ QueueHandle_t awsiot_init(oap_sensor_config_t _sensor_config)
 	if (awsiot_configure(&awsiot_config) == ESP_OK) {
 		sensor_config = _sensor_config;
 		input_queue = xQueueCreate(1, sizeof(oap_meas));
-    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*10, NULL, 5, NULL);
+		//8192-2684=5508 bytes consumed
+    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*8, NULL, 5, NULL);
     	return input_queue;
 	} else {
 		release(awsiot_config);

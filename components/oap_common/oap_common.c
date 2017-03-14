@@ -27,6 +27,7 @@
 #include <sys/time.h>
 #include "oap_common.h"
 #include "esp_attr.h"
+#include "esp_log.h"
 #include "freertos/task.h"
 
 static const long FEB22_2017 = 1487795557;
@@ -92,3 +93,5 @@ void IRAM_ATTR delayMicroseconds(uint32_t us)
         }
     }
 }
+
+

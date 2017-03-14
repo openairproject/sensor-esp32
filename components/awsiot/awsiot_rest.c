@@ -34,6 +34,7 @@
 #include "awsiot_rest.h"
 #include "ssl_client.h"
 #include "oap_common.h"
+#include "oap_debug.h"
 
 //#define WEB_SERVER "a32on3oilq3poc.iot.eu-west-1.amazonaws.com"
 //#define WEB_PORT "8443"
@@ -44,22 +45,27 @@ static const char *TAG = "awsiot";
 extern const uint8_t verisign_root_ca_pem_start[] asm("_binary_verisign_root_ca_pem_start");
 extern const uint8_t verisign_root_ca_pem_end[]   asm("_binary_verisign_root_ca_pem_end");
 
+#define RESPONSE_BUF_SIZE 1024
 
 esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
+	heap_log* hl = heap_log_take(NULL, "start");
 	sslclient_context ssl_client = {};
 	ssl_init(&ssl_client);
 	int ret = ESP_OK;
 
+	heap_log_take(hl, "after ssl_init");
 	ESP_LOGD(TAG, "connecting to %s:%d", awsiot_config.endpoint,awsiot_config.port);
-	if ((ssl_client.socket = open_socket(awsiot_config.endpoint,awsiot_config.port,5,0)) < 0) {
+	if ((ssl_client.socket = open_socket(awsiot_config.endpoint,awsiot_config.port,1,0)) < 0) {
 		return ssl_client.socket;
 	} else {
 		ESP_LOGD(TAG, "connected");
 	}
+	heap_log_take(hl, "connected");
 
 	char* rootCA = str_make((void*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
 	if (start_ssl_client(&ssl_client, (unsigned char*)rootCA, (unsigned char*)awsiot_config.cert, (unsigned char*)awsiot_config.pkey) > 0) {
 		free(rootCA);
+		heap_log_take(hl, "start_ssl_client");
 		char* request = malloc(strlen(body) + 250);
 
 		sprintf(request, "POST /things/%s/shadow HTTP/1.1\n"
@@ -69,16 +75,23 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
 			"Content-Length: %d\n"
 		    "\r\n%s", awsiot_config.thingName, awsiot_config.endpoint, strlen(body), body);
 
-		ESP_LOGD(TAG, "%s", request);
+		ESP_LOGD(TAG, "%s (%d bytes)", request, strlen(request));
+
+		heap_log_take(hl, "built request");
 
 		send_ssl_data(&ssl_client, (uint8_t *)request, strlen(request));
+
+		heap_log_take(hl, "send_ssl_data");
+
 		free(request);
+
+		heap_log_take(hl, "free request");
 
 		int len;
 		//TODO parse at least status code (would be nice to get json body) too
-		unsigned char buf[1024];
+		unsigned char* buf = malloc(RESPONSE_BUF_SIZE);
 		do {
-			len = get_ssl_receive(&ssl_client, buf, 1024);
+			len = get_ssl_receive(&ssl_client, buf, RESPONSE_BUF_SIZE);
 			if (len == MBEDTLS_ERR_SSL_WANT_READ || len == MBEDTLS_ERR_SSL_WANT_WRITE) {
 				continue;
 			} else if (len == -0x4C) {
@@ -88,16 +101,19 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
 				ret = len;
 				break;
 			}
-			for (int i =0; i < len ; i++) {
+			for (int i=0; i < len ; i++) {
 				putchar(buf[i]);
 			}
 		} while (1);
+		free(buf);
 	} else {
 		free(rootCA);
 		ret = ESP_FAIL;
 	}
+	heap_log_take(hl, "request done");
 	stop_ssl_socket(&ssl_client);
-
+	heap_log_take(hl, "stop_ssl_socket");
+	heap_log_free(hl);
 	ESP_LOGI(TAG, "ssl request done %d", ret);
 
 	return ret;

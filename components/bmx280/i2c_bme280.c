@@ -81,7 +81,7 @@ static char* TAG = "i2c_bmx280";
 
 static env_data result = {};
 
-#define CONT_IF_I2C_OK(log, x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGW(TAG, "err:%s",log); if (cmd) i2c_cmd_link_delete(cmd); return rc;} } while(0);
+#define CONT_IF_I2C_OK(log, x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGW(TAG, "err: %d (%s)",rc,log); if (cmd) i2c_cmd_link_delete(cmd); return rc;} } while(0);
 #define CONT_IF_OK(x)   do { esp_err_t rc = (x); if (rc != ESP_OK) return rc; } while(0);
 
 static esp_err_t read_i2c(uint8_t reg, uint8_t* data, int len) {
@@ -91,7 +91,7 @@ static esp_err_t read_i2c(uint8_t reg, uint8_t* data, int len) {
 	CONT_IF_I2C_OK("r2", i2c_master_write_byte(cmd, (device_addr << 1) | I2C_MASTER_WRITE, 1));
 	CONT_IF_I2C_OK("r3", i2c_master_write_byte(cmd, reg, 1));
 	CONT_IF_I2C_OK("r4", i2c_master_stop(cmd));
-	CONT_IF_I2C_OK("r5",i2c_master_cmd_begin(i2c_num, cmd, 1000/portTICK_PERIOD_MS));
+	CONT_IF_I2C_OK("r5",i2c_master_cmd_begin(i2c_num, cmd, 1000/portTICK_PERIOD_MS)); //often ESP_FAIL (no ack received)
 	i2c_cmd_link_delete(cmd);
 	cmd = 0;
 
