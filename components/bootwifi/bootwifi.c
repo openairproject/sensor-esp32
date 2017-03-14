@@ -66,6 +66,7 @@ typedef uint16_t u16_t;
 
 static int g_mongooseStarted = 0; // Has the mongoose server started?
 static int g_mongooseStopRequest = 0; // Request to stop the mongoose server.
+static int reboot_in_progress = 0;
 
 // Forward declarations
 static int is_station = 0;
@@ -104,6 +105,7 @@ static void handler_get_config(struct mg_connection *nc, struct http_message *me
 static void handler_reboot(struct mg_connection *nc) {
 	mg_send_head(nc, 200, 0, "Content-Type: text/plain");
 	ESP_LOGW(tag, "received reboot request!");
+	reboot_in_progress = 1;
 	esp_restart();
 }
 
@@ -250,6 +252,8 @@ static void start_mongoose() {
  * SYSTEM_EVENT_WIFI_READY
  */
 static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
+	if (reboot_in_progress) return ESP_OK; //ignore - trying to reconnect now will crash
+
 	// Your event handling code here...
 	switch(event->event_id) {
 		// When we have started being an access point, then start being a web server.
