@@ -40,6 +40,7 @@
 #include "pmsx003.h"
 #include "pm_meter.h"
 #include "oap_storage.h"
+#include "oap_debug.h"
 #include "awsiot.h"
 
 static const char *TAG = "app";
@@ -100,35 +101,39 @@ static void update_led_color(led_mode mode, float r, float g, float b) {
 }
 
 static void pm_meter_trigger_task() {
+	int delay = (sensor_config.measInterval-sensor_config.measTime);
 	pm_meter_init(pms_init(sensor_config.indoor));
 	while (1) {
+		log_task_stack("pm_meter_trigger");
 		update_led_mode(LED_PULSE);
 		pm_meter_start(sensor_config.warmUpTime);
 		vTaskDelay(sensor_config.measTime * 1000 / portTICK_PERIOD_MS);
-		pm_data pm = pm_meter_stop();
+		pm_data pm = pm_meter_sample(delay>0);
 		update_led_mode(LED_SET);
 		xQueueSend(pm_queue, &pm, 1000 / portTICK_PERIOD_MS); //1sec
-		vTaskDelay((sensor_config.measInterval-sensor_config.measTime) * 1000 / portTICK_PERIOD_MS);
+		if (delay > 0) {
+			vTaskDelay(delay * 1000 / portTICK_PERIOD_MS);
+		} else {
+			vTaskDelay(10);
+		}
 	}
 }
 
 static void main_task() {
-	pm_queue = xQueueCreate(1, sizeof(pm_data));
-
-	//buffer up to 100 measurements
-	led_queue = xQueueCreate(10, sizeof(led_cmd));
-
-	QueueHandle_t thing_speak_queue = thing_speak_init();
 	QueueHandle_t awsiot_queue = awsiot_init(sensor_config);
 
 //	while (awsiot_queue && 1) {
 //		oap_meas meas = {};
 //		if (!xQueueSend(awsiot_queue, &meas, 1)) {
-//			ESP_LOGW(TAG,"awsiot_queue queue overflow");
+//			//ESP_LOGW(TAG,"awsiot_queue queue overflow");
 //		}
-//		vTaskDelay(1000);
+//		vTaskDelay(100);
 //	}
 
+
+	QueueHandle_t thing_speak_queue = thing_speak_init();
+	pm_queue = xQueueCreate(1, sizeof(pm_data));
+	led_queue = xQueueCreate(10, sizeof(led_cmd));
 	QueueHandle_t env_queue = bmx280_init();
 	led_init(get_config().led, led_queue);
 	update_led();
@@ -154,6 +159,7 @@ static void main_task() {
 
 		pm_data pm;
 		if (xQueueReceive(pm_queue, &pm, 100)) {
+			log_task_stack("main_task");
 			float aqi = fminf(pm.pm2_5 / 100.0, 1.0);
 			ESP_LOGI(TAG, "AQI=%f",aqi);
 
@@ -183,7 +189,7 @@ static void main_task() {
 
 void app_main()
 {
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
+	delay(1000);
 	ESP_LOGI(TAG,"starting app...");
 
 	storage_init();
@@ -191,9 +197,9 @@ void app_main()
 
 	//wifi/mongoose requires plenty of mem, start it here
 	bootWiFi();
-	xTaskCreate(main_task, "main_task", 1024*10, NULL, 10, NULL);
-	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*8, NULL, 10, NULL);
+	xTaskCreate(main_task, "main_task", 1024*4, NULL, 10, NULL);
+	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, 10, NULL);
 	while (1) {
-		vTaskDelay(10000 / portTICK_PERIOD_MS);
+		delay(10000);
 	}
 }

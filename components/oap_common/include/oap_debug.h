@@ -1,7 +1,7 @@
 /*
- * pm_meter.h
+ * oap_debug.h
  *
- *  Created on: Feb 10, 2017
+ *  Created on: Mar 13, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,19 +20,18 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_PM_METER_H_
-#define MAIN_PM_METER_H_
+typedef struct heap_log {
+	size_t heap;
+	char* tag;
+	struct heap_log* next;
+} heap_log;
 
-#include "freertos/queue.h"
-#include "oap_common.h"
+void heap_log_print(heap_log* log, heap_log* prev);
+heap_log* heap_log_take(heap_log* log, char* msg);
+void heap_log_free(heap_log* log);
 
-typedef enum {
-	PM_MEAS_AVG,
-	PM_MEAS_CONT
-} pm_meas_mode;
 
-void pm_meter_start(unsigned int warmingTime);
-pm_data pm_meter_sample(int disable_sensor);
-void pm_meter_init(QueueHandle_t samples_queue);
+void log_task_stack(char* TAG);
+void log_heap_size(char* TAG, char* msg);
 
-#endif /* MAIN_PM_METER_H_ */
+

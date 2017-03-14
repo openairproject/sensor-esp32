@@ -31,9 +31,10 @@
 #include "esp_log.h"
 #include "pmsx003.h"
 #include "oap_common.h"
+#include "oap_debug.h"
 
 /*
- * Driver for Plantower PMS3003 and PMS5003 dust sensors (not tested with PMS7003 yet).
+ * Driver for Plantower PMS3003 / PMS5003 / PMS7003 dust sensors.
  * PMSx003 sensors return two values for different environment of measurement.
  */
 #define OAP_PM_UART_BUF_SIZE (128)
@@ -75,22 +76,23 @@ static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
 	return pm;
 }
 
-static void pms_uart_read()
-{
+static void pms_uart_read() {
     uint8_t* data = (uint8_t*) malloc(32);
     while(1) {
-        int len = uart_read_bytes(CONFIG_OAP_PM_UART_NUM, data, 32, 100 / portTICK_RATE_MS);
+    	int len = uart_read_bytes(CONFIG_OAP_PM_UART_NUM, data, 32, 100 / portTICK_RATE_MS);
         if (!enabled) continue;
         if (len >= 24 && data[0]==0x42 && data[1]==0x4d) {
+        		log_task_stack(TAG);
         		//ESP_LOGI(TAG, "got frame of %d bytes", len);
         		pm_data pm = decodepm_data(data, indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
 				if (!xQueueSend(samples, &pm, 100)) {
 					ESP_LOGW(TAG, "sample queue overflow");
 				}
         } else if (len > 0) {
-        	ESP_LOGW(TAG, "invalid frame of %d", len);
+        	ESP_LOGW(TAG, "invalid frame of %d", len); //we often get an error after this :(
         }
     }
+    vTaskDelete(NULL);
 }
 
 void pms_enable(int _enabled) {
@@ -106,7 +108,8 @@ QueueHandle_t pms_init(int _indoor) {
 	pms_enable(0);
 	pms_init_uart();
 
-	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*2, NULL, 10, NULL);
+	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
+	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*3, NULL, 10, NULL);
 	return samples;
 }
 

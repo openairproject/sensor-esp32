@@ -40,6 +40,7 @@
 #include "thing_speak.h"
 #include "oap_common.h"
 #include "oap_storage.h"
+#include "oap_debug.h"
 
 #define OAP_THING_SPEAK_HOST "api.thingspeak.com"
 #define OAP_THING_SPEAK_PORT 80
@@ -90,13 +91,15 @@ static int post_data(oap_meas meas) {
 	freeaddrinfo(res);
 
 	char payload[200];
-	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f&field6=%.2f", apikey,
+	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f&field6=%.2f&field7=%d&field8=%d", apikey,
 			meas.pm.pm1_0,
 			meas.pm.pm2_5,
 			meas.pm.pm10,
 			meas.env.temp,
 			meas.env.pressure,
-			meas.env.humidity);
+			meas.env.humidity,
+			xPortGetFreeHeapSize(),
+			xPortGetMinimumEverFreeHeapSize());
 
 	char request[512];
 
@@ -136,6 +139,7 @@ static void thing_speak_task() {
 	oap_meas meas;
 	while (1) {
 		if(xQueuePeek(input_queue, &meas, 1000)) {
+			log_task_stack(TAG);
 			if (post_data(meas)) {
 				xQueueReceive(input_queue, &meas, 1000);
 				ESP_LOGI(TAG, "data sent successfully");

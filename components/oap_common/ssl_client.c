@@ -177,7 +177,8 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
 {
     char buf[512];
     int ret, flags;
-    DEBUG_PRINT("Free heap before TLS %u\n", xPortGetFreeHeapSize());
+    size_t free_heap_before = xPortGetFreeHeapSize();
+    DEBUG_PRINT("Free heap before TLS %u\n", free_heap_before);
 
     do {
         DEBUG_PRINT( "Seeding the random number generator\n");
@@ -283,7 +284,6 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
             vPortYield();
         }
 
-
         if (cli_cert != NULL && cli_key != NULL) {
             DEBUG_PRINT("Protocol is %s \nCiphersuite is %s\n", mbedtls_ssl_get_version(&ssl_client->ssl_ctx), mbedtls_ssl_get_ciphersuite(&ssl_client->ssl_ctx));
             if ((ret = mbedtls_ssl_get_record_expansion(&ssl_client->ssl_ctx)) >= 0) {
@@ -293,22 +293,22 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
             }
         }
 
+		DEBUG_PRINT( "Verifying peer X.509 certificate...\n");
 
-            DEBUG_PRINT( "Verifying peer X.509 certificate...\n");
-
-            if ((flags = mbedtls_ssl_get_verify_result(&ssl_client->ssl_ctx)) != 0) {
-                printf( "Failed to verify peer certificate!\n");
-                bzero(buf, sizeof(buf));
-                mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
-                printf( "verification info: %s\n", buf);
-                stop_ssl_socket(ssl_client);  //It's not safe continue.
-            } else {
-                DEBUG_PRINT( "Certificate verified.\n");
-            }
+		if ((flags = mbedtls_ssl_get_verify_result(&ssl_client->ssl_ctx)) != 0) {
+			printf( "Failed to verify peer certificate!\n");
+			bzero(buf, sizeof(buf));
+			mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
+			printf( "verification info: %s\n", buf);
+			stop_ssl_socket(ssl_client);  //It's not safe continue.
+		} else {
+			DEBUG_PRINT( "Certificate verified.\n");
+		}
 
     } while (0);
 
-    DEBUG_PRINT("Free heap after TLS %u\n", xPortGetFreeHeapSize());
+    size_t free_heap_after = xPortGetFreeHeapSize();
+    DEBUG_PRINT("Free heap after TLS %u (-%u)\n", free_heap_after, free_heap_before-free_heap_after);
 
     return ssl_client->socket;
 }
@@ -340,7 +340,6 @@ void stop_ssl_socket(sslclient_context *ssl_client)
     }
 }
 
-
 int data_to_read(sslclient_context *ssl_client)
 {
 
@@ -355,8 +354,6 @@ int data_to_read(sslclient_context *ssl_client)
 
     return res;
 }
-
-
 
 int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t len)
 {
@@ -374,8 +371,6 @@ int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t l
     //DEBUG_PRINT( "%d bytes written\n", len);  //for low level debug
     return ret;
 }
-
-
 
 int get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length)
 {

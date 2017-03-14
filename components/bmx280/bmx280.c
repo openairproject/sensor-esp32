@@ -28,8 +28,10 @@
 #include <freertos/task.h>
 #include "sdkconfig.h"
 #include "oap_common.h"
+#include "oap_debug.h"
 #include "include/bmx280.h"
 #include "i2c_bme280.h"
+
 
 static char* TAG = "bmx280";
 static QueueHandle_t samples_queue;
@@ -38,6 +40,7 @@ static void bmx280_task() {
 	// TODO strangely, if this is executed inside main task, LEDC fails to initialise properly PWM (and blinks in funny ways)... easy to reproduce.
 	if (BME280_init(BME280_MODE_NORMAL, CONFIG_OAP_BMX280_I2C_NUM, CONFIG_OAP_BMX280_ADDRESS) == ESP_OK) {
 		while(1) {
+			log_task_stack(TAG);
 			if (BME280_read() == ESP_OK) {
 				env_data result = BME280_last_result();
 				ESP_LOGD(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity %.2f", result.temp, result.pressure, result.humidity);
@@ -70,6 +73,7 @@ static void i2c_setup() {
 QueueHandle_t bmx280_init() {
 	samples_queue = xQueueCreate(1, sizeof(env_data));
 	i2c_setup();
-	xTaskCreate(bmx280_task, "bmx280_task", 1024*2, NULL, 10, NULL);
+	//2kb => ~380bytes free
+	xTaskCreate(bmx280_task, "bmx280_task", 1024*3, NULL, 10, NULL);
 	return samples_queue;
 }

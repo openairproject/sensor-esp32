@@ -96,6 +96,7 @@ int storage_get_str(const char* key, char** out_value) {
 void storage_put_blob(const char* key, void* value, size_t length) {
 	nvs_handle handle;
 	ESP_ERROR_CHECK(nvs_open(NAMESPACE, NVS_READWRITE, &handle));
+	ESP_LOGD(TAG, "store blob '%s'=%d bytes", key, length);
 	ESP_ERROR_CHECK(nvs_set_blob(handle, key, value, length));
 	ESP_ERROR_CHECK(nvs_commit(handle));
 	nvs_close(handle);
@@ -104,6 +105,7 @@ void storage_put_blob(const char* key, void* value, size_t length) {
 void storage_put_str(const char* key, char* value) {
 	nvs_handle handle;
 	ESP_ERROR_CHECK(nvs_open(NAMESPACE, NVS_READWRITE, &handle));
+	ESP_LOGD(TAG, "store string '%s'=%d bytes", key, strlen(value));
 	ESP_ERROR_CHECK(nvs_set_str(handle, key, value));
 	ESP_ERROR_CHECK(nvs_commit(handle));
 	nvs_close(handle);
