@@ -33,6 +33,7 @@
 #include "sdkconfig.h"
 #include "apps/sntp/sntp.h"
 #include "http_utils.h"
+#include "oap_common.h"
 #include "oap_storage.h"
 
 /**
@@ -225,7 +226,7 @@ static void start_mongoose() {
 	if (CONFIG_OAP_CONTROL_PANEL) {
 		if (!g_mongooseStarted) {
 			g_mongooseStarted = 1;
-			xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL, 0);
+			xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL, 0);
 			//xTaskCreate(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL);
 		}
 	} else {

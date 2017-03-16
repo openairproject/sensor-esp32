@@ -74,6 +74,6 @@ QueueHandle_t bmx280_init() {
 	samples_queue = xQueueCreate(1, sizeof(env_data));
 	i2c_setup();
 	//2kb => ~380bytes free
-	xTaskCreate(bmx280_task, "bmx280_task", 1024*3, NULL, 10, NULL);
+	xTaskCreate(bmx280_task, "bmx280_task", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
 	return samples_queue;
 }

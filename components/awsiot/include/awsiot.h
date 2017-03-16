@@ -23,8 +23,9 @@
 #ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
 #define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
 
-QueueHandle_t awsiot_init();
+#include "oap_common.h"
+#include "esp_err.h"
 
-
+esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config);
 
 #endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */

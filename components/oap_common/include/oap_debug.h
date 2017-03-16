@@ -27,11 +27,9 @@ typedef struct heap_log {
 } heap_log;
 
 void heap_log_print(heap_log* log, heap_log* prev);
-heap_log* heap_log_take(heap_log* log, char* msg);
+heap_log* heap_log_take(heap_log* log, const char* msg);
 void heap_log_free(heap_log* log);
 
 
-void log_task_stack(char* TAG);
-void log_heap_size(char* TAG, char* msg);
-
-
+void log_task_stack(const char* TAG);
+void log_heap_size(const char* TAG, const char* msg);

@@ -119,5 +119,5 @@ pm_data pm_meter_sample(int disable_sensor) {
 void pm_meter_init(QueueHandle_t _samples_queue) {
 	samples_queue = _samples_queue;
 	sampleBuffer = malloc(CONFIG_OAP_PM_SAMPLE_BUF_SIZE * sizeof(pm_data));
-	xTaskCreate(pm_data_collector_task, "pm_data_collector_task", 1024*4, NULL, 10, NULL);
+	xTaskCreate(pm_data_collector_task, "pm_data_collector_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
 }

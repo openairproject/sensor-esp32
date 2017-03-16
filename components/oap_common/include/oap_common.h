@@ -23,6 +23,8 @@
 #ifndef MAIN_COMMON_COMMON_H_
 #define MAIN_COMMON_COMMON_H_
 
+#define DEFAULT_TASK_PRIORITY (10)
+
 typedef struct {
 	unsigned int pm1_0;
 	unsigned int pm2_5;

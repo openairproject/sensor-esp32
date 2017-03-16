@@ -109,7 +109,7 @@ QueueHandle_t pms_init(int _indoor) {
 	pms_init_uart();
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
-	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*3, NULL, 10, NULL);
+	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
 	return samples;
 }
 

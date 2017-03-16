@@ -27,6 +27,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
@@ -39,29 +40,15 @@
 #include "bmx280.h"
 #include "pmsx003.h"
 #include "pm_meter.h"
+#include "oap_common.h"
 #include "oap_storage.h"
 #include "oap_debug.h"
 #include "awsiot.h"
 
 static const char *TAG = "app";
 
-//static QueueHandle_t result_queue;
 static QueueHandle_t led_queue;
 static QueueHandle_t pm_queue;
-
-//static void printTime() {
-//	struct timeval tv;
-////	time_t nowtime;
-////	struct tm *nowtm;
-////	char tmbuf[64], buf[64];
-//
-//	gettimeofday(&tv, NULL);
-//	//nowtime = tv.tv_sec;
-//	//nowtm = localtime(&nowtime);
-//	//strftime(tmbuf, sizeof tmbuf, "%Y-%m-%d %H:%M:%S", nowtm);
-//	//printf(buf, sizeof buf, "%s.%06d", tmbuf, tv.tv_usec);
-//	ESP_LOGI(TAG, "timestamp: %ld", tv.tv_sec);
-//}
 
 static oap_sensor_config_t sensor_config;
 
@@ -101,42 +88,33 @@ static void update_led_color(led_mode mode, float r, float g, float b) {
 }
 
 static void pm_meter_trigger_task() {
-	int delay = (sensor_config.measInterval-sensor_config.measTime);
+	int delay_sec = (sensor_config.measInterval-sensor_config.measTime);
 	pm_meter_init(pms_init(sensor_config.indoor));
 	while (1) {
 		log_task_stack("pm_meter_trigger");
 		update_led_mode(LED_PULSE);
 		pm_meter_start(sensor_config.warmUpTime);
-		vTaskDelay(sensor_config.measTime * 1000 / portTICK_PERIOD_MS);
-		pm_data pm = pm_meter_sample(delay>0);
-		update_led_mode(LED_SET);
+		delay(sensor_config.measTime * 1000);
+		pm_data pm = pm_meter_sample(delay_sec>0);
+
+		float aqi = fminf(pm.pm2_5 / 100.0, 1.0);
+		ESP_LOGI(TAG, "AQI=%f",aqi);
+		update_led_color(LED_SET, aqi,(1-aqi), 0);
+
 		xQueueSend(pm_queue, &pm, 1000 / portTICK_PERIOD_MS); //1sec
-		if (delay > 0) {
-			vTaskDelay(delay * 1000 / portTICK_PERIOD_MS);
+		if (delay_sec > 0) {
+			delay(delay_sec * 1000);
 		} else {
-			vTaskDelay(10);
+			delay(10);
 		}
 	}
 }
 
 static void main_task() {
-	QueueHandle_t awsiot_queue = awsiot_init(sensor_config);
-
-//	while (awsiot_queue && 1) {
-//		oap_meas meas = {};
-//		if (!xQueueSend(awsiot_queue, &meas, 1)) {
-//			//ESP_LOGW(TAG,"awsiot_queue queue overflow");
-//		}
-//		vTaskDelay(100);
-//	}
-
-
-	QueueHandle_t thing_speak_queue = thing_speak_init();
-	pm_queue = xQueueCreate(1, sizeof(pm_data));
-	led_queue = xQueueCreate(10, sizeof(led_cmd));
-	QueueHandle_t env_queue = bmx280_init();
 	led_init(get_config().led, led_queue);
 	update_led();
+
+	QueueHandle_t env_queue = bmx280_init();
 
 	gpio_num_t btn_gpio[] = {CONFIG_OAP_BTN_0_PIN};
 	//xQueueHandle btn_events = btn_init(btn_gpio, sizeof(btn_gpio)/sizeof(btn_gpio[0]));
@@ -160,11 +138,7 @@ static void main_task() {
 		pm_data pm;
 		if (xQueueReceive(pm_queue, &pm, 100)) {
 			log_task_stack("main_task");
-			float aqi = fminf(pm.pm2_5 / 100.0, 1.0);
-			ESP_LOGI(TAG, "AQI=%f",aqi);
 
-			//for error we can: led_state.freq = 200; LED_BLINK
-			update_led_color(LED_SET, aqi,(1-aqi), 0);
 
 			oap_meas meas = {
 				.pm = pm,
@@ -172,7 +146,12 @@ static void main_task() {
 				.local_time = localTime
 			};
 
-			//broadcast
+			thing_speak_send(&meas);
+			awsiot_send(&meas, &sensor_config);
+
+			/*
+			 * generally, we'd like to keep all client asynchronous,
+			 * but having multiple heavy tasks hurts esp32 stability (for now)
 			if (thing_speak_queue) {
 				if (!xQueueSend(thing_speak_queue, &meas, 1)) {
 					ESP_LOGW(TAG,"thing_speak_queue queue overflow");
@@ -182,7 +161,7 @@ static void main_task() {
 				if (!xQueueSend(awsiot_queue, &meas, 1)) {
 					ESP_LOGW(TAG,"awsiot_queue queue overflow");
 				}
-			}
+			}*/
 		}
 	}
 }
@@ -197,9 +176,10 @@ void app_main()
 
 	//wifi/mongoose requires plenty of mem, start it here
 	bootWiFi();
-	xTaskCreate(main_task, "main_task", 1024*4, NULL, 10, NULL);
-	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, 10, NULL);
-	while (1) {
-		delay(10000);
-	}
+	pm_queue = xQueueCreate(1, sizeof(pm_data));
+	led_queue = xQueueCreate(10, sizeof(led_cmd));
+
+	//xTaskCreate(main_task, "main_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	main_task();
 }
