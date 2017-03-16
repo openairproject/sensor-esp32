@@ -36,13 +36,25 @@
 static char* TAG = "bmx280";
 static QueueHandle_t samples_queue;
 
-static void bmx280_task() {
+static void bmx280_task(bmx280_config_t* bmx280_config) {
+
+	i2c_comm_t i2c_comm = {
+		.i2c_num = bmx280_config->i2c_num,
+		.device_addr = bmx280_config->device_addr
+	};
+
+	bme280_sensor_t bmx280_sensor = {
+		.operation_mode = BME280_MODE_NORMAL,
+		.i2c_comm = i2c_comm
+	};
+
+	env_data result = {};
+
 	// TODO strangely, if this is executed inside main task, LEDC fails to initialise properly PWM (and blinks in funny ways)... easy to reproduce.
-	if (BME280_init(BME280_MODE_NORMAL, CONFIG_OAP_BMX280_I2C_NUM, CONFIG_OAP_BMX280_ADDRESS) == ESP_OK) {
+	if (BME280_init(&bmx280_sensor) == ESP_OK) {
 		while(1) {
 			log_task_stack(TAG);
-			if (BME280_read() == ESP_OK) {
-				env_data result = BME280_last_result();
+			if (BME280_read(&bmx280_sensor, &result) == ESP_OK) {
 				ESP_LOGD(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity %.2f", result.temp, result.pressure, result.humidity);
 				if (!xQueueSend(samples_queue, &result, 10000/portTICK_PERIOD_MS)) {
 					ESP_LOGW(TAG, "env queue overflow");
@@ -50,7 +62,7 @@ static void bmx280_task() {
 			} else {
 				ESP_LOGW(TAG, "Failed to read data");
 			}
-			vTaskDelay(5000/portTICK_PERIOD_MS);
+			delay(5000);
 		}
 	} else {
 		ESP_LOGE(TAG, "Failed to initialise");
@@ -58,22 +70,22 @@ static void bmx280_task() {
 	vTaskDelete(NULL);
 }
 
-static void i2c_setup() {
-	i2c_config_t conf;
-	conf.mode = I2C_MODE_MASTER;
-	conf.sda_io_num = CONFIG_OAP_BMX280_I2C_SDA_PIN;
-	conf.scl_io_num = CONFIG_OAP_BMX280_I2C_SCL_PIN;
-	conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-	conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-	conf.master.clk_speed = 100000;
-	i2c_param_config(CONFIG_OAP_BMX280_I2C_NUM, &conf);
-	i2c_driver_install(CONFIG_OAP_BMX280_I2C_NUM, I2C_MODE_MASTER, 0, 0, 0);
+static void i2c_setup(bmx280_config_t* config) {
+	i2c_config_t i2c_conf;
+	i2c_conf.mode = I2C_MODE_MASTER;
+	i2c_conf.sda_io_num = config->sda_pin;//CONFIG_OAP_BMX280_I2C_SDA_PIN;
+	i2c_conf.scl_io_num = config->scl_pin;//CONFIG_OAP_BMX280_I2C_SCL_PIN;
+	i2c_conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+	i2c_conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+	i2c_conf.master.clk_speed = 100000;
+	i2c_param_config(config->i2c_num, &i2c_conf);
+	i2c_driver_install(config->i2c_num, I2C_MODE_MASTER, 0, 0, 0);
 }
 
-QueueHandle_t bmx280_init() {
+QueueHandle_t bmx280_init(bmx280_config_t* bmx280_config) {
 	samples_queue = xQueueCreate(1, sizeof(env_data));
-	i2c_setup();
+	i2c_setup(bmx280_config);
 	//2kb => ~380bytes free
-	xTaskCreate(bmx280_task, "bmx280_task", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	xTaskCreate(bmx280_task, "bmx280_task", 1024*3, bmx280_config, DEFAULT_TASK_PRIORITY, NULL);
 	return samples_queue;
 }

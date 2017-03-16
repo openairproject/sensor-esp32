@@ -114,7 +114,14 @@ static void main_task() {
 	led_init(get_config().led, led_queue);
 	update_led();
 
-	QueueHandle_t env_queue = bmx280_init();
+	bmx280_config_t bmx280_config = {
+		.i2c_num = CONFIG_OAP_BMX280_I2C_NUM,
+		.device_addr = CONFIG_OAP_BMX280_ADDRESS,
+		.sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN,
+		.scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN
+	};
+
+	QueueHandle_t env_queue = bmx280_init(&bmx280_config);
 
 	gpio_num_t btn_gpio[] = {CONFIG_OAP_BTN_0_PIN};
 	//xQueueHandle btn_events = btn_init(btn_gpio, sizeof(btn_gpio)/sizeof(btn_gpio[0]));
