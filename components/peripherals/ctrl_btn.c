@@ -27,7 +27,7 @@
 #include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-//#include "oap_config.h"
+#include "oap_common.h"
 #include "ctrl_btn.h"
 #include "esp_log.h"
 
@@ -106,7 +106,7 @@ QueueHandle_t btn_init(gpio_num_t *btn_gpio, uint8_t num_of_btns)
     //create a queue to handle gpio event from isr
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     //start gpio task
-    xTaskCreate(btn_task, "btn_task", 2048, NULL, 10, NULL);
+    xTaskCreate(btn_task, "btn_task", 2048, NULL, DEFAULT_TASK_PRIORITY, NULL);
 
     //install gpio isr service
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);

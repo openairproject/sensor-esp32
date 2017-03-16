@@ -49,9 +49,11 @@
 
 #include "oap_common.h"
 #include "ssl_client.h"
-
+#include "esp_err.h"
+#include "esp_log.h"
 
 static const char *pers = "esp32-tls";
+static const char* TAG = "ssl";
 
 #define DEBUG true //Set false to supress debug messages
 
@@ -90,16 +92,16 @@ static void mbedtls_debug(void *ctx, int level,
 
     switch (level) {
     case 1:
-        printf( "%s:%d %s \n", file, line, str);
+        printf( "%s:%d %s", file, line, str);
         break;
     case 2:
     case 3:
-        printf( "%s:%d %s \n", file, line, str);
+        printf( "%s:%d %s", file, line, str);
     case 4:
-        printf( "%s:%d %s \n", file, line, str);
+        printf( "%s:%d %s", file, line, str);
         break;
     default:
-        printf( "Unexpected log level %d: %s \n", level, str);
+        printf( "Unexpected log level %d: %s", level, str);
         break;
     }
 }
@@ -176,17 +178,17 @@ fcntl( ssl_client->socket, F_SETFL, fcntl( ssl_client->socket, F_GETFL, 0 ) | O_
 int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, unsigned char *cli_cert, unsigned char *cli_key)
 {
     char buf[512];
-    int ret, flags;
+    int ret;
     size_t free_heap_before = xPortGetFreeHeapSize();
-    DEBUG_PRINT("Free heap before TLS %u\n", free_heap_before);
+    ESP_LOGD(TAG, "Free heap before TLS %u", free_heap_before);
 
     do {
-        DEBUG_PRINT( "Seeding the random number generator\n");
+    	ESP_LOGD(TAG, "Seeding the random number generator");
         mbedtls_entropy_init(&ssl_client->entropy_ctx);
 
         if ((ret = mbedtls_ctr_drbg_seed(&ssl_client->drbg_ctx, mbedtls_entropy_func,
-                                         &ssl_client->entropy_ctx, (const unsigned char *) pers, strlen(pers))) != 0) {
-            printf( "mbedtls_ctr_drbg_seed returned %d \n", ret);
+                                         &ssl_client->entropy_ctx, (const unsigned char *) pers, strlen(pers))) != ESP_OK) {
+        	ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
             break;
         }
 
@@ -195,12 +197,12 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
         MBEDTLS_SSL_VERIFY_NONE if not.
         */
         if (rootCABuff != NULL) {
-            DEBUG_PRINT( "Loading CA cert\n");
+        	ESP_LOGD(TAG, "Loading CA cert\n");
             mbedtls_x509_crt_init(&ssl_client->ca_cert);
             mbedtls_ssl_conf_authmode(&ssl_client->ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
             ret = mbedtls_x509_crt_parse(&ssl_client->ca_cert, (const unsigned char *)rootCABuff, strlen((const char *)rootCABuff) + 1);
-            if (ret < 0) {
-				printf( "CA cert: mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+            if (ret != ESP_OK) {
+            	ESP_LOGE(TAG, "CA cert: mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
 				break;
 			}
             mbedtls_ssl_conf_ca_chain(&ssl_client->ssl_conf, &ssl_client->ca_cert, NULL);
@@ -214,21 +216,21 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
             mbedtls_x509_crt_init(&ssl_client->client_cert);
             mbedtls_pk_init(&ssl_client->client_key);
 
-            DEBUG_PRINT( "Loading CRT cert\n");
+            ESP_LOGD(TAG, "Loading CRT cert");
 
             ret = mbedtls_x509_crt_parse(&ssl_client->client_cert, (const unsigned char *)cli_cert, strlen((const char *)cli_cert) + 1);
 
-            if (ret < 0) {
-                printf( "CRT cert: mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+            if (ret < ESP_OK) {
+            	ESP_LOGE(TAG, "CRT cert: mbedtls_x509_crt_parse returned -0x%x", -ret);
                 break;
             }
             ssl_client->has_client_cert = 1;
 
-            DEBUG_PRINT( "Loading private key\n");
+            DEBUG_PRINT( "Loading private key");
             ret = mbedtls_pk_parse_key(&ssl_client->client_key, (const unsigned char *)cli_key, strlen((const char *)cli_key) + 1, NULL, 0);
 
-            if (ret < 0) {
-                printf( "PRIVATE KEY: mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+            if (ret != ESP_OK) {
+            	ESP_LOGE(TAG, "PRIVATE KEY: mbedtls_x509_crt_parse returned -0x%x", -ret);
                 break;
             }
 
@@ -250,13 +252,13 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
         }
         */
 
-        DEBUG_PRINT( "Setting up the SSL/TLS structure...\n");
+        ESP_LOGD(TAG, "Setting up the SSL/TLS structure...");
 
         if ((ret = mbedtls_ssl_config_defaults(&ssl_client->ssl_conf,
                                                MBEDTLS_SSL_IS_CLIENT,
                                                MBEDTLS_SSL_TRANSPORT_STREAM,
-                                               MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
-            printf( "mbedtls_ssl_config_defaults returned %d\n", ret);
+                                               MBEDTLS_SSL_PRESET_DEFAULT)) != ESP_OK) {
+        	ESP_LOGW(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
             break;
         }
 
@@ -266,59 +268,64 @@ int start_ssl_client(sslclient_context *ssl_client, unsigned char *rootCABuff, u
         mbedtls_ssl_conf_dbg(&ssl_client->ssl_conf, mbedtls_debug, NULL);
 #endif
 
-        if ((ret = mbedtls_ssl_setup(&ssl_client->ssl_ctx, &ssl_client->ssl_conf)) != 0) {
-            printf( "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+        if ((ret = mbedtls_ssl_setup(&ssl_client->ssl_ctx, &ssl_client->ssl_conf)) != ESP_OK) {
+        	ESP_LOGW(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
             break;
         }
 
         mbedtls_ssl_set_bio(&ssl_client->ssl_ctx, &ssl_client->socket, mbedtls_net_send, mbedtls_net_recv, NULL );
 
-        DEBUG_PRINT( "Performing the SSL/TLS handshake...\n");
+        ESP_LOGD(TAG, "Performing the SSL/TLS handshake...");
 
-        while ((ret = mbedtls_ssl_handshake(&ssl_client->ssl_ctx)) != 0) {
+        while ((ret = mbedtls_ssl_handshake(&ssl_client->ssl_ctx)) != ESP_OK) {
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != -76) {
-                printf( "mbedtls_ssl_handshake returned -0x%x\n", -ret);
+            	ESP_LOGW(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
                 break;
             }
             delay(10);
             vPortYield();
         }
+        if (ret != ESP_OK) break;
 
         if (cli_cert != NULL && cli_key != NULL) {
-            DEBUG_PRINT("Protocol is %s \nCiphersuite is %s\n", mbedtls_ssl_get_version(&ssl_client->ssl_ctx), mbedtls_ssl_get_ciphersuite(&ssl_client->ssl_ctx));
+            ESP_LOGD(TAG, "Protocol is %s \nCiphersuite is %s", mbedtls_ssl_get_version(&ssl_client->ssl_ctx), mbedtls_ssl_get_ciphersuite(&ssl_client->ssl_ctx));
+            //not error
             if ((ret = mbedtls_ssl_get_record_expansion(&ssl_client->ssl_ctx)) >= 0) {
-                DEBUG_PRINT("Record expansion is %d\n", ret);
+            	ESP_LOGD(TAG, "Record expansion is %d\n", ret);
             } else {
-                DEBUG_PRINT("Record expansion is unknown (compression)\n");
+                ESP_LOGD(TAG, "Record expansion is unknown (compression)");
             }
         }
 
-		DEBUG_PRINT( "Verifying peer X.509 certificate...\n");
+		ESP_LOGD(TAG, "Verifying peer X.509 certificate...");
 
-		if ((flags = mbedtls_ssl_get_verify_result(&ssl_client->ssl_ctx)) != 0) {
-			printf( "Failed to verify peer certificate!\n");
+		if ((ret = mbedtls_ssl_get_verify_result(&ssl_client->ssl_ctx)) != ESP_OK) {
+			ESP_LOGE(TAG, "Failed to verify peer certificate!");
 			bzero(buf, sizeof(buf));
-			mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
-			printf( "verification info: %s\n", buf);
-			stop_ssl_socket(ssl_client);  //It's not safe continue.
+			mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", ret);
+			ESP_LOGW(TAG, "verification info: %s", buf);
+			//stop_ssl_socket(ssl_client);  //It's not safe continue.
+			break;
 		} else {
-			DEBUG_PRINT( "Certificate verified.\n");
+			ESP_LOGD(TAG, "Certificate verified.");
 		}
 
     } while (0);
 
     size_t free_heap_after = xPortGetFreeHeapSize();
-    DEBUG_PRINT("Free heap after TLS %u (-%u)\n", free_heap_after, free_heap_before-free_heap_after);
+    ESP_LOGD(TAG, "Free heap after TLS %u (-%u)", free_heap_after, free_heap_before-free_heap_after);
 
-    return ssl_client->socket;
+    return ret;
 }
 
 
 void stop_ssl_socket(sslclient_context *ssl_client)
 {
-    DEBUG_PRINT( "\nCleaning SSL connection.\n");
-    close(ssl_client->socket);
-    ssl_client->socket = -1;
+	ESP_LOGD(TAG, "Cleaning SSL connection.");
+    if (ssl_client->socket > 0) {
+    	close(ssl_client->socket);
+    	ssl_client->socket = 0;
+    }
     mbedtls_ssl_free(&ssl_client->ssl_ctx);
     mbedtls_ssl_config_free(&ssl_client->ssl_conf);
     mbedtls_ctr_drbg_free(&ssl_client->drbg_ctx);
@@ -349,7 +356,7 @@ int data_to_read(sslclient_context *ssl_client)
     res = mbedtls_ssl_get_bytes_avail(&ssl_client->ssl_ctx);
     //printf("RES: %i\n",res);
     if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret < 0 && ret != -76) {
-        printf("MbedTLS error %i", ret);
+    	ESP_LOGE(TAG, "MbedTLS error %i", ret);
     }
 
     return res;
@@ -362,7 +369,7 @@ int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, uint16_t l
 
     while ((ret = mbedtls_ssl_write(&ssl_client->ssl_ctx, data, len)) <= 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != -76) {
-            printf( "mbedtls_ssl_write returned -0x%x\n", -ret);
+        	ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
             break;
         }
     }

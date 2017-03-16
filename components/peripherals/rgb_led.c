@@ -20,6 +20,7 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/xtensa_api.h"
@@ -32,12 +33,13 @@
 #include "esp_log.h"
 #include <math.h>
 #include "rgb_led.h"
-//#include "oap_config.h"
+#include "oap_common.h"
 
+static const char* TAG = "rgbled";
 static xQueueHandle cmd_queue;
 static gpio_num_t led_gpio[] = {CONFIG_OAP_LED_R_PIN,CONFIG_OAP_LED_G_PIN,CONFIG_OAP_LED_B_PIN};
 
-#define DEFAULT_FREQ 1500;
+#define DEFAULT_FREQ 1500
 
 static ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE;
 
@@ -65,16 +67,30 @@ static int calc_duty(rgb color, uint8_t c) {
 }
 
 void set_color(rgb color) {
+	esp_err_t res;
+	int duty;
 	for (int c = 0; c < 3; c++) {
-		ledc_set_duty(speed_mode, c, calc_duty(color,c));
-		ledc_update_duty(speed_mode, c);
+		duty = calc_duty(color,c);
+		if ((res = ledc_set_duty(speed_mode, c, duty)) != ESP_OK) {
+			ESP_LOGW(TAG, "ledc_set_duty(%d,%d,%d) error %d", speed_mode, c, duty, res);
+		}
+		if ((res = ledc_update_duty(speed_mode, c)) != ESP_OK) {
+			ESP_LOGW(TAG, "ledc_update_duty(%d,%d) error %d", speed_mode, c, res);
+		}
 	}
 }
 
 void fade_to_color(rgb color, int time) {
+	esp_err_t res;
+	int duty;
 	for (int c = 0; c < 3; c++) {
-		ledc_set_fade_with_time(speed_mode, c, calc_duty(color,c),time);
-		ledc_fade_start(c, LEDC_FADE_NO_WAIT);
+		duty = calc_duty(color,c);
+		if ((res = ledc_set_fade_with_time(speed_mode, c, duty,time)) != ESP_OK) {
+			ESP_LOGW(TAG, "ledc_set_fade_with_time(%d,%d,%d,%d) error %d", speed_mode, c, duty, time, res);
+		}
+		if ((res = ledc_fade_start(c, LEDC_FADE_NO_WAIT)) != ESP_OK) {
+			ESP_LOGW(TAG, "ledc_fade_start(%d,%d) error %d", c, LEDC_FADE_NO_WAIT, res);
+		}
 	}
 }
 
@@ -107,8 +123,6 @@ static void setup_ledc() {
 }
 
 static void led_cycle() {
-
-
 	rgb color = {.v={1,1,1}};
 	led_cmd cmd = {
 		.mode = LED_SET,
@@ -121,22 +135,29 @@ static void led_cycle() {
 		freq = cmd.freq > 0 ? cmd.freq : DEFAULT_FREQ;
 		switch (cmd.mode) {
 			case LED_BLINK :
+				ESP_LOGD(TAG, "->blink (%d)", level);
 				set_color(level ? cmd.color : LED_OFF);
 				break;
 			case LED_PULSE :
+				ESP_LOGD(TAG, "->pulse (%d)", level);
 				fade_to_color(level ? cmd.color : LED_OFF, freq);
 			    break;
 			case LED_FADE_TO:
+				ESP_LOGD(TAG, "->fade_to");
 				//this is causing some errors - cannot schedule fading when other is still ongoing?
 				fade_to_color(cmd.color, freq);
 				break;
 			default:
+				ESP_LOGD(TAG, "->set");
 				freq = DEFAULT_FREQ;
 				set_color(cmd.color);
 				break;
 		}
 		//wait for another command
-		xQueueReceive(cmd_queue, &cmd, freq / portTICK_PERIOD_MS);
+		if (xQueueReceive(cmd_queue, &cmd, freq / portTICK_PERIOD_MS)) {
+			ESP_LOGD(TAG, "->received command");
+			//memcpy(&cmd, &received, sizeof(cmd));
+		}
 	}
 }
 
@@ -145,7 +166,7 @@ void led_init(int enabled, xQueueHandle _cmd_queue)
 	cmd_queue = _cmd_queue;
     if (enabled) {
     	setup_ledc();	//this often conflicts with other i/o operations? e.g. bme280 init.
-    	xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, 10, NULL);
+    	xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
     }
 }
 

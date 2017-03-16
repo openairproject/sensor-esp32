@@ -24,6 +24,7 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -49,9 +50,11 @@
 static const char *TAG = "thingspk";
 
 static char* apikey = NULL;
-static QueueHandle_t input_queue;
+#define TS_NOT_CONFIGURED 1
+static int configured = TS_NOT_CONFIGURED;
 
-static int post_data(oap_meas meas) {
+static esp_err_t thing_speak_rest_post(oap_meas* meas) {
+
     const struct addrinfo hints = {
         .ai_family = AF_INET,
         .ai_socktype = SOCK_STREAM,
@@ -63,9 +66,9 @@ static int post_data(oap_meas meas) {
 
     int err = getaddrinfo(OAP_THING_SPEAK_HOST, "80", &hints, &res);
 
-	if(err != 0 || res == NULL) {
+	if(err != ESP_OK || res == NULL) {
 		ESP_LOGW(TAG, "DNS lookup failed err=%d res=%p", err, res);
-		return 0;
+		return ESP_FAIL;
 	}
 
 	/* Code to print the resolved IP.
@@ -77,45 +80,48 @@ static int post_data(oap_meas meas) {
 	if(sck < 0) {
 		ESP_LOGW(TAG, "failed to allocate socket.");
 		freeaddrinfo(res);
-		return 0;
+		return ESP_FAIL;
 	}
 
 	err = connect(sck, res->ai_addr, res->ai_addrlen);
-	if(err != 0) {
+	if(err != ESP_OK) {
 		ESP_LOGW(TAG, "socket connect failed errno=%d", err);
 		close(sck);
 		freeaddrinfo(res);
-		return 0;
+		return err;
 	}
 
 	freeaddrinfo(res);
 
-	char payload[200];
+	char* payload = malloc(512);
 	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f&field6=%.2f&field7=%d&field8=%d", apikey,
-			meas.pm.pm1_0,
-			meas.pm.pm2_5,
-			meas.pm.pm10,
-			meas.env.temp,
-			meas.env.pressure,
-			meas.env.humidity,
+			meas->pm.pm1_0,
+			meas->pm.pm2_5,
+			meas->pm.pm10,
+			meas->env.temp,
+			meas->env.pressure,
+			meas->env.humidity,
 			xPortGetFreeHeapSize(),
 			xPortGetMinimumEverFreeHeapSize());
 
-	char request[512];
+	char* request = malloc(512);
 
 	sprintf(request, "POST %s HTTP/1.1\n"
 	    "Host: %s\n"
 		"Content-Type: application/x-www-form-urlencoded\n"
 		"Content-Length: %d\n"
 	    "\r\n%s", OAP_THING_SPEAK_PATH, OAP_THING_SPEAK_HOST, strlen(payload), payload);
+	free(payload);
 
 	ESP_LOGD(TAG, "request:\n%s", request);
 
 	if (write(sck, request, strlen(request)) < 0) {
 		ESP_LOGW(TAG, "socket send failed");
+		free(request);
 		close(sck);
-		return 0;
+		return ESP_FAIL;
 	}
+	free(request);
 	ESP_LOGD(TAG, "socket send success");
 
 	int response_size = 0;
@@ -132,26 +138,10 @@ static int post_data(oap_meas meas) {
 	//TODO check response status!
 
 	close(sck);
-	return 1;
+	return ESP_OK;
 }
 
-static void thing_speak_task() {
-	oap_meas meas;
-	while (1) {
-		if(xQueuePeek(input_queue, &meas, 1000)) {
-			log_task_stack(TAG);
-			if (post_data(meas)) {
-				xQueueReceive(input_queue, &meas, 1000);
-				ESP_LOGI(TAG, "data sent successfully");
-			} else {
-				ESP_LOGW(TAG, "data post failed");
-				vTaskDelay(5000 / portTICK_PERIOD_MS);
-			}
-		}
-	}
-}
-
-static int thing_speak_configure() {
+static esp_err_t thing_speak_configure() {
 	cJSON* thingspeak = storage_get_config("thingspeak");
 	if (!thingspeak) {
 		ESP_LOGI(TAG, "config not found");
@@ -175,13 +165,48 @@ static int thing_speak_configure() {
 	}
 }
 
+esp_err_t thing_speak_send(oap_meas* meas) {
+	if (configured == TS_NOT_CONFIGURED) {
+		configured = thing_speak_configure();
+	}
+	if (configured == ESP_OK) {
+		return thing_speak_rest_post(meas);
+	} else {
+		return configured;
+	}
+}
+
+
+/*
+extern SemaphoreHandle_t networkHandle;
+static QueueHandle_t input_queue;
+
+static void thing_speak_task() {
+	oap_meas meas;
+	while (1) {
+		if(xQueuePeek(input_queue, &meas, 1000)) {
+			log_task_stack(TAG);
+			xSemaphoreTake(networkHandle, portMAX_DELAY);
+			if (post_data(&meas)) {
+				xQueueReceive(input_queue, &meas, 1000);
+				xSemaphoreGive(networkHandle);
+				ESP_LOGI(TAG, "data sent successfully");
+			} else {
+				xSemaphoreGive(networkHandle);
+				ESP_LOGW(TAG, "data post failed");
+				vTaskDelay(5000 / portTICK_PERIOD_MS);
+			}
+
+		}
+	}
+}
 QueueHandle_t thing_speak_init()
 {
 	if (thing_speak_configure() == ESP_OK) {
 		input_queue = xQueueCreate(1, sizeof(oap_meas));
-    	xTaskCreate(&thing_speak_task, "thing_speak_task", 1024*10, NULL, 5, NULL);
+    	xTaskCreate(&thing_speak_task, "thing_speak_task", 1024*10, NULL, DEFAULT_TASK_PRIORITY, NULL);
     	return input_queue;
 	} else {
 		return NULL;
 	}
-}
+}*/

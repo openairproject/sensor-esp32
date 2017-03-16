@@ -23,6 +23,9 @@
 #ifndef MAIN_HTTP_H_
 #define MAIN_HTTP_H_
 
-QueueHandle_t thing_speak_init();
+#include "oap_common.h"
+#include "esp_err.h"
+
+esp_err_t thing_speak_send(oap_meas* meas);
 
 #endif /* MAIN_HTTP_H_ */

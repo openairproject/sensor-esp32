@@ -33,20 +33,20 @@
  * this method is surprisingly stack heavy - it takes ~ 1000 bytes.
  * before using it, adjust task stack accordingly.
  */
-void log_task_stack(char* TAG) {
+void log_task_stack(const char* TAG) {
 	//uxTaskGetStackHighWaterMark is marked as UNTESTED
 	#if !CONFIG_FREERTOS_ASSERT_ON_UNTESTED_FUNCTION
-		ESP_LOGW(TAG, "----------> TASK MIN STACK: %d", uxTaskGetStackHighWaterMark( NULL ));
+		ESP_LOGD(TAG, "----------> TASK MIN STACK: %d", uxTaskGetStackHighWaterMark( NULL ));
 	#endif
 }
 
 
 static size_t last_free_heap = 0;
 
-void log_heap_size(char* TAG, char* msg) {
+void log_heap_size(const char* TAG, const char* msg) {
 	size_t free_heap = xPortGetFreeHeapSize();
 	if (last_free_heap == 0) last_free_heap = free_heap;
-	ESP_LOGW(TAG, "----------> free heap (%s): %d (since last: %d, min: %d)", msg, free_heap, free_heap-last_free_heap, xPortGetMinimumEverFreeHeapSize());
+	ESP_LOGD(TAG, "----------> free heap (%s): %d (since last: %d, min: %d)", msg, free_heap, free_heap-last_free_heap, xPortGetMinimumEverFreeHeapSize());
 	last_free_heap = free_heap;
 }
 
@@ -75,14 +75,14 @@ void heap_log_list(heap_log* log) {
 void heap_log_print(heap_log* log, heap_log* prev) {
 	size_t comp_heap = log->heap + heap_log_count * sizeof(heap_log);
 	if (prev == NULL) {
-		ESP_LOGW("debug", "----------> heap %25s: %d", log->tag, comp_heap);
+		ESP_LOGD("debug", "----------> heap %25s: %d", log->tag, comp_heap);
 	} else {
 		size_t diff_heap = log->heap - prev->heap + sizeof(heap_log);
-		ESP_LOGW("debug", "----------> heap %25s: %d \t (%d)", log->tag, comp_heap, diff_heap);
+		ESP_LOGD("debug", "----------> heap %25s: %d \t (%d)", log->tag, comp_heap, diff_heap);
 	}
 }
 
-heap_log* heap_log_take(heap_log* log, char* msg) {
+heap_log* heap_log_take(heap_log* log, const char* msg) {
 	heap_log* new_log = malloc(sizeof(heap_log));
 	heap_log_count++;
 	new_log->tag = strdup(msg);
@@ -116,6 +116,6 @@ void heap_log_free(heap_log* log) {
 		} while (log);
 
 
-		ESP_LOGW("debug", "----------> leaked : %d",  xPortGetFreeHeapSize() - initial_heap);
+		ESP_LOGD("debug", "----------> leaked : %d",  xPortGetFreeHeapSize() - initial_heap);
 	}
 }

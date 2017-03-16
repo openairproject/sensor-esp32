@@ -48,24 +48,24 @@ extern const uint8_t verisign_root_ca_pem_end[]   asm("_binary_verisign_root_ca_
 #define RESPONSE_BUF_SIZE 1024
 
 esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
-	heap_log* hl = heap_log_take(NULL, "start");
-	sslclient_context ssl_client = {};
+	//heap_log* hl = heap_log_take(NULL, "start");
+	sslclient_context ssl_client = {.0};
 	ssl_init(&ssl_client);
 	int ret = ESP_OK;
 
-	heap_log_take(hl, "after ssl_init");
+	//heap_log_take(hl, "after ssl_init");
 	ESP_LOGD(TAG, "connecting to %s:%d", awsiot_config.endpoint,awsiot_config.port);
 	if ((ssl_client.socket = open_socket(awsiot_config.endpoint,awsiot_config.port,1,0)) < 0) {
 		return ssl_client.socket;
 	} else {
 		ESP_LOGD(TAG, "connected");
 	}
-	heap_log_take(hl, "connected");
+	//heap_log_take(hl, "connected");
 
 	char* rootCA = str_make((void*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
-	if (start_ssl_client(&ssl_client, (unsigned char*)rootCA, (unsigned char*)awsiot_config.cert, (unsigned char*)awsiot_config.pkey) > 0) {
+	if (start_ssl_client(&ssl_client, (unsigned char*)rootCA, (unsigned char*)awsiot_config.cert, (unsigned char*)awsiot_config.pkey) == ESP_OK) {
 		free(rootCA);
-		heap_log_take(hl, "start_ssl_client");
+		//heap_log_take(hl, "start_ssl_client");
 		char* request = malloc(strlen(body) + 250);
 
 		sprintf(request, "POST /things/%s/shadow HTTP/1.1\n"
@@ -77,15 +77,15 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
 
 		ESP_LOGD(TAG, "%s (%d bytes)", request, strlen(request));
 
-		heap_log_take(hl, "built request");
+		//heap_log_take(hl, "built request");
 
 		send_ssl_data(&ssl_client, (uint8_t *)request, strlen(request));
 
-		heap_log_take(hl, "send_ssl_data");
+		//heap_log_take(hl, "send_ssl_data");
 
 		free(request);
 
-		heap_log_take(hl, "free request");
+		//heap_log_take(hl, "free request");
 
 		int len;
 		//TODO parse at least status code (would be nice to get json body) too
@@ -110,10 +110,10 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
 		free(rootCA);
 		ret = ESP_FAIL;
 	}
-	heap_log_take(hl, "request done");
+	//heap_log_take(hl, "request done");
 	stop_ssl_socket(&ssl_client);
-	heap_log_take(hl, "stop_ssl_socket");
-	heap_log_free(hl);
+	//heap_log_take(hl, "stop_ssl_socket");
+	//heap_log_free(hl);
 	ESP_LOGI(TAG, "ssl request done %d", ret);
 
 	return ret;
