@@ -135,20 +135,20 @@ static void led_cycle() {
 		freq = cmd.freq > 0 ? cmd.freq : DEFAULT_FREQ;
 		switch (cmd.mode) {
 			case LED_BLINK :
-				ESP_LOGD(TAG, "->blink (%d)", level);
+				//ESP_LOGD(TAG, "->blink (%d)", level);
 				set_color(level ? cmd.color : LED_OFF);
 				break;
 			case LED_PULSE :
-				ESP_LOGD(TAG, "->pulse (%d)", level);
+				//ESP_LOGD(TAG, "->pulse (%d)", level);
 				fade_to_color(level ? cmd.color : LED_OFF, freq);
 			    break;
 			case LED_FADE_TO:
-				ESP_LOGD(TAG, "->fade_to");
+				//ESP_LOGD(TAG, "->fade_to");
 				//this is causing some errors - cannot schedule fading when other is still ongoing?
 				fade_to_color(cmd.color, freq);
 				break;
 			default:
-				ESP_LOGD(TAG, "->set");
+				//ESP_LOGD(TAG, "->set");
 				freq = DEFAULT_FREQ;
 				set_color(cmd.color);
 				break;

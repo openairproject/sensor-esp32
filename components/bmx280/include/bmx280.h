@@ -25,6 +25,15 @@
 
 #include "freertos/queue.h"
 
-QueueHandle_t bmx280_init();
+typedef struct bmx280_config_t {
+
+	uint8_t i2c_num;
+	uint8_t device_addr;
+	uint8_t sda_pin;
+	uint8_t scl_pin;
+
+} bmx280_config_t;
+
+QueueHandle_t bmx280_init(bmx280_config_t* config);
 
 #endif /* MAIN_BMP280_H_ */
