@@ -47,6 +47,9 @@ typedef struct {
 
 typedef struct {
 	int led;
+	int heater;
+	int fan;
+
 	int indoor;
 	int warmUpTime;
 	int measTime;

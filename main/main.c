@@ -61,6 +61,8 @@ static oap_sensor_config_t get_config() {
 
 	if ((field = cJSON_GetObjectItem(sconfig, "led"))) sensor_config.led = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "indoor"))) sensor_config.indoor = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "fan"))) sensor_config.fan = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "heater"))) sensor_config.heater = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "warmUpTime"))) sensor_config.warmUpTime = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "measTime"))) sensor_config.measTime = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "measInterval"))) sensor_config.measInterval = field->valueint;
@@ -92,7 +94,10 @@ static void pm_meter_trigger_task() {
 	pms_config_t* pms_config = malloc(sizeof(pms_config_t));
 	memset(pms_config, 0, sizeof(pms_config_t));
 	pms_config->indoor = sensor_config.indoor;
-	pms_config->set0_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
+	pms_config->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
+	pms_config->heater_pin = sensor_config.heater ? CONFIG_OAP_HEATER_CONTROL_PIN : 0;
+	pms_config->fan_pin = sensor_config.fan ? CONFIG_OAP_FAN_CONTROL_PIN : 0;
+
 	pms_config->uart_num = CONFIG_OAP_PM_UART_NUM;
 	pms_config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
 	pms_config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;

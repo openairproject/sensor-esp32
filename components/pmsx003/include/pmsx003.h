@@ -33,8 +33,10 @@ typedef struct pms_config_t {
 	uint8_t enabled;
 	uint8_t sensor;
 	pms_callback callback;
-	uint8_t set0_pin;
-	uint8_t set1_pin;	//optional set pin
+	uint8_t set_pin;
+	uint8_t heater_pin;
+	uint8_t fan_pin;
+
 	uart_port_t uart_num;
 	uint8_t uart_txd_pin;
 	uint8_t uart_rxd_pin;
@@ -50,6 +52,6 @@ esp_err_t pms_init(pms_config_t* config);
 /**
  * enable/disable sensor.
  */
-esp_err_t pms_enable(pms_config_t* config, int enabled);
+esp_err_t pms_enable(pms_config_t* config, uint8_t enabled);
 
 #endif /* MAIN_PMS_H_ */

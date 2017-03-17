@@ -17,8 +17,10 @@
 	},
 	"sensor" : {
 		"config" : {
-			"indoor" 	: 	true,
-			"led"		:	true,
+			"indoor" 	: 	0,
+			"led"		:	1,
+			"fan"		:	1,
+			"heater"	:	1,
 			"measTime"	: 	60,
 			"warmUpTime":	30,
 			"measInterval": 300,
