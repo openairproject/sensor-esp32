@@ -79,11 +79,18 @@ To configure and build sources
 	
 	make -j5
 	
+You can always bring up configuration menu via
+
+	make menuconfig	
+		
 During the first run, a menuconfig should appear where you need to configure some parameters of your setup,
 most notably - UART port (in my case - "/dev/tty.SLAB_USBtoUART").
 
 In components submenu there's a few configuration settings related to OAP hardware setup (e.g. gpio pin assignments),
 and "OAP Main" menu where you can change various functional parameters.
+
+** ATTENTION. main task stack should be increased to 10K if you're gonna use AWSIoT (via menuconfig) **	
+
 All settings are saved in sdkconfig file.
 
 to flash the module and read from the serial output
