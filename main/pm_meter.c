@@ -49,35 +49,29 @@ static pm_data *sampleBuffer = NULL;
 static long startedAt;
 static int warmingTime;
 
-static QueueHandle_t samples_queue;
-
 static char* TAG = "pm_meter";
+static pms_config_t* pms_config = NULL;
 
 static void pm_data_print(char* str, pm_data pm) {
 	ESP_LOGI(TAG, "%s pm1.0=%d pm2.5=%d pm10=%d", str, pm.pm1_0, pm.pm2_5, pm.pm10);
 }
 
-static void pm_data_collector_task() {
-	pm_data pm;
+void pm_meter_collect(pm_data* pm) {
 	long localTime;
-	while (1) {
-		if (xQueueReceive(samples_queue, &pm, 100)) {
-			pm_data* buf = sampleBuffer+(sampleIndex % CONFIG_OAP_PM_SAMPLE_BUF_SIZE);
-			memcpy(buf, &pm, sizeof(pm));
-			localTime = oap_epoch_sec();
+	pm_data* buf = sampleBuffer+(sampleIndex % CONFIG_OAP_PM_SAMPLE_BUF_SIZE);
+	memcpy(buf, pm, sizeof(pm_data));
+	localTime = oap_epoch_sec();
 
-			if (localTime - startedAt > 3600 * 24) {
-				//localTime was set to proper value in a meantime. start over to avoid invalid warming time.
-				startedAt = localTime;
-			}
+	if (localTime - startedAt > 3600 * 24) {
+		//localTime was set to proper value in a meantime. start over to avoid invalid warming time.
+		startedAt = localTime;
+	}
 
-			if (localTime - startedAt > warmingTime) {
-				sampleIndex++;
-				pm_data_print("collect: ", *buf);
-			} else {
-				pm_data_print("warming: ", *buf);
-			}
-		}
+	if (localTime - startedAt > warmingTime) {
+		sampleIndex++;
+		pm_data_print("collect: ", *buf);
+	} else {
+		pm_data_print("warming: ", *buf);
 	}
 }
 
@@ -85,11 +79,11 @@ void pm_meter_start(unsigned int _warmingTime) {
 	sampleIndex = 0;
 	startedAt = oap_epoch_sec();
 	warmingTime = _warmingTime;
-	pms_enable(1);
+	pms_enable(pms_config, 1);
 }
 
 pm_data pm_meter_sample(int disable_sensor) {
-	if (disable_sensor) pms_enable(0);
+	if (disable_sensor) pms_enable(pms_config, 0);
 	pm_data avg = {
 		.pm1_0 = 0,
 		.pm2_5 = 0,
@@ -116,8 +110,7 @@ pm_data pm_meter_sample(int disable_sensor) {
 	return avg;
 }
 
-void pm_meter_init(QueueHandle_t _samples_queue) {
-	samples_queue = _samples_queue;
+void pm_meter_init(pms_config_t* _pms_config) {
+	pms_config = _pms_config;
 	sampleBuffer = malloc(CONFIG_OAP_PM_SAMPLE_BUF_SIZE * sizeof(pm_data));
-	xTaskCreate(pm_data_collector_task, "pm_data_collector_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
 }

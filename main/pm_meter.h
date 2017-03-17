@@ -23,8 +23,9 @@
 #ifndef MAIN_PM_METER_H_
 #define MAIN_PM_METER_H_
 
-#include "freertos/queue.h"
 #include "oap_common.h"
+#include "pmsx003.h"
+
 
 typedef enum {
 	PM_MEAS_AVG,
@@ -32,7 +33,9 @@ typedef enum {
 } pm_meas_mode;
 
 void pm_meter_start(unsigned int warmingTime);
+void pm_meter_collect(pm_data *data);
+
 pm_data pm_meter_sample(int disable_sensor);
-void pm_meter_init(QueueHandle_t samples_queue);
+void pm_meter_init(pms_config_t* pms_config);
 
 #endif /* MAIN_PM_METER_H_ */

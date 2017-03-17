@@ -23,16 +23,33 @@
 #ifndef MAIN_PMS_H_
 #define MAIN_PMS_H_
 
-#include "freertos/queue.h"
+#include "oap_common.h"
+#include "driver/uart.h"
+
+typedef void(*pms_callback)(pm_data*);
+
+typedef struct pms_config_t {
+	uint8_t indoor;
+	uint8_t enabled;
+	uint8_t sensor;
+	pms_callback callback;
+	uint8_t set0_pin;
+	uint8_t set1_pin;	//optional set pin
+	uart_port_t uart_num;
+	uint8_t uart_txd_pin;
+	uint8_t uart_rxd_pin;
+	uint8_t uart_rts_pin;
+	uint8_t uart_cts_pin;
+} pms_config_t;
 
 /**
  * pm samples data is send to the queue.
  */
-QueueHandle_t pms_init(int outdoor);
+esp_err_t pms_init(pms_config_t* config);
 
 /**
  * enable/disable sensor.
  */
-void pms_enable(int enabled);
+esp_err_t pms_enable(pms_config_t* config, int enabled);
 
 #endif /* MAIN_PMS_H_ */
