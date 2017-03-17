@@ -70,7 +70,15 @@ static void bmx280_task(bmx280_config_t* bmx280_config) {
 	vTaskDelete(NULL);
 }
 
+static uint8_t i2c_drivers[3] = {0};
+
 static esp_err_t i2c_setup(bmx280_config_t* config) {
+	if (config->i2c_num > 2) {
+		ESP_LOGE(TAG, "invalid I2C BUS NUMBER (%d)", config->i2c_num);
+		return ESP_FAIL;
+	}
+	if (i2c_drivers[config->i2c_num]) return ESP_OK; //already installed
+
 	i2c_config_t i2c_conf;
 	i2c_conf.mode = I2C_MODE_MASTER;
 	i2c_conf.sda_io_num = config->sda_pin;//CONFIG_OAP_BMX280_I2C_SDA_PIN;
@@ -81,7 +89,14 @@ static esp_err_t i2c_setup(bmx280_config_t* config) {
 
 	esp_err_t res;
 	if ((res = i2c_param_config(config->i2c_num, &i2c_conf)) != ESP_OK) return res;
-	return i2c_driver_install(config->i2c_num, I2C_MODE_MASTER, 0, 0, 0);
+
+	ESP_LOGD(TAG, "install I2C driver (bus %d)", config->i2c_num);
+	res = i2c_driver_install(config->i2c_num, I2C_MODE_MASTER, 0, 0, 0);
+	if (res == ESP_OK) {
+		i2c_drivers[config->i2c_num] = 1;
+	}
+
+	return res;
 }
 
 esp_err_t bmx280_init(bmx280_config_t* bmx280_config) {

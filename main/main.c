@@ -159,7 +159,7 @@ static void main_task() {
 		bmx280_config->device_addr = CONFIG_OAP_BMX280_ADDRESS_AUX;
 		bmx280_config->sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN_AUX;
 		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN_AUX;
-		bmx280_config->sensor = 0;
+		bmx280_config->sensor = 1;
 		bmx280_config->interval = 5000;
 		bmx280_config->callback = &bmx280_callback;
 
