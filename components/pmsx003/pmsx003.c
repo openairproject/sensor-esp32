@@ -30,7 +30,6 @@
 #include "soc/uart_struct.h"
 #include "esp_log.h"
 #include "pmsx003.h"
-#include "oap_common.h"
 #include "oap_debug.h"
 
 /*
@@ -41,11 +40,7 @@
 
 static const char* TAG = "pmsX003";
 
-static int enabled = 0;
-static int indoor = 0;
-static QueueHandle_t samples;
-
-static void pms_init_uart(void) {
+static void pms_init_uart(pms_config_t* config) {
 	//configure UART
     uart_config_t uart_config = {
         .baud_rate = 9600,
@@ -55,16 +50,20 @@ static void pms_init_uart(void) {
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,//UART_HW_FLOWCTRL_CTS_RTS,
         .rx_flow_ctrl_thresh = 122,
     };
-    uart_param_config(CONFIG_OAP_PM_UART_NUM, &uart_config);
-    uart_set_pin(CONFIG_OAP_PM_UART_NUM, CONFIG_OAP_PM_UART_TXD_PIN, CONFIG_OAP_PM_UART_RXD_PIN, CONFIG_OAP_PM_UART_RTS_PIN, CONFIG_OAP_PM_UART_CTS_PIN);
+    uart_param_config(config->uart_num, &uart_config);
+    uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, config->uart_rts_pin, config->uart_cts_pin);
     //Install UART driver( We don't need an event queue here)
 
-    uart_driver_install(CONFIG_OAP_PM_UART_NUM, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
+    uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
 }
 
-static void pms_init_gpio(void) {
-	gpio_pad_select_gpio(CONFIG_OAP_PM_SENSOR_CONTROL_PIN);
-	ESP_ERROR_CHECK(gpio_set_direction(CONFIG_OAP_PM_SENSOR_CONTROL_PIN, GPIO_MODE_OUTPUT));
+static void pms_init_gpio(pms_config_t* config) {
+	gpio_pad_select_gpio(config->set0_pin);	//CONFIG_OAP_PM_SENSOR_CONTROL_PIN
+	ESP_ERROR_CHECK(gpio_set_direction(config->set0_pin, GPIO_MODE_OUTPUT));
+	if (config->set1_pin) {
+		gpio_pad_select_gpio(config->set1_pin);
+		ESP_ERROR_CHECK(gpio_set_direction(config->set1_pin, GPIO_MODE_OUTPUT));
+	}
 }
 
 static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
@@ -76,17 +75,17 @@ static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
 	return pm;
 }
 
-static void pms_uart_read() {
+static void pms_uart_read(pms_config_t* config) {
     uint8_t* data = (uint8_t*) malloc(32);
     while(1) {
-    	int len = uart_read_bytes(CONFIG_OAP_PM_UART_NUM, data, 32, 100 / portTICK_RATE_MS);
-        if (!enabled) continue;
+    	int len = uart_read_bytes(config->uart_num, data, 32, 100 / portTICK_RATE_MS);
+        if (!config->enabled) continue;
         if (len >= 24 && data[0]==0x42 && data[1]==0x4d) {
         		log_task_stack(TAG);
         		//ESP_LOGI(TAG, "got frame of %d bytes", len);
-        		pm_data pm = decodepm_data(data, indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
-				if (!xQueueSend(samples, &pm, 100)) {
-					ESP_LOGW(TAG, "sample queue overflow");
+        		pm_data pm = decodepm_data(data, config->indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
+				if (config->callback) {
+					config->callback(&pm);
 				}
         } else if (len > 0) {
         	ESP_LOGW(TAG, "invalid frame of %d", len); //we often get an error after this :(
@@ -95,22 +94,23 @@ static void pms_uart_read() {
     vTaskDelete(NULL);
 }
 
-void pms_enable(int _enabled) {
-	enabled = _enabled;
+esp_err_t pms_enable(pms_config_t* config, int enabled) {
 	ESP_LOGI(TAG,"enable(%d)",enabled);
-	gpio_set_level(CONFIG_OAP_PM_SENSOR_CONTROL_PIN, enabled); //low state = disabled, high state = enabled
+	config->enabled = enabled;
+	gpio_set_level(config->set0_pin, enabled); //low state = disabled, high state = enabled
+	if (config->set1_pin) {
+		gpio_set_level(config->set1_pin, enabled);
+	}
+	return ESP_OK; //todo
 }
 
-QueueHandle_t pms_init(int _indoor) {
-	indoor = _indoor;
-	samples = xQueueCreate(1, sizeof(pm_data));
-	pms_init_gpio();
-	pms_enable(0);
-	pms_init_uart();
-
+esp_err_t pms_init(pms_config_t* config) {
+	pms_init_gpio(config);
+	pms_enable(config, 0);
+	pms_init_uart(config);
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
-	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
-	return samples;
+	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
+	return ESP_OK;	//todo
 }
 
 

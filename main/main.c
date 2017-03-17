@@ -88,8 +88,22 @@ static void update_led_color(led_mode mode, float r, float g, float b) {
 }
 
 static void pm_meter_trigger_task() {
+
+	pms_config_t* pms_config = malloc(sizeof(pms_config_t));
+	memset(pms_config, 0, sizeof(pms_config_t));
+	pms_config->indoor = sensor_config.indoor;
+	pms_config->set0_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
+	pms_config->uart_num = CONFIG_OAP_PM_UART_NUM;
+	pms_config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
+	pms_config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;
+	pms_config->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN;
+	pms_config->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN;
+	pms_config->callback = &pm_meter_collect;
+
+	pms_init(pms_config);
+	pm_meter_init(pms_config);
+
 	int delay_sec = (sensor_config.measInterval-sensor_config.measTime);
-	pm_meter_init(pms_init(sensor_config.indoor));
 	while (1) {
 		log_task_stack("pm_meter_trigger");
 		update_led_mode(LED_PULSE);
