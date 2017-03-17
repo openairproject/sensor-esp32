@@ -35,11 +35,13 @@ typedef struct {
 	double temp;
 	double pressure;
 	double humidity;
+	uint8_t sensor;
 } env_data;
 
 typedef struct {
 	pm_data pm;
 	env_data env;
+	env_data env_int;
 	long int local_time;
 } oap_meas;
 

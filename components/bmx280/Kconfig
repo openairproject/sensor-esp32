@@ -1,5 +1,11 @@
 menu "OAP BMx280 Sensor"
 
+config OAP_BMX280_ENABLED
+    int "enable bmx280 sensor"
+    default 1
+    help
+        todo   
+
 config OAP_BMX280_ADDRESS
     hex "i2c address"
     default 0x76
@@ -24,5 +30,36 @@ config OAP_BMX280_I2C_SCL_PIN
     default 26
     help
         see help for SDA pin
+        
+config OAP_BMX280_ENABLED_AUX
+    int "enable aux bmx280 sensor"
+    default 0
+    help
+        todo     
+        
+config OAP_BMX280_ADDRESS_AUX
+    hex "i2c address"
+    default 0x77
+    help
+        default address for bmx280 sensor is 0x76, it can be set to 0x77 by pulling down SDO pin.
+
+config OAP_BMX280_I2C_NUM_AUX
+    int "i2c interface number"
+    default 0
+    help
+        todo
+        
+config OAP_BMX280_I2C_SDA_PIN_AUX
+    int "gpio SDA pin"
+    default 16
+    help
+        be careful with choosing gpio. i2c pins must be R/W.
+        
+
+config OAP_BMX280_I2C_SCL_PIN_AUX
+    int "SCL pin"
+    default 17
+    help
+        see help for SDA pin        
 
 endmenu

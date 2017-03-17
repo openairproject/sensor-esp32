@@ -110,18 +110,50 @@ static void pm_meter_trigger_task() {
 	}
 }
 
+static env_data env = {0};
+static env_data env_int = {0};
+
+static void bmx280_callback(env_data* result) {
+	ESP_LOGI(TAG,"Env (%d): Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", result->sensor, result->temp, result->pressure, result->humidity);
+	memcpy(result->sensor ? &env_int : &env, result, sizeof(env_data));
+}
+
 static void main_task() {
 	led_init(get_config().led, led_queue);
 	update_led();
 
-	bmx280_config_t bmx280_config = {
-		.i2c_num = CONFIG_OAP_BMX280_I2C_NUM,
-		.device_addr = CONFIG_OAP_BMX280_ADDRESS,
-		.sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN,
-		.scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN
-	};
+	if (CONFIG_OAP_BMX280_ENABLED) {
+		bmx280_config_t *bmx280_config = malloc(sizeof(bmx280_config_t));
 
-	QueueHandle_t env_queue = bmx280_init(&bmx280_config);
+		bmx280_config->i2c_num = CONFIG_OAP_BMX280_I2C_NUM;
+		bmx280_config->device_addr = CONFIG_OAP_BMX280_ADDRESS;
+		bmx280_config->sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN;
+		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN;
+		bmx280_config->sensor = 0;
+		bmx280_config->interval = 5000;
+		bmx280_config->callback = &bmx280_callback;
+
+		if (bmx280_init(bmx280_config) != ESP_OK) {
+			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor 0");
+		}
+	}
+
+	if (CONFIG_OAP_BMX280_ENABLED_AUX) {
+		bmx280_config_t *bmx280_config = malloc(sizeof(bmx280_config_t));
+
+		bmx280_config->i2c_num = CONFIG_OAP_BMX280_I2C_NUM_AUX;
+		bmx280_config->device_addr = CONFIG_OAP_BMX280_ADDRESS_AUX;
+		bmx280_config->sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN_AUX;
+		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN_AUX;
+		bmx280_config->sensor = 0;
+		bmx280_config->interval = 5000;
+		bmx280_config->callback = &bmx280_callback;
+
+		if (bmx280_init(bmx280_config) != ESP_OK) {
+			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor 1");
+		}
+	}
+
 
 	gpio_num_t btn_gpio[] = {CONFIG_OAP_BTN_0_PIN};
 	//xQueueHandle btn_events = btn_init(btn_gpio, sizeof(btn_gpio)/sizeof(btn_gpio[0]));
@@ -132,43 +164,24 @@ static void main_task() {
 //		}
 //	}
 
-	env_data env = {};
-	long env_timestamp = 0;
+	//env_data env = {};
+	//long env_timestamp = 0;
 
 	while (1) {
 		long localTime = oap_epoch_sec_valid();
-		if (env_queue != NULL && xQueueReceive(env_queue, &env, 100)) {
-			env_timestamp = localTime;
-			ESP_LOGI(TAG,"Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", env.temp, env.pressure, env.humidity);
-		}
-
 		pm_data pm;
 		if (xQueueReceive(pm_queue, &pm, 100)) {
 			log_task_stack("main_task");
 
-
 			oap_meas meas = {
 				.pm = pm,
 				.env = env,			//TODO allow null, check last timestamp
+				.env_int = env_int,
 				.local_time = localTime
 			};
 
 			thing_speak_send(&meas);
 			awsiot_send(&meas, &sensor_config);
-
-			/*
-			 * generally, we'd like to keep all client asynchronous,
-			 * but having multiple heavy tasks hurts esp32 stability (for now)
-			if (thing_speak_queue) {
-				if (!xQueueSend(thing_speak_queue, &meas, 1)) {
-					ESP_LOGW(TAG,"thing_speak_queue queue overflow");
-				}
-			}
-			if (awsiot_queue) {
-				if (!xQueueSend(awsiot_queue, &meas, 1)) {
-					ESP_LOGW(TAG,"awsiot_queue queue overflow");
-				}
-			}*/
 		}
 	}
 }
