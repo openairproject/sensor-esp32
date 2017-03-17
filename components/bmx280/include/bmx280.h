@@ -23,7 +23,7 @@
 #ifndef MAIN_BMP280_H_
 #define MAIN_BMP280_H_
 
-#include "freertos/queue.h"
+typedef void(*env_callback)(env_data*);
 
 typedef struct bmx280_config_t {
 
@@ -31,9 +31,12 @@ typedef struct bmx280_config_t {
 	uint8_t device_addr;
 	uint8_t sda_pin;
 	uint8_t scl_pin;
+	uint8_t sensor;	//sensor number (0 - 1)
+	uint32_t interval;
+	env_callback callback;
 
 } bmx280_config_t;
 
-QueueHandle_t bmx280_init(bmx280_config_t* config);
+esp_err_t bmx280_init(bmx280_config_t* config);
 
 #endif /* MAIN_BMP280_H_ */

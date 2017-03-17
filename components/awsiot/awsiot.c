@@ -55,6 +55,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 	cJSON* config = cJSON_CreateObject();
 	cJSON* pm = cJSON_CreateObject();
 	cJSON* weather = cJSON_CreateObject();
+	cJSON* internal = cJSON_CreateObject();
 	cJSON* status = cJSON_CreateObject();
 
 	cJSON_AddItemToObject(shadow, "state", state);
@@ -65,6 +66,8 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 
 	cJSON_AddItemToObject(results, "pm", pm);
 	cJSON_AddItemToObject(results, "weather", weather);
+	cJSON_AddItemToObject(results, "internal", internal);
+
 	cJSON_AddNumberToObject(results, "uid", rand()); //what about 0?
 	cJSON_AddNumberToObject(status, "heap", xPortGetFreeHeapSize());
 	cJSON_AddNumberToObject(status, "heap_min", xPortGetMinimumEverFreeHeapSize());
@@ -89,6 +92,10 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 	cJSON_AddNumberToObject(weather, "temp", meas->env.temp);
 	cJSON_AddNumberToObject(weather, "pressure", meas->env.pressure);
 	cJSON_AddNumberToObject(weather, "humidity", meas->env.humidity);
+
+	cJSON_AddNumberToObject(internal, "temp", meas->env_int.temp);
+	cJSON_AddNumberToObject(internal, "pressure", meas->env_int.pressure);
+	cJSON_AddNumberToObject(internal, "humidity", meas->env_int.humidity);
 
 	char *body = cJSON_Print(shadow);
 

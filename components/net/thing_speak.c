@@ -94,14 +94,15 @@ static esp_err_t thing_speak_rest_post(oap_meas* meas) {
 	freeaddrinfo(res);
 
 	char* payload = malloc(512);
-	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f&field6=%.2f&field7=%d&field8=%d", apikey,
+	sprintf(payload, "key=%s&field1=%d&field2=%d&field3=%d&field4=%.2f&field5=%.2f&field6=%.2f&field7=%.2f&field8=%.2f&field9=%d", apikey,
 			meas->pm.pm1_0,
 			meas->pm.pm2_5,
 			meas->pm.pm10,
 			meas->env.temp,
 			meas->env.pressure,
 			meas->env.humidity,
-			xPortGetFreeHeapSize(),
+			meas->env_int.temp,
+			meas->env_int.humidity,
 			xPortGetMinimumEverFreeHeapSize());
 
 	char* request = malloc(512);
