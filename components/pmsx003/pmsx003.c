@@ -47,7 +47,7 @@ static void pms_init_uart(pms_config_t* config) {
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,//UART_HW_FLOWCTRL_CTS_RTS,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 122,
     };
     uart_param_config(config->uart_num, &uart_config);
@@ -57,13 +57,25 @@ static void pms_init_uart(pms_config_t* config) {
     uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
 }
 
-static void pms_init_gpio(pms_config_t* config) {
-	gpio_pad_select_gpio(config->set0_pin);	//CONFIG_OAP_PM_SENSOR_CONTROL_PIN
-	ESP_ERROR_CHECK(gpio_set_direction(config->set0_pin, GPIO_MODE_OUTPUT));
-	if (config->set1_pin) {
-		gpio_pad_select_gpio(config->set1_pin);
-		ESP_ERROR_CHECK(gpio_set_direction(config->set1_pin, GPIO_MODE_OUTPUT));
+static void configure_gpio(uint8_t gpio) {
+	if (gpio > 0) {
+		ESP_LOGD(TAG, "configure pin %d as output", gpio);
+		gpio_pad_select_gpio(gpio);
+		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
 	}
+}
+
+static void set_gpio(uint8_t gpio, uint8_t enabled) {
+	if (gpio > 0) {
+		ESP_LOGD(TAG, "set pin %d => %d", gpio, enabled);
+		gpio_set_level(gpio, enabled);
+	}
+}
+
+static void pms_init_gpio(pms_config_t* config) {
+	configure_gpio(config->set_pin);
+	configure_gpio(config->heater_pin);
+	configure_gpio(config->fan_pin);
 }
 
 static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
@@ -94,13 +106,12 @@ static void pms_uart_read(pms_config_t* config) {
     vTaskDelete(NULL);
 }
 
-esp_err_t pms_enable(pms_config_t* config, int enabled) {
+esp_err_t pms_enable(pms_config_t* config, uint8_t enabled) {
 	ESP_LOGI(TAG,"enable(%d)",enabled);
 	config->enabled = enabled;
-	gpio_set_level(config->set0_pin, enabled); //low state = disabled, high state = enabled
-	if (config->set1_pin) {
-		gpio_set_level(config->set1_pin, enabled);
-	}
+	set_gpio(config->set_pin, enabled);
+	set_gpio(config->heater_pin, enabled);
+	set_gpio(config->fan_pin, enabled);
 	return ESP_OK; //todo
 }
 

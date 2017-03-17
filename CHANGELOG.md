@@ -7,3 +7,8 @@
 
 - support for bmp280 and bme280
 - basic rest client for AWS IoT
+
+# 0.3.0
+
+- support two (internal and external) bmx sensors
+- support optional fan and heater

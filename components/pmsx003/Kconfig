@@ -10,31 +10,42 @@ config OAP_PM_SENSOR_CONTROL_PIN
     int "SET gpio"
     default 10
     help
-        ESP32 R/W gpio connected to sensor SET line - it enables/disables sensor.
+        R/W GPIO pin connected to sensor SET line - it enables/disables sensor.
+
+config OAP_HEATER_CONTROL_PIN
+    int "external heater gpio"
+    default 15
+    help
+        optional GPIO pin to control a heater. It mirrors state of SET gpio. (0 = none)
+
+config OAP_FAN_CONTROL_PIN
+    int "external fan gpio"
+    default 2
+    help
+        optional GPIO pin to control an additional fan. It mirrors state of SET gpio. (0 = none)
 
 config OAP_PM_UART_RXD_PIN
     int "RX gpio"
     default 34
     help
-        ESP32 gpio connected to sensor RX line. This pin can be R/O (>=34).
+        GPIO pin connected to sensor RX line. This pin can be R/O (>=34).
         
 config OAP_PM_UART_TXD_PIN
     int "TX gpio"
-    default 4
+    default 5
     help
-        Any pin (no need to connect this line)
+        Any gpio pin (no need to connect this line)
         
-
 config OAP_PM_UART_RTS_PIN
     int "RTS gpio"
     default 18
     help
-        Any pin (no need to connect this line)
+        Any gpio pin (no need to connect this line)
 
 config OAP_PM_UART_CTS_PIN
     int "CTS gpio"
     default 19
     help
-        Any pin (no need to connect this line)
+        Any gpio pin (no need to connect this line)
 
 endmenu
