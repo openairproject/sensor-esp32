@@ -57,28 +57,28 @@ typedef struct temp_reading_t {
 
 static char* TAG = "i2c_bmx280";
 
-#define CONT_IF_I2C_OK(log, x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGW(TAG, "err: %d (%s)",rc,log); if (cmd) i2c_cmd_link_delete(cmd); return rc;} } while(0);
+#define CONT_IF_I2C_OK(log, comm, x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGW(TAG, "err: %d (%x %s)",rc,comm->device_addr, log); if (cmd) i2c_cmd_link_delete(cmd); return rc;} } while(0);
 #define CONT_IF_OK(x)   do { esp_err_t rc = (x); if (rc != ESP_OK) return rc; } while(0);
 
 static esp_err_t read_i2c(i2c_comm_t* comm, uint8_t reg, uint8_t* data, int len) {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 	//set address
-	CONT_IF_I2C_OK("r1", i2c_master_start(cmd));
-	CONT_IF_I2C_OK("r2", i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_WRITE, 1));
-	CONT_IF_I2C_OK("r3", i2c_master_write_byte(cmd, reg, 1));
-	CONT_IF_I2C_OK("r4", i2c_master_stop(cmd));
-	CONT_IF_I2C_OK("r5",i2c_master_cmd_begin(comm->i2c_num, cmd, 1000/portTICK_PERIOD_MS)); //often ESP_FAIL (no ack received)
+	CONT_IF_I2C_OK("r1", comm, i2c_master_start(cmd));
+	CONT_IF_I2C_OK("r2", comm, i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_WRITE, 1));
+	CONT_IF_I2C_OK("r3", comm, i2c_master_write_byte(cmd, reg, 1));
+	CONT_IF_I2C_OK("r4", comm, i2c_master_stop(cmd));
+	CONT_IF_I2C_OK("r5", comm, i2c_master_cmd_begin(comm->i2c_num, cmd, 1000/portTICK_PERIOD_MS)); //often ESP_FAIL (no ack received)
 	i2c_cmd_link_delete(cmd);
 	cmd = 0;
 
 	//we need to read one byte per command (see below)
 	for (int i=0;i<len;i++) {
 		cmd = i2c_cmd_link_create();
-		CONT_IF_I2C_OK("r6",i2c_master_start(cmd));
-		CONT_IF_I2C_OK("r7",i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_READ, 1));
-		CONT_IF_I2C_OK("r8",i2c_master_read(cmd,data+i,1,1)); //ACK is must!
-		CONT_IF_I2C_OK("r9",i2c_master_stop(cmd));
-		CONT_IF_I2C_OK("r10",i2c_master_cmd_begin(comm->i2c_num, cmd, 2000/portTICK_PERIOD_MS));
+		CONT_IF_I2C_OK("r6", comm, i2c_master_start(cmd));
+		CONT_IF_I2C_OK("r7", comm, i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_READ, 1));
+		CONT_IF_I2C_OK("r8", comm, i2c_master_read(cmd,data+i,1,1)); //ACK is must!
+		CONT_IF_I2C_OK("r9", comm, i2c_master_stop(cmd));
+		CONT_IF_I2C_OK("r10",comm, i2c_master_cmd_begin(comm->i2c_num, cmd, 2000/portTICK_PERIOD_MS));
 		i2c_cmd_link_delete(cmd);
 		cmd = 0;
 	}
@@ -87,12 +87,12 @@ static esp_err_t read_i2c(i2c_comm_t* comm, uint8_t reg, uint8_t* data, int len)
 
 static esp_err_t write_i2c_byte(i2c_comm_t *comm, uint8_t reg, uint8_t value) {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-	CONT_IF_I2C_OK("w1",i2c_master_start(cmd));
-	CONT_IF_I2C_OK("w2",i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_WRITE, 1));
-	CONT_IF_I2C_OK("w3",i2c_master_write_byte(cmd, reg, 1));
-	CONT_IF_I2C_OK("w4",i2c_master_write_byte(cmd, value, 1));
-	CONT_IF_I2C_OK("w5",i2c_master_stop(cmd));
-	CONT_IF_I2C_OK("w6",i2c_master_cmd_begin(comm->i2c_num, cmd, 1000/portTICK_PERIOD_MS));
+	CONT_IF_I2C_OK("w1",comm, i2c_master_start(cmd));
+	CONT_IF_I2C_OK("w2",comm, i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_WRITE, 1));
+	CONT_IF_I2C_OK("w3",comm, i2c_master_write_byte(cmd, reg, 1));
+	CONT_IF_I2C_OK("w4",comm, i2c_master_write_byte(cmd, value, 1));
+	CONT_IF_I2C_OK("w5",comm, i2c_master_stop(cmd));
+	CONT_IF_I2C_OK("w6",comm, i2c_master_cmd_begin(comm->i2c_num, cmd, 1000/portTICK_PERIOD_MS));
 	i2c_cmd_link_delete(cmd);
 	return ESP_OK;
 }

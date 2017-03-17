@@ -10,7 +10,8 @@ config OAP_BMX280_ADDRESS
     hex "i2c address"
     default 0x76
     help
-        default address for bmx280 sensor is 0x76, it can be set to 0x77 by pulling down SDO pin.
+        Default address for bmx280 sensor is 0x76, it can be set to 0x77 by pulling up SDO pin.
+        Adafruit bme280 board is configured for 0x77 as default.
 
 config OAP_BMX280_I2C_NUM
     int "i2c interface number"
@@ -32,33 +33,36 @@ config OAP_BMX280_I2C_SCL_PIN
         see help for SDA pin
         
 config OAP_BMX280_ENABLED_AUX
-    int "enable aux bmx280 sensor"
+    int "enable internal bmx280 sensor"
     default 0
     help
         todo     
         
 config OAP_BMX280_ADDRESS_AUX
-    hex "i2c address"
+    hex "i2c address of internal sensor"
     default 0x77
     help
-        default address for bmx280 sensor is 0x76, it can be set to 0x77 by pulling down SDO pin.
+    	If both external and internal sensor use the same i2c bus, they must be configured to use
+    	different addresses.
+        Default address for bmx280 sensor is 0x76, it can be set to 0x77 by pulling up SDO pin.
+        Adafruit bme280 board is configured for 0x77 as default.
 
 config OAP_BMX280_I2C_NUM_AUX
-    int "i2c interface number"
+    int "i2c interface number for internal sensor"
     default 0
     help
-        todo
+        if both sensors use the same bus (default), sda/scl pins are ignored.
         
 config OAP_BMX280_I2C_SDA_PIN_AUX
     int "gpio SDA pin"
-    default 16
+    default 25
     help
         be careful with choosing gpio. i2c pins must be R/W.
         
 
 config OAP_BMX280_I2C_SCL_PIN_AUX
     int "SCL pin"
-    default 17
+    default 26
     help
         see help for SDA pin        
 
