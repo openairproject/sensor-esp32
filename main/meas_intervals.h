@@ -1,7 +1,7 @@
 /*
- * pm_meter.h
+ * meas_intervals.h
  *
- *  Created on: Feb 10, 2017
+ *  Created on: Mar 25, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,22 +20,17 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_PM_METER_H_
-#define MAIN_PM_METER_H_
-
-#include "oap_common.h"
-#include "pmsx003.h"
+#ifndef MAIN_MEAS_INTERVALS_H_
+#define MAIN_MEAS_INTERVALS_H_
 
 
-typedef enum {
-	PM_MEAS_AVG,
-	PM_MEAS_CONT
-} pm_meas_mode;
+#include "meas.h"
 
-void pm_meter_start(unsigned int warmingTime);
-void pm_meter_collect(pm_data *data);
+typedef struct {
+	int warmUpTime;
+	int measTime;
+	int measInterval;
+} meas_intervals_params_t;
 
-pm_data pm_meter_sample(int disable_sensor);
-void pm_meter_init(pms_config_t* pms_config);
 
-#endif /* MAIN_PM_METER_H_ */
+#endif /* MAIN_MEAS_INTERVALS_H_ */

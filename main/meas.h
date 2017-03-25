@@ -1,7 +1,7 @@
 /*
- * pms.h
+ * meas.h
  *
- *  Created on: Feb 3, 2017
+ *  Created on: Mar 25, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,38 +20,38 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_PMS_H_
-#define MAIN_PMS_H_
+#ifndef MAIN_MEAS_H_
+#define MAIN_MEAS_H_
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "oap_common.h"
-#include "driver/uart.h"
+#include "pmsx003.h"
 
-typedef void(*pms_callback)(uint8_t sensor, pm_data*);
+typedef struct {
+  uint8_t count;
+  pm_data data[2];
+} pm_data_duo_t;
 
-typedef struct pms_config_t {
-	uint8_t indoor;
-	uint8_t enabled;
-	uint8_t sensor;
-	pms_callback callback;
-	uint8_t set_pin;
-	uint8_t heater_pin;
-	uint8_t fan_pin;
+typedef struct {
+  uint8_t count;
+  pms_config_t* sensor[2];
+} pms_configs_t;
 
-	uart_port_t uart_num;
-	uint8_t uart_txd_pin;
-	uint8_t uart_rxd_pin;
-	uint8_t uart_rts_pin;
-	uint8_t uart_cts_pin;
-} pms_config_t;
+typedef enum {
+	MEAS_START,
+	MEAS_RESULT,
+	MEAS_ERROR
+} meas_event_t;
 
-/**
- * pm samples data is send to the queue.
- */
-esp_err_t pms_init(pms_config_t* config);
+typedef void(*meas_strategy_callback)(meas_event_t event, void* data);
 
-/**
- * enable/disable sensor.
- */
-esp_err_t pms_enable(pms_config_t* config, uint8_t enabled);
+typedef void(*meas_strategy_start)(pms_configs_t*, void*, meas_strategy_callback);
 
-#endif /* MAIN_PMS_H_ */
+typedef struct meas_strategy {
+	pms_callback collect;
+	meas_strategy_start start;
+} meas_strategy_t;
+
+#endif /* MAIN_MEAS_H_ */
