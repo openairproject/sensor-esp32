@@ -97,7 +97,7 @@ static void pms_uart_read(pms_config_t* config) {
         		//ESP_LOGI(TAG, "got frame of %d bytes", len);
         		pm_data pm = decodepm_data(data, config->indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
 				if (config->callback) {
-					config->callback(&pm);
+					config->callback(config->sensor, &pm);
 				}
         } else if (len > 0) {
         	ESP_LOGW(TAG, "invalid frame of %d", len); //we often get an error after this :(
@@ -119,8 +119,12 @@ esp_err_t pms_init(pms_config_t* config) {
 	pms_init_gpio(config);
 	pms_enable(config, 0);
 	pms_init_uart(config);
+
+	char task_name[100];
+	sprintf(task_name, "pm_uart_read_%d", config->sensor);
+
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
-	xTaskCreate(pms_uart_read, "pms_uart_read", 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
+	xTaskCreate(pms_uart_read, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
 }
 

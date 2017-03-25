@@ -23,6 +23,11 @@
 #ifndef MAIN_COMMON_COMMON_H_
 #define MAIN_COMMON_COMMON_H_
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "freertos/FreeRTOS.h"
+
 #define DEFAULT_TASK_PRIORITY (10)
 
 typedef struct {
@@ -35,7 +40,7 @@ typedef struct {
 	double temp;
 	double pressure;
 	double humidity;
-	uint8_t sensor;
+	uint8_t sensor; //TODO remove
 } env_data;
 
 typedef struct {

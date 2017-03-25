@@ -33,13 +33,16 @@
 #include "esp_log.h"
 #include <math.h>
 
+#include "meas_intervals.h"
+#include "meas_continuous.h"
+
+
 #include "thing_speak.h"
 #include "bootwifi.h"
 #include "rgb_led.h"
 #include "ctrl_btn.h"
 #include "bmx280.h"
 #include "pmsx003.h"
-#include "pm_meter.h"
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "oap_debug.h"
@@ -51,6 +54,11 @@ static QueueHandle_t led_queue;
 static QueueHandle_t pm_queue;
 
 static oap_sensor_config_t sensor_config;
+
+
+extern meas_strategy_t meas_intervals;
+extern meas_strategy_t meas_continuous;
+
 
 static oap_sensor_config_t get_config() {
 	oap_sensor_config_t sensor_config = {};
@@ -74,10 +82,12 @@ static oap_sensor_config_t get_config() {
 static led_cmd led_state = {
 	.color = {.v = {0,0,1}} //initial color (when no samples collected)
 };
-static void update_led() {
+
+void update_led() {
 	xQueueSend(led_queue, &led_state, 100);
 }
-static void update_led_mode(led_mode mode) {
+
+void update_led_mode(led_mode mode) {
 	led_state.mode = mode;
 	update_led();
 }
@@ -89,44 +99,88 @@ static void update_led_color(led_mode mode, float r, float g, float b) {
 	update_led_mode(mode);
 }
 
-static void pm_meter_trigger_task() {
+static void on_measurement_success(pm_data_duo_t* pm) {
+	ESP_LOGI(TAG, "STOP MEASUREMENT: %d", pm->data[0].pm2_5);
 
-	pms_config_t* pms_config = malloc(sizeof(pms_config_t));
-	memset(pms_config, 0, sizeof(pms_config_t));
-	pms_config->indoor = sensor_config.indoor;
-	pms_config->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
-	pms_config->heater_pin = sensor_config.heater ? CONFIG_OAP_HEATER_CONTROL_PIN : 0;
-	pms_config->fan_pin = sensor_config.fan ? CONFIG_OAP_FAN_CONTROL_PIN : 0;
+	float aqi = fminf(pm->data[0].pm2_5 / 100.0, 1.0);
+	//ESP_LOGI(TAG, "AQI=%f",aqi);
+	update_led_color(LED_SET, aqi,(1-aqi), 0);
 
-	pms_config->uart_num = CONFIG_OAP_PM_UART_NUM;
-	pms_config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
-	pms_config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;
-	pms_config->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN;
-	pms_config->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN;
-	pms_config->callback = &pm_meter_collect;
+}
 
-	pms_init(pms_config);
-	pm_meter_init(pms_config);
-
-	int delay_sec = (sensor_config.measInterval-sensor_config.measTime);
-	while (1) {
-		log_task_stack("pm_meter_trigger");
+static void pm_collect(meas_event_t event, void* data) {
+	switch (event) {
+	case MEAS_START:
+		ESP_LOGI(TAG, "START MEASUREMENT");
 		update_led_mode(LED_PULSE);
-		pm_meter_start(sensor_config.warmUpTime);
-		delay(sensor_config.measTime * 1000);
-		pm_data pm = pm_meter_sample(delay_sec>0);
-
-		float aqi = fminf(pm.pm2_5 / 100.0, 1.0);
-		ESP_LOGI(TAG, "AQI=%f",aqi);
-		update_led_color(LED_SET, aqi,(1-aqi), 0);
-
-		xQueueSend(pm_queue, &pm, 1000 / portTICK_PERIOD_MS); //1sec
-		if (delay_sec > 0) {
-			delay(delay_sec * 1000);
-		} else {
-			delay(10);
-		}
+		break;
+	case MEAS_RESULT:
+		on_measurement_success((pm_data_duo_t*)data);
+		break;
+	case MEAS_ERROR:
+		ESP_LOGW(TAG, "FAILED MEASUREMENT: %s", (char*)data);
+		break;
 	}
+
+}
+
+static void pm_configure() {
+
+	meas_strategy_t* strategy;
+	void* params = NULL;
+
+	switch (sensor_config.measStrategy) {
+		case 0 :
+			ESP_LOGI(TAG, "measurement strategy = interval");
+			params = malloc(sizeof(meas_intervals_params_t));
+			((meas_intervals_params_t*)params)->measInterval=sensor_config.measInterval;
+			((meas_intervals_params_t*)params)->measTime=sensor_config.measTime;
+			((meas_intervals_params_t*)params)->warmUpTime=sensor_config.warmUpTime;
+			strategy = &meas_intervals;
+			break;
+		case 1 :
+			ESP_LOGI(TAG, "measurement strategy = continuous");
+			strategy = &meas_continuous;
+			break;
+		default:
+			ESP_LOGE(TAG, "unknown strategy");
+			return;
+	}
+
+	pms_configs_t config = {};
+
+	config.sensor[0] = malloc(sizeof(pms_config_t));
+	memset(config.sensor[0], 0, sizeof(pms_config_t));
+
+	config.count++;
+	config.sensor[0]->sensor = 0;
+	config.sensor[0]->indoor = sensor_config.indoor;
+	config.sensor[0]->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
+	config.sensor[0]->heater_pin = sensor_config.heater ? CONFIG_OAP_HEATER_CONTROL_PIN : 0;
+	config.sensor[0]->fan_pin = sensor_config.fan ? CONFIG_OAP_FAN_CONTROL_PIN : 0;
+	config.sensor[0]->uart_num = CONFIG_OAP_PM_UART_NUM;
+	config.sensor[0]->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
+	config.sensor[0]->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;
+	config.sensor[0]->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN;
+	config.sensor[0]->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN;
+	config.sensor[0]->callback = strategy->collect;
+
+	if (CONFIG_OAP_PM_ENABLED_AUX) {
+		config.count++;
+		config.sensor[1] = malloc(sizeof(pms_config_t));
+		memset(config.sensor[1], 0, sizeof(pms_config_t));
+		config.sensor[1]->sensor = 1;
+		config.sensor[1]->indoor = sensor_config.indoor;
+		config.sensor[1]->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN_AUX;
+		config.sensor[1]->uart_num = CONFIG_OAP_PM_UART_NUM_AUX;
+		config.sensor[1]->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN_AUX;
+		config.sensor[1]->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN_AUX;
+		config.sensor[1]->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN_AUX;
+		config.sensor[1]->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN_AUX;
+		config.sensor[1]->callback = strategy->collect;
+	}
+
+	strategy->start(&config, params, &pm_collect);
 }
 
 static env_data env = {0};
@@ -219,6 +273,7 @@ void app_main()
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
 	//xTaskCreate(main_task, "main_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
-	xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	//xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	pm_configure();
 	main_task();
 }
