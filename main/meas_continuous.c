@@ -22,12 +22,28 @@
 
 #include "meas_continuous.h"
 
-static void collect(pm_data* data) {
+static char* TAG = "meas_cont";
+
+typedef struct {
+	pms_config_t config;
+	pm_data last;
+} sensor_model_t;
+
+uint8_t sensor_count;
+sensor_model_t* sensors;
+
+static void collect(uint8_t s, pm_data* pm) {
 
 }
 
-static void start() {
-
+static void start(pms_configs_t* pms_configs, meas_continuous_params_t* params, meas_strategy_callback callback) {
+	sensor_count = pms_configs->count;
+	sensors = malloc(sizeof(sensor_model_t)*sensor_count);
+	for (uint8_t c = 0; c < sensor_count; c++) {
+		sensor_model_t* sensor = sensors+c;
+		memset(sensor, 0, sizeof(sensor_model_t));
+		memcpy(&sensor->config, pms_configs->sensor[c], sizeof(pms_config_t));
+	}
 }
 
 meas_strategy_t meas_continuous = {

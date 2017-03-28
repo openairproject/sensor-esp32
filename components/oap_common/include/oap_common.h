@@ -31,22 +31,24 @@
 #define DEFAULT_TASK_PRIORITY (10)
 
 typedef struct {
-	unsigned int pm1_0;
-	unsigned int pm2_5;
-	unsigned int pm10;
+	uint16_t pm1_0;
+	uint16_t pm2_5;
+	uint16_t pm10;
+	uint8_t sensor;
 } pm_data;
 
 typedef struct {
 	double temp;
 	double pressure;
 	double humidity;
-	uint8_t sensor; //TODO remove
+	uint8_t sensor;
 } env_data;
 
 typedef struct {
-	pm_data pm;
-	env_data env;
-	env_data env_int;
+	pm_data* pm;
+	pm_data* pm_aux;
+	env_data* env;
+	env_data* env_int;
 	long int local_time;
 } oap_meas;
 

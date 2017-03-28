@@ -57,7 +57,7 @@ typedef struct temp_reading_t {
 
 static char* TAG = "i2c_bmx280";
 
-#define CONT_IF_I2C_OK(log, comm, x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGW(TAG, "err: %d (%x %s)",rc,comm->device_addr, log); if (cmd) i2c_cmd_link_delete(cmd); return rc;} } while(0);
+#define CONT_IF_I2C_OK(log, comm, x)   do { esp_err_t rc = (x); if (rc != ESP_OK) { ESP_LOGW(TAG, "[%x] err: %d (%s)",comm->device_addr, rc, log); if (cmd) i2c_cmd_link_delete(cmd); return rc;} } while(0);
 #define CONT_IF_OK(x)   do { esp_err_t rc = (x); if (rc != ESP_OK) return rc; } while(0);
 
 static esp_err_t read_i2c(i2c_comm_t* comm, uint8_t reg, uint8_t* data, int len) {
@@ -234,34 +234,39 @@ esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data* result){
 
 esp_err_t BME280_verify_chip(bme280_sensor_t* bme280_sensor) {
 	uint8_t chipID = 0;
-	uint8_t attemp = 0;
-	while (attemp++ <= 5 || read_i2c(&bme280_sensor->i2c_comm, BME280_CHIP_ID_REG,&chipID,1) != ESP_OK) {
+	uint8_t attempt = 0;
+	while (read_i2c(&bme280_sensor->i2c_comm, BME280_CHIP_ID_REG, &chipID,1) != ESP_OK && attempt++ < 5) {
+		ESP_LOGW(TAG, "[%x] failed to read chip id (attempt %d)", bme280_sensor->i2c_comm.device_addr, attempt)
 		vTaskDelay(20/portTICK_PERIOD_MS);
 	}
 
 	switch (chipID) {
 		case BME280_CHIP_ID:
-			ESP_LOGI(TAG,"detected BME280 (0x%X)", chipID);
+			ESP_LOGI(TAG,"[%x] detected BME280 (0x%X)", bme280_sensor->i2c_comm.device_addr, chipID);
 			return ESP_OK;
 		case BMP280_CHIP_ID1:
 		case BMP280_CHIP_ID2:
 		case BMP280_CHIP_ID3:
-			ESP_LOGI(TAG,"detected BMP280 - no humidity data (0x%X)", chipID);
+			ESP_LOGI(TAG,"[%x] detected BMP280 - no humidity data (0x%X)", bme280_sensor->i2c_comm.device_addr, chipID);
 			return ESP_OK;
 		default:
-			ESP_LOGW(TAG,"detected unknown chip (0x%X), disable env data", chipID);
+			ESP_LOGW(TAG,"[%x] detected unknown chip (0x%X), disable env data", bme280_sensor->i2c_comm.device_addr, chipID);
 			return ESP_FAIL;
 	}
 }
 
 esp_err_t BME280_init(bme280_sensor_t* bme280_sensor)
 {
-	if (BME280_verify_chip(bme280_sensor) != ESP_OK) {
-		return ESP_FAIL;
+	esp_err_t res;
+	if ((res = BME280_verify_chip(bme280_sensor)) != ESP_OK) {
+		return res;
 	}
-
-	BME280_writeConfigRegisters(&bme280_sensor->i2c_comm, bme280_sensor->operation_mode);
-	BME280_readCalibrationRegisters(&bme280_sensor->i2c_comm, &bme280_sensor->calib);
+	if ((res=BME280_writeConfigRegisters(&bme280_sensor->i2c_comm, bme280_sensor->operation_mode)) != ESP_OK) {
+		return res;
+	}
+	if ((res=BME280_readCalibrationRegisters(&bme280_sensor->i2c_comm, &bme280_sensor->calib)) != ESP_OK) {
+		return res;
+	}
 
 	return ESP_OK;
 }

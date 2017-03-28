@@ -106,6 +106,9 @@ static void on_measurement_success(pm_data_duo_t* pm) {
 	//ESP_LOGI(TAG, "AQI=%f",aqi);
 	update_led_color(LED_SET, aqi,(1-aqi), 0);
 
+	if (!xQueueSend(pm_queue, pm, 100)) {
+		ESP_LOGW(TAG,"pm_queue overflow");
+	}
 }
 
 static void pm_collect(meas_event_t event, void* data) {
@@ -121,7 +124,6 @@ static void pm_collect(meas_event_t event, void* data) {
 		ESP_LOGW(TAG, "FAILED MEASUREMENT: %s", (char*)data);
 		break;
 	}
-
 }
 
 static void pm_configure() {
@@ -183,17 +185,29 @@ static void pm_configure() {
 	strategy->start(&config, params, &pm_collect);
 }
 
-static env_data env = {0};
-static env_data env_int = {0};
 
-static void bmx280_callback(env_data* result) {
-	ESP_LOGI(TAG,"Env (%d): Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", result->sensor, result->temp, result->pressure, result->humidity);
-	memcpy(result->sensor ? &env_int : &env, result, sizeof(env_data));
+typedef struct {
+	env_data data;
+	long timestamp;
+} env_sensor_read_t;
+
+static env_sensor_read_t env_sensor_read[2];
+
+static void env_sensor_callback(env_data* result) {
+	if (result->sensor <= 1) {
+		ESP_LOGI(TAG,"Env (%d): Temperature : %.2f C, Pressure: %.2f hPa, Humidity: %.2f %%", result->sensor, result->temp, result->pressure, result->humidity);
+		env_sensor_read_t* r = env_sensor_read + result->sensor;
+		r->timestamp = oap_epoch_sec();
+		memcpy(&env_sensor_read->data, result, sizeof(env_data));
+	} else {
+		ESP_LOGE(TAG, "Env (%d) - invalid sensor", result->sensor);
+	}
 }
 
 static void main_task() {
 	led_init(get_config().led, led_queue);
 	update_led();
+	memset(&env_sensor_read, 0, sizeof(env_sensor_read_t)*2);
 
 	if (CONFIG_OAP_BMX280_ENABLED) {
 		bmx280_config_t *bmx280_config = malloc(sizeof(bmx280_config_t));
@@ -204,7 +218,7 @@ static void main_task() {
 		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN;
 		bmx280_config->sensor = 0;
 		bmx280_config->interval = 5000;
-		bmx280_config->callback = &bmx280_callback;
+		bmx280_config->callback = &env_sensor_callback;
 
 		if (bmx280_init(bmx280_config) != ESP_OK) {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor 0");
@@ -220,7 +234,7 @@ static void main_task() {
 		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN_AUX;
 		bmx280_config->sensor = 1;
 		bmx280_config->interval = 5000;
-		bmx280_config->callback = &bmx280_callback;
+		bmx280_config->callback = &env_sensor_callback;
 
 		if (bmx280_init(bmx280_config) != ESP_OK) {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor 1");
@@ -242,14 +256,16 @@ static void main_task() {
 
 	while (1) {
 		long localTime = oap_epoch_sec_valid();
-		pm_data pm;
-		if (xQueueReceive(pm_queue, &pm, 100)) {
+		long sysTime = oap_epoch_sec();
+		pm_data_duo_t pm_data_duo;
+		if (xQueueReceive(pm_queue, &pm_data_duo, 100)) {
 			log_task_stack("main_task");
 
 			oap_meas meas = {
-				.pm = pm,
-				.env = env,			//TODO allow null, check last timestamp
-				.env_int = env_int,
+				.pm = &pm_data_duo.data[0],
+				.pm_aux = pm_data_duo.count == 2 ? &pm_data_duo.data[1] : NULL,
+				.env = sysTime - env_sensor_read[0].timestamp < 60 ? &env_sensor_read[0].data : NULL,
+				.env_int = sysTime - env_sensor_read[1].timestamp < 60 ? &env_sensor_read[1].data : NULL,
 				.local_time = localTime
 			};
 
@@ -269,7 +285,7 @@ void app_main()
 
 	//wifi/mongoose requires plenty of mem, start it here
 	bootWiFi();
-	pm_queue = xQueueCreate(1, sizeof(pm_data));
+	pm_queue = xQueueCreate(1, sizeof(pm_data_duo_t));
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
 	//xTaskCreate(main_task, "main_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
