@@ -23,7 +23,9 @@
 #ifndef MAIN_MEAS_CONTINUOUS_H_
 #define MAIN_MEAS_CONTINUOUS_H_
 
+typedef struct {
 
+} meas_continuous_params_t;
 
 #include "meas.h"
 

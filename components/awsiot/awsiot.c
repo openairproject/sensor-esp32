@@ -53,9 +53,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 	cJSON* reported = cJSON_CreateObject();
 	cJSON* results = cJSON_CreateObject();
 	cJSON* config = cJSON_CreateObject();
-	cJSON* pm = cJSON_CreateObject();
-	cJSON* weather = cJSON_CreateObject();
-	cJSON* internal = cJSON_CreateObject();
+
 	cJSON* status = cJSON_CreateObject();
 
 	cJSON_AddItemToObject(shadow, "state", state);
@@ -63,10 +61,6 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 	cJSON_AddItemToObject(reported, "results", results);
 	cJSON_AddItemToObject(reported, "config", config);
 	cJSON_AddItemToObject(reported, "status", status);
-
-	cJSON_AddItemToObject(results, "pm", pm);
-	cJSON_AddItemToObject(results, "weather", weather);
-	cJSON_AddItemToObject(results, "internal", internal);
 
 	cJSON_AddNumberToObject(results, "uid", rand()); //what about 0?
 	cJSON_AddNumberToObject(status, "heap", xPortGetFreeHeapSize());
@@ -85,17 +79,49 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 		cJSON_AddNumberToObject(config, "test", sensor_config->test);
 	}
 
-	cJSON_AddNumberToObject(pm, "pm1_0", meas->pm.pm1_0);
-	cJSON_AddNumberToObject(pm, "pm2_5", meas->pm.pm2_5);
-	cJSON_AddNumberToObject(pm, "pm10", meas->pm.pm10);
+	if (meas->pm) {
+		cJSON* pm = cJSON_CreateObject();
+		cJSON_AddItemToObject(results, "pm", pm);
+		cJSON_AddNumberToObject(pm, "pm1_0", meas->pm->pm1_0);
+		cJSON_AddNumberToObject(pm, "pm2_5", meas->pm->pm2_5);
+		cJSON_AddNumberToObject(pm, "pm10", meas->pm->pm10);
+		cJSON_AddNumberToObject(pm, "sensor", meas->pm->sensor);
+	} else {
+		cJSON_AddNullToObject(results, "pm");
+	}
 
-	cJSON_AddNumberToObject(weather, "temp", meas->env.temp);
-	cJSON_AddNumberToObject(weather, "pressure", meas->env.pressure);
-	cJSON_AddNumberToObject(weather, "humidity", meas->env.humidity);
+	if (meas->pm_aux) {
+		cJSON* pm = cJSON_CreateObject();
+		cJSON_AddItemToObject(results, "pmAux", pm);
+		cJSON_AddNumberToObject(pm, "pm1_0", meas->pm_aux->pm1_0);
+		cJSON_AddNumberToObject(pm, "pm2_5", meas->pm_aux->pm2_5);
+		cJSON_AddNumberToObject(pm, "pm10", meas->pm_aux->pm10);
+		cJSON_AddNumberToObject(pm, "sensor", meas->pm_aux->sensor);
+	} else {
+		cJSON_AddNullToObject(results, "pmAux");
+	}
 
-	cJSON_AddNumberToObject(internal, "temp", meas->env_int.temp);
-	cJSON_AddNumberToObject(internal, "pressure", meas->env_int.pressure);
-	cJSON_AddNumberToObject(internal, "humidity", meas->env_int.humidity);
+	if (meas->env) {
+		cJSON* weather = cJSON_CreateObject();
+		cJSON_AddItemToObject(results, "weather", weather);
+		cJSON_AddNumberToObject(weather, "temp", meas->env->temp);
+		cJSON_AddNumberToObject(weather, "pressure", meas->env->pressure);
+		cJSON_AddNumberToObject(weather, "humidity", meas->env->humidity);
+		cJSON_AddNumberToObject(weather, "sensor", meas->env->sensor);
+	} else {
+		cJSON_AddNullToObject(results, "weather");
+	}
+
+	if (meas->env_int) {
+		cJSON* internal = cJSON_CreateObject();
+		cJSON_AddItemToObject(results, "internal", internal);
+		cJSON_AddNumberToObject(internal, "temp", meas->env_int->temp);
+		cJSON_AddNumberToObject(internal, "pressure", meas->env_int->pressure);
+		cJSON_AddNumberToObject(internal, "humidity", meas->env_int->humidity);
+		cJSON_AddNumberToObject(internal, "sensor", meas->env_int->sensor);
+	} else {
+		cJSON_AddNullToObject(results, "internal");
+	}
 
 	char *body = cJSON_Print(shadow);
 
@@ -183,43 +209,3 @@ esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config) {
 		return configured;
 	}
 }
-
-
-
-/*
-QueueHandle_t input_queue;
-
-static void awsiot_task() {
-	oap_meas meas;
-
-	while (1) {
-		if(xQueuePeek(input_queue, &meas, 1000)) {
-
-			log_task_stack(TAG);
-			xSemaphoreTake(networkHandle, portMAX_DELAY);
-			esp_err_t res = awsiot_post(&meas);
-			xSemaphoreGive(networkHandle);
-
-			if (res == ESP_OK) {
-				ESP_LOGI(TAG, "data sent successfully");
-				xQueueReceive(input_queue, &meas, 1000);
-			} else {
-				ESP_LOGW(TAG, "data post failed");
-				vTaskDelay(5000 / portTICK_PERIOD_MS);
-			}
-		}
-	}
-}
-
-QueueHandle_t awsiot_init(oap_sensor_config_t* _sensor_config)
-{
-	if (awsiot_configure(&awsiot_config) == ESP_OK) {
-		sensor_config = _sensor_config;
-		input_queue = xQueueCreate(1, sizeof(oap_meas));
-		//8192-2684=5508 bytes consumed
-    	xTaskCreate(&awsiot_task, "awsiot_task", 1024*10, NULL, DEFAULT_TASK_PRIORITY, NULL);
-    	return input_queue;
-	} else {
-		return NULL;
-	}
-}*/

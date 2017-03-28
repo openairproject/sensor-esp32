@@ -89,7 +89,7 @@ static esp_err_t pm_meter_sample(uint8_t s, pm_data* result, uint8_t disable_sen
 	}
 
 	uint16_t count = sensor->sample_count > CONFIG_OAP_PM_SAMPLE_BUF_SIZE ? CONFIG_OAP_PM_SAMPLE_BUF_SIZE : sensor->sample_count;
-	if (!count) {
+	if (count == 0) {
 		ESP_LOGW(TAG, "no samples recorded for sensor %d", s);
 		return ESP_FAIL;
 	}
@@ -106,8 +106,9 @@ static esp_err_t pm_meter_sample(uint8_t s, pm_data* result, uint8_t disable_sen
 	result->pm1_0 /= count;
 	result->pm2_5 /= count;
 	result->pm10 /= count;
+	result->sensor = s;
 
-	ESP_LOGI(TAG, "stop measurement. recorded %d samples", count);
+	ESP_LOGI(TAG, "stop measurement for sensor %d, recorded %d samples", s, count);
 	pm_data_print("average", s, result);
 
 	return ESP_OK;
@@ -132,15 +133,18 @@ static void task() {
 			.count = sensor_count
 		};
 
-		for (uint8_t s = 0; s < sensor_count; s++) {
+		uint8_t ok = 1;
+		for (uint8_t s = 0; ok && s < sensor_count; s++) {
 			ESP_LOGI(TAG, "compute results for sensor %d", s);
 			if (pm_meter_sample(s, pm_data_duo.data+s, delay_sec>0) != ESP_OK) {
 				_callback(MEAS_ERROR, "cannot calculate result");
-				return;
+				ok = 0;
 			}
 		}
 
-		_callback(MEAS_RESULT,&pm_data_duo);
+		if (ok) {
+			_callback(MEAS_RESULT,&pm_data_duo);
+		}
 
 		if (delay_sec > 0) {
 			delay(delay_sec * 1000);
@@ -158,9 +162,10 @@ static void start(pms_configs_t* pms_configs, meas_intervals_params_t* params, m
 	sensor_count = pms_configs->count;
 	sensors = malloc(sizeof(sensor_model_t)*sensor_count);
 	for (uint8_t c = 0; c < sensor_count; c++) {
-		memset(&sensors[c], 0, sizeof(sensor_model_t));
-		memcpy(&sensors[c], pms_configs->sensor[c], sizeof(pms_config_t));
-		sensors[c].samples = malloc(sizeof(pm_data)*CONFIG_OAP_PM_SAMPLE_BUF_SIZE);
+		sensor_model_t* sensor = sensors+c;
+		memset(sensor, 0, sizeof(sensor_model_t));
+		memcpy(&sensor->config, pms_configs->sensor[c], sizeof(pms_config_t));
+		sensor->samples = malloc(sizeof(pm_data)*CONFIG_OAP_PM_SAMPLE_BUF_SIZE);
 	}
 	xTaskCreate(task, "meas_intervals", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
 }
