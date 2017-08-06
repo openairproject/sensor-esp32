@@ -62,6 +62,7 @@ static void configure_gpio(uint8_t gpio) {
 		ESP_LOGD(TAG, "configure pin %d as output", gpio);
 		gpio_pad_select_gpio(gpio);
 		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
+		gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY);
 	}
 }
 
@@ -110,8 +111,8 @@ esp_err_t pms_enable(pms_config_t* config, uint8_t enabled) {
 	ESP_LOGI(TAG,"enable(%d)",enabled);
 	config->enabled = enabled;
 	set_gpio(config->set_pin, enabled);
-	set_gpio(config->heater_pin, enabled);
-	set_gpio(config->fan_pin, enabled);
+	if (config->heater_enabled) set_gpio(config->heater_pin, enabled);
+	if (config->fan_enabled) set_gpio(config->fan_pin, enabled);
 	return ESP_OK; //todo
 }
 
