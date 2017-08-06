@@ -36,6 +36,8 @@ typedef struct pms_config_t {
 	uint8_t set_pin;
 	uint8_t heater_pin;
 	uint8_t fan_pin;
+	uint8_t heater_enabled;
+	uint8_t fan_enabled;
 
 	uart_port_t uart_num;
 	uint8_t uart_txd_pin;

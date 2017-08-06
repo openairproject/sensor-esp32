@@ -163,10 +163,14 @@ static void led_cycle() {
 
 void led_init(int enabled, xQueueHandle _cmd_queue)
 {
-	cmd_queue = _cmd_queue;
     if (enabled) {
+    	cmd_queue = _cmd_queue;
     	setup_ledc();	//this often conflicts with other i/o operations? e.g. bme280 init.
     	xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
+    } else {
+    	for (int c = 0; c < 3; c++) {
+    	    if (led_gpio[c] > 0) gpio_set_pull_mode(led_gpio[c], GPIO_PULLDOWN_ONLY);
+    	}
     }
 }
 

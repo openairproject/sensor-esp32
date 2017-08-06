@@ -154,12 +154,16 @@ static void pm_configure() {
 	config.sensor[0] = malloc(sizeof(pms_config_t));
 	memset(config.sensor[0], 0, sizeof(pms_config_t));
 
+
 	config.count++;
 	config.sensor[0]->sensor = 0;
 	config.sensor[0]->indoor = sensor_config.indoor;
 	config.sensor[0]->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
-	config.sensor[0]->heater_pin = sensor_config.heater ? CONFIG_OAP_HEATER_CONTROL_PIN : 0;
-	config.sensor[0]->fan_pin = sensor_config.fan ? CONFIG_OAP_FAN_CONTROL_PIN : 0;
+	config.sensor[0]->heater_pin = CONFIG_OAP_HEATER_CONTROL_PIN;
+	config.sensor[0]->fan_pin = CONFIG_OAP_FAN_CONTROL_PIN;
+	config.sensor[0]->heater_enabled = sensor_config.heater;
+	config.sensor[0]->fan_enabled = sensor_config.fan;
+
 	config.sensor[0]->uart_num = CONFIG_OAP_PM_UART_NUM;
 	config.sensor[0]->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
 	config.sensor[0]->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;
@@ -205,8 +209,6 @@ static void env_sensor_callback(env_data* result) {
 }
 
 static void main_task() {
-	led_init(get_config().led, led_queue);
-	update_led();
 	memset(&env_sensor_read, 0, sizeof(env_sensor_read_t)*2);
 
 	if (CONFIG_OAP_BMX280_ENABLED) {
@@ -290,6 +292,10 @@ void app_main()
 
 	//xTaskCreate(main_task, "main_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
 	//xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
+
+	led_init(get_config().led, led_queue);
+	update_led();
+
 	pm_configure();
 	main_task();
 }
