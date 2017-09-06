@@ -241,7 +241,7 @@ static void storage_init_config() {
 }
 
 void storage_init() {
-	nvs_flash_init();
+	ESP_ERROR_CHECK(nvs_flash_init());
 	storage_init_config();
 }
 
