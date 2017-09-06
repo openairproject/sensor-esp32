@@ -12,3 +12,7 @@
 
 - support two (internal and external) bmx sensors
 - support optional fan and heater
+
+# 0.4.0
+
+- support two PM sensors ([#8](https://github.com/openairproject/sensor-esp32/issues/8))

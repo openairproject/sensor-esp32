@@ -37,8 +37,29 @@
            */
           "sensor"  : 0
         },
+        
+        /**
+         * optional results for the second sensor, if both were used to perform measurement at the same time
+         */
+        "pmAux":	{
+          "pm1_0"   : 0,
+          "pm2_5"   : 0,
+          "pm10"    : 0,
+		  "sensor":	1
+		},
+        
         /**
          * measured atmospheric conditions. parameters are optional but types are validated.
+         */
+        "weather" : {
+          "temp" : 0.0,
+          "pressure" : 0.0,
+          "humidity" : 0.0,
+          "sensor" : 0
+        },
+      
+        /**
+         * measured internal atmospheric conditions (optional)
          */
         "weather" : {
           "temp" : 0.0,
