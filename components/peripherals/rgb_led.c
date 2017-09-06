@@ -88,7 +88,7 @@ void fade_to_color(rgb color, int time) {
 		if ((res = ledc_set_fade_with_time(speed_mode, c, duty,time)) != ESP_OK) {
 			ESP_LOGW(TAG, "ledc_set_fade_with_time(%d,%d,%d,%d) error %d", speed_mode, c, duty, time, res);
 		}
-		if ((res = ledc_fade_start(c, LEDC_FADE_NO_WAIT)) != ESP_OK) {
+		if ((res = ledc_fade_start(speed_mode, c, LEDC_FADE_NO_WAIT)) != ESP_OK) {
 			ESP_LOGW(TAG, "ledc_fade_start(%d,%d) error %d", c, LEDC_FADE_NO_WAIT, res);
 		}
 	}
