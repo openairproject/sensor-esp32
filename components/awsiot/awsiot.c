@@ -77,6 +77,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 		//send it only once. of course if we want two-way configuration, we need versioning
 		cJSON_AddBoolToObject(config, "indoor", sensor_config->indoor);
 		cJSON_AddNumberToObject(config, "test", sensor_config->test);
+		cJSON_AddStringToObject(config, "firmware", oap_version_str());
 	}
 
 	if (meas->pm) {

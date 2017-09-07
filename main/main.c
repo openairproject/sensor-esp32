@@ -280,7 +280,7 @@ static void main_task() {
 void app_main()
 {
 	delay(1000);
-	ESP_LOGI(TAG,"starting app...");
+	ESP_LOGI(TAG,"starting app... firmware %s", oap_version_str());
 
 	storage_init();
 	sensor_config = get_config();

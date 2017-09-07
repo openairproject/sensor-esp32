@@ -23,9 +23,11 @@
 #ifndef MAIN_COMMON_COMMON_H_
 #define MAIN_COMMON_COMMON_H_
 
+#include "oap_version.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "freertos/FreeRTOS.h"
 
 #define DEFAULT_TASK_PRIORITY (10)

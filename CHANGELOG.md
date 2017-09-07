@@ -17,3 +17,4 @@
 
 - support two PM sensors ([#8](https://github.com/openairproject/sensor-esp32/issues/8))
 - update ESP-IDF to 2.1 ([#1](https://github.com/openairproject/sensor-esp32/issues/1))
+- track firmware version ([#9](https://github.com/openairproject/sensor-esp32/issues/9))
