@@ -26,21 +26,45 @@
 #include <stdlib.h>
 #include "cJSON.h"
 
-/*
- * Achtung!
- * each time when you change structure of storable object, use different (versioned) key
- * to avoid situation when old blob is loaded into incompatible struct.
- *
- * TODO we could use json for storing settings, it is more 'tolerant' for such changes
+
+/**
+ * @brief    initialise storage and config
  */
-int storage_get_blob(const char* key, void* out_value, size_t length);
-void storage_put_blob(const char* key, void* value, size_t length);
+void storage_init();
 
-int storage_set_config_str(const char* config);
-char* storage_get_config_str();
-
+/**
+ * @brief    return config for given submodule
+ *
+ * @param[in]  module  name of a submodule, e.g. 'wifi' or NULL to retrieve full config tree
+ *
+ * @return	config JSON. DO NOT free the result, it is a singleton.
+ */
 cJSON* storage_get_config(const char* module);
 
-void storage_init();
+
+/**
+ * @brief returns config json as a string
+ *
+ * sensitive data (wifi password) is replaced with constant string
+ *
+ * @return config json
+ */
+char* storage_get_config_str();
+
+
+/**
+ * @bried updates json config
+ *
+ * passed string is first parsed to JSON to ensure proper format and then
+ * sensitive data (wifi password) that has not been changed is being replaced with proper values.
+ *
+ * @param[in] json config as a string
+ *
+ * @return
+ * 			- ESP_OK if config was updated
+ * 			- ESP_FAIL if passed config was malformed
+ */
+esp_err_t storage_set_config_str(const char* config_json);
+
 
 #endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_STORAGE_H_ */

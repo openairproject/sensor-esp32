@@ -348,10 +348,6 @@ static int get_config(oc_wifi_t *oc_wifi) {
 	return ESP_OK;
 }
 
-//static void saveConnectionInfo(oc_wifi_t *pConnectionInfo) {
-//	storage_put_blob(KEY_CONNECTION_INFO, pConnectionInfo, sizeof(oc_wifi_t));
-//}
-
 static void become_station(oc_wifi_t *pConnectionInfo) {
 	is_station = 1;
 	ESP_LOGD(tag, "- Connecting to access point \"%s\" ...", pConnectionInfo->ssid);

@@ -29,6 +29,7 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 #include "cJSON.h"
+#include <math.h>
 
 extern const uint8_t default_config_json_start[] asm("_binary_default_config_json_start");
 extern const uint8_t default_config_json_end[] asm("_binary_default_config_json_end");
@@ -37,30 +38,59 @@ static char* NAMESPACE = "OAP";
 static char* TAG = "storage";
 static char* PASSWORD_NOT_CHANGED = "<not-changed>";
 
-int storage_get_blob(const char* key, void* out_value, size_t length) {
+static const size_t MAX_NVS_VALUE_SIZE = 32 * (126 / 2 - 1);
+
+static cJSON* _config;
+
+static nvs_handle storage_open(nvs_open_mode open_mode) {
 	nvs_handle handle;
+	ESP_ERROR_CHECK(nvs_open(NAMESPACE, open_mode, &handle));
+	return handle;
+}
+
+void storage_clean() {
+	ESP_ERROR_CHECK(nvs_flash_init());
+	nvs_handle handle = storage_open(NVS_READWRITE);
+	ESP_ERROR_CHECK(nvs_erase_all(handle));
+	ESP_ERROR_CHECK(nvs_commit(handle));
+	nvs_close(handle);
+	_config = NULL;
+}
+
+void storage_erase_blob(const char* key) {
+	nvs_handle handle = storage_open(NVS_READWRITE);
+	esp_err_t err = nvs_erase_key(handle, key);
+	if (err != ESP_ERR_NVS_NOT_FOUND) {
+		ESP_ERROR_CHECK(err);
+		ESP_ERROR_CHECK(nvs_commit(handle));
+	}
+	nvs_close(handle);
+}
+
+esp_err_t storage_get_blob(const char* key, void** out_value, size_t* length) {
+	nvs_handle handle = storage_open(NVS_READONLY);
 	esp_err_t err;
-	err = nvs_open(NAMESPACE, NVS_READWRITE, &handle);
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "nvs_open: %x", err);
-		return err;
-	}
-	err = nvs_get_blob(handle, key, out_value, &length);
-	if (err != ESP_OK) {
-		ESP_LOGD(TAG, "No connection record found (%d).", err);
+	size_t _length;
+	err = nvs_get_blob(handle, key, 0, &_length);
+	if (err == ESP_ERR_NVS_NOT_FOUND) {
 		nvs_close(handle);
 		return err;
 	}
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "nvs_open: %x", err);
-		nvs_close(handle);
-		return err;
+	ESP_ERROR_CHECK(err);
+
+	if (length != NULL) {
+		//fill optional length param
+		memcpy(length, &_length, sizeof(size_t));
 	}
+
+	*out_value = malloc(_length);
+	ESP_ERROR_CHECK(nvs_get_blob(handle, key, *out_value, &_length));
 	nvs_close(handle);
 	return ESP_OK;
 }
 
-int storage_get_str(const char* key, char** out_value) {
+/*
+esp_err_t storage_get_str(const char* key, char** out_value) {
 	nvs_handle handle;
 	esp_err_t err;
 	err = nvs_open(NAMESPACE, NVS_READWRITE, &handle);
@@ -71,7 +101,7 @@ int storage_get_str(const char* key, char** out_value) {
 	size_t length;
 	err = nvs_get_str(handle, key, 0, &length);
 	if (err != ESP_OK) {
-		ESP_LOGD(TAG, "No connection record found(1) (%d).", err);
+		ESP_LOGD(TAG, "nvs_get_str (%x).", err);
 		nvs_close(handle);
 		return err;
 	}
@@ -79,29 +109,22 @@ int storage_get_str(const char* key, char** out_value) {
 
 	err = nvs_get_str(handle, key, *out_value, &length);
 	if (err != ESP_OK) {
-		ESP_LOGD(TAG, "No connection record found(2) (%d).", err);
-		nvs_close(handle);
-		return err;
-	}
-
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "nvs_open: %x", err);
+		ESP_LOGD(TAG, "nvs_get_str (%x).", err);
 		nvs_close(handle);
 		return err;
 	}
 	nvs_close(handle);
 	return ESP_OK;
-}
+}*/
 
-void storage_put_blob(const char* key, void* value, size_t length) {
-	nvs_handle handle;
-	ESP_ERROR_CHECK(nvs_open(NAMESPACE, NVS_READWRITE, &handle));
-	ESP_LOGD(TAG, "store blob '%s'=%d bytes", key, length);
+void storage_set_blob(const char* key, void* value, size_t length) {
+	nvs_handle handle = storage_open(NVS_READWRITE);
 	ESP_ERROR_CHECK(nvs_set_blob(handle, key, value, length));
 	ESP_ERROR_CHECK(nvs_commit(handle));
 	nvs_close(handle);
 }
 
+/*
 void storage_put_str(const char* key, char* value) {
 	nvs_handle handle;
 	ESP_ERROR_CHECK(nvs_open(NAMESPACE, NVS_READWRITE, &handle));
@@ -109,11 +132,116 @@ void storage_put_str(const char* key, char* value) {
 	ESP_ERROR_CHECK(nvs_set_str(handle, key, value));
 	ESP_ERROR_CHECK(nvs_commit(handle));
 	nvs_close(handle);
+}*/
+
+//----------- big blob --
+
+static esp_err_t storage_get_bigblob_size(nvs_handle handle, const char* key, size_t* length) {
+	char* desc = malloc(strlen(key) + 3);
+	strcpy(desc, key);
+	strcat(desc, ".#");
+	esp_err_t err = nvs_get_i32(handle, desc, (int32_t*)length);
+	free(desc);
+	return err;
+}
+
+static esp_err_t storage_set_bigblob_size(nvs_handle handle, const char* key, size_t length) {
+	char* desc = malloc(strlen(key) + 3);
+	strcpy(desc, key);
+	strcat(desc, ".#");
+	esp_err_t err = nvs_set_i32(handle, desc, length);
+	free(desc);
+	return err;
+}
+
+esp_err_t storage_get_bigblob(const char* key, void** out_value, size_t* length) {
+	nvs_handle handle = storage_open(NVS_READONLY);
+	esp_err_t err;
+	//read key.desc to find length and #parts
+	size_t _length;
+	err = storage_get_bigblob_size(handle, key, &_length);
+
+	if (err != ESP_OK) {
+		ESP_LOGD(TAG, "No entry found (%x).", err);
+		nvs_close(handle);
+		return err;
+	} else {
+		ESP_LOGD(TAG, "reading %u bytes", _length);
+		if (length != NULL) {
+			//fill optional length param
+			memcpy(length, &_length, sizeof(size_t));
+		}
+	}
+
+	*out_value = malloc(_length);
+	int p = 0;
+	char* part = malloc(strlen(key) + 4);
+	size_t start = 0, end = 0;
+	err = ESP_OK;
+
+	while (err == ESP_OK && end < _length) {
+		sprintf(part, "%s.%x", key, p);
+		start = p * MAX_NVS_VALUE_SIZE;
+		end = start + MAX_NVS_VALUE_SIZE;
+		if (end > _length) end = _length;
+		ESP_LOGD(TAG, "read %s: %d-%d", part, start, end);
+		size_t part_len = end-start;
+		err = nvs_get_blob(handle, part, *out_value+start, &part_len);
+		p++;
+	}
+	free(part);
+	nvs_close(handle);
+	return err;
+}
+
+void storage_set_bigblob(const char* key, void* value, size_t length) {
+	nvs_handle handle = storage_open(NVS_READWRITE);
+	ESP_LOGD(TAG, "set_bigblob '%s'= %d bytes", key, length);
+
+	size_t old_length;
+	uint8_t old_parts = 0;
+	esp_err_t err = storage_get_bigblob_size(handle, key, &old_length);
+	if (err == ESP_OK) {
+		old_parts = ceil(old_length / (double)MAX_NVS_VALUE_SIZE);
+		ESP_LOGD(TAG, "old entry size=%d (%d parts)", old_length, old_parts);
+	} else if (err == ESP_ERR_NVS_NOT_FOUND) {
+		ESP_LOGD(TAG, "new entry");
+	} else {
+	  ESP_ERROR_CHECK(err);
+	}
+
+	//write new one
+	uint8_t p = 0;
+	size_t start = 0, end = 0;
+	char* part = malloc(strlen(key) + 4);
+
+	while (end < length) {
+		start = p*MAX_NVS_VALUE_SIZE;
+		end =  start + MAX_NVS_VALUE_SIZE;
+		if (end > length) end = length;
+		sprintf(part, "%s.%x", key, p);
+		ESP_LOGD(TAG, "store part '%s': %d-%d", part, start, end);
+		ESP_ERROR_CHECK(nvs_set_blob(handle, part, value+start, end-start));
+		p++;
+	}
+
+	while (p < old_parts) {
+		sprintf(part, "%s.%x", key, p);
+		ESP_LOGD(TAG, "remove part '%s'", part);
+		err = nvs_erase_key(handle, part);
+		if (err != ESP_ERR_NVS_NOT_FOUND) {
+			ESP_ERROR_CHECK(err);
+		}
+		p++;
+	}
+	free(part);
+
+	ESP_ERROR_CHECK(storage_set_bigblob_size(handle, key, length));
+	nvs_commit(handle);
+	nvs_close(handle);
 }
 
 //----------- config --------------
-
-static cJSON* _config;
 
 cJSON* storage_get_config(const char* module) {
 	if (!_config) {
@@ -131,8 +259,10 @@ static void storage_set_config(cJSON *config) {
 	if (_config) cJSON_Delete(_config);
 	_config = config;
 	char* _configStr = cJSON_Print(_config);
-	storage_put_str("config", _configStr);
+	storage_set_bigblob("config", _configStr, strlen(_configStr)+1);
 	free(_configStr);
+
+	storage_erase_blob("config"); //remove old entry
 }
 
 /*
@@ -152,23 +282,8 @@ char* storage_get_config_str() {
 	return str;
 }
 
-//static void set_str_value(cJSON* node, char* str) {
-//	if (!node) return;
-//	if (node->valuestring) free(node->valuestring);
-//	node->valuestring = malloc(strlen(str)+1);
-//	strcpy(node->valuestring, str);
-//}
-
-/*
- * deserialises json string and stores as a new config.
- * it also checks password field if it that didn't change - it leaves the old value.
- */
-int storage_set_config_str(const char* configStr) {
+esp_err_t storage_set_config_str(const char* configStr) {
 	ESP_LOGD(TAG, "set config");
-
-//	char* c= storage_get_config_str();
-//	ESP_LOGD(TAG, "current config: %s", c);
-//	free(c);
 
 	cJSON *config = cJSON_Parse(configStr);
 	if (config) {
@@ -208,7 +323,11 @@ static void storage_init_config() {
 	ESP_LOGD(TAG, "get config");
 
 	int err;
-	if ((err = storage_get_str("config", &str)) != ESP_OK) {
+	if ((err = storage_get_bigblob("config", &str, NULL)) == ESP_ERR_NVS_NOT_FOUND) {
+		err = storage_get_blob("config", &str, NULL);	//backward comp, config used to be stored as single string
+	}
+
+	if (err != ESP_OK) {
 		if (str) free(str);
 		if (err == ESP_ERR_NVS_NOT_FOUND) {
 			ESP_LOGW(TAG,"config does not exist, create default");
