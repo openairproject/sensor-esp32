@@ -43,6 +43,11 @@
             margin:0;
             font-size: 32px;
         }
+        #ver {
+        	font-size:0.5em;
+        	padding:1em;
+        	float:right;
+        }
         div.cnt {
             padding:1em;
         }
@@ -90,7 +95,7 @@
     </style>
 </head>
 <body>
-<h1 class="header"><div class="logo64-grey"></div><span>OpenAirProject Sensor</span></h1>
+<h1 class="header"><div class="logo64-grey"></div><span>OpenAirProject Sensor</span><span id="ver"></span></h1>
 <div class="cnt">
 <form>
         <fieldset>
@@ -334,6 +339,7 @@
         qwest.get('config')
           .then(function (xhr, json) {
             oap.jsonToForm(json, document.forms[0]);
+            document.getElementById('ver').innerText = xhr.getResponseHeader('X-VERSION');
           })
           .catch(function (e, xhr, response) {
             alert('Could not load config\n(' + xhr.status + ' - ' + e.message + ')');

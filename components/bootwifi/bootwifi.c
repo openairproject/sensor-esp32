@@ -94,10 +94,12 @@ static void handler_index(struct mg_connection *nc) {
 static void handler_get_config(struct mg_connection *nc, struct http_message *message) {
 	ESP_LOGD(tag, "handler_get_config");
 	cJSON* config = storage_get_config_to_update();
-
 	char* json = cJSON_Print(config);
-	mg_send_head(nc, 200, strlen(json), "Content-Type: application/json");
+	char* headers = malloc(200);
+	sprintf(headers, "Content-Type: application/json\r\nX-Version: %s", oap_version_str());
+	mg_send_head(nc, 200, strlen(json), headers);
 	mg_send(nc, json, strlen(json));
+	free(headers);
 	free(json);
 }
 
