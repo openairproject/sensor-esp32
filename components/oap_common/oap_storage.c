@@ -255,60 +255,56 @@ cJSON* storage_get_config(const char* module) {
 	}
 }
 
-static void storage_set_config(cJSON *config) {
+static void storage_store_config(cJSON *config) {
 	if (_config) cJSON_Delete(_config);
-	_config = config;
-	char* _configStr = cJSON_Print(_config);
-	storage_set_bigblob("config", _configStr, strlen(_configStr)+1);
-	free(_configStr);
-
+	_config = cJSON_Duplicate(config, 1);
+	char* json = cJSON_Print(_config);
+	storage_set_bigblob("config", json, strlen(json)+1);
+	free(json);
 	storage_erase_blob("config"); //remove old entry
 }
 
-/*
- * returns entire config as a string.
- * free result after use.
- */
-char* storage_get_config_str() {
-	cJSON* copy = cJSON_Duplicate(_config, 1);
-	cJSON* wifi = cJSON_GetObjectItem(copy, "wifi");
+static void mask_sensitive_fields(cJSON* config) {
+	cJSON* wifi = cJSON_GetObjectItem(config, "wifi");
 	//replace existing password (security)
 	if (wifi && cJSON_GetObjectItem(wifi, "password")) {
 		cJSON_DeleteItemFromObject(wifi, "password");
 		cJSON_AddStringToObject(wifi, "password", PASSWORD_NOT_CHANGED);
 	}
-	char* str = cJSON_Print(copy);
-	cJSON_Delete(copy);
-	return str;
 }
 
-esp_err_t storage_set_config_str(const char* configStr) {
-	ESP_LOGD(TAG, "set config");
+cJSON* storage_get_config_to_update() {
+	cJSON* copy = cJSON_Duplicate(_config, 1);
+	mask_sensitive_fields(copy);
+	return copy;
+}
 
-	cJSON *config = cJSON_Parse(configStr);
-	if (config) {
-		if (_config) {
-			cJSON* wifi = cJSON_GetObjectItem(config, "wifi");
+static void unmask_sensitive_fields(const cJSON* new_config, const cJSON* old_config) {
+	if (old_config) {
+		cJSON* wifi = cJSON_GetObjectItem(new_config, "wifi");
+		if (wifi) {
 			cJSON* passwordNode = cJSON_GetObjectItem(wifi, "password");
 			if (passwordNode && strcmp(passwordNode->valuestring, PASSWORD_NOT_CHANGED) == 0) {
-				cJSON* _wifi = cJSON_GetObjectItem(_config, "wifi");
-				cJSON* _passwordNode = cJSON_GetObjectItem(_wifi, "password");
-				ESP_LOGD(TAG,"detected '%s' token, we need to keep old password (%s)", PASSWORD_NOT_CHANGED, _passwordNode->valuestring);
-				if (_passwordNode) {
-					cJSON_DeleteItemFromObject(wifi, "password");
-					cJSON_AddStringToObject(wifi, "password", _passwordNode->valuestring);
+				cJSON* _wifi = cJSON_GetObjectItem(old_config, "wifi");
+				if (_wifi) {
+					cJSON* _passwordNode = cJSON_GetObjectItem(_wifi, "password");
+					ESP_LOGD(TAG,"detected '%s' token, we need to keep old password (%s)", PASSWORD_NOT_CHANGED, _passwordNode->valuestring);
+					if (_passwordNode) {
+						cJSON_DeleteItemFromObject(wifi, "password");
+						cJSON_AddStringToObject(wifi, "password", _passwordNode->valuestring);
+					}
 				}
 			}
 		}
-		storage_set_config(config);
-		return ESP_OK;
-	} else {
-		ESP_LOGE(TAG, "malformed config, ignore");
-		return ESP_FAIL;
 	}
 }
 
-
+void storage_update_config(const cJSON* config) {
+	ESP_LOGD(TAG, "update config");
+	if (!config) return;
+	unmask_sensitive_fields(config, _config);
+	storage_store_config(config);
+}
 
 static char* default_config() {
 	int len = default_config_json_end-default_config_json_start;
@@ -327,6 +323,8 @@ static void storage_init_config() {
 		err = storage_get_blob("config", &str, NULL);	//backward comp, config used to be stored as single string
 	}
 
+	cJSON* stored = NULL;
+
 	if (err != ESP_OK) {
 		if (str) free(str);
 		if (err == ESP_ERR_NVS_NOT_FOUND) {
@@ -335,8 +333,8 @@ static void storage_init_config() {
 			ESP_LOGE(TAG,"config corrupted, replace with default");
 		}
 	} else {
-		_config = cJSON_Parse(str);
-		if (!_config) {
+		stored = cJSON_Parse(str);
+		if (!stored) {
 			ESP_LOGE(TAG,"config is not a proper json, replace with default\n%s", str);
 		} else {
 			//TODO here we should "merge" it with defaults - in case of new firmware
@@ -345,17 +343,20 @@ static void storage_init_config() {
 		free(str);
 	}
 
-	if (!_config) {
+	if (stored) {
+		_config = stored;
+	} else {
 		str = default_config();
-		_config = cJSON_Parse(str);
-		if (!_config) {
+		cJSON* def_config = cJSON_Parse(str);
+		if (!def_config) {
 			ESP_LOGE(TAG,"default config is not a proper json\n%s", str);
 			abort();
 		} else {
-			ESP_LOGI(TAG,"config\n%s",str);
+			ESP_LOGI(TAG,"default config\n%s",str);
 		}
-		storage_set_config_str(str);
 		free(str);
+		storage_update_config(def_config);
+		cJSON_Delete(def_config);
 	}
 }
 
