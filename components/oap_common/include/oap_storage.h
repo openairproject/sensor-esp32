@@ -37,7 +37,7 @@ void storage_init();
  *
  * @param[in]  module  name of a submodule, e.g. 'wifi' or NULL to retrieve full config tree
  *
- * @return	config JSON. DO NOT free the result, it is a singleton.
+ * @return	config JSON. DO NOT free or modify the result, it is a singleton!
  */
 cJSON* storage_get_config(const char* module);
 
@@ -47,24 +47,19 @@ cJSON* storage_get_config(const char* module);
  *
  * sensitive data (wifi password) is replaced with constant string
  *
- * @return config json
+ * @return config json. free it after use!
  */
-char* storage_get_config_str();
+cJSON* storage_get_config_to_update();
 
 
 /**
  * @bried updates json config
  *
- * passed string is first parsed to JSON to ensure proper format and then
  * sensitive data (wifi password) that has not been changed is being replaced with proper values.
  *
- * @param[in] json config as a string
- *
- * @return
- * 			- ESP_OK if config was updated
- * 			- ESP_FAIL if passed config was malformed
+ * @param[in] json config
  */
-esp_err_t storage_set_config_str(const char* config_json);
+void storage_update_config(cJSON* config);
 
 
 #endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_STORAGE_H_ */

@@ -93,14 +93,12 @@ static void handler_index(struct mg_connection *nc) {
 
 static void handler_get_config(struct mg_connection *nc, struct http_message *message) {
 	ESP_LOGD(tag, "handler_get_config");
-	char* json = storage_get_config_str();
-	if (json) {
-		mg_send_head(nc, 200, strlen(json), "Content-Type: application/json");
-		mg_send(nc, json, strlen(json));
-		free(json);
-	} else {
-		mg_http_send_error(nc, 500, "failed to load config");
-	}
+	cJSON* config = storage_get_config_to_update();
+
+	char* json = cJSON_Print(config);
+	mg_send_head(nc, 200, strlen(json), "Content-Type: application/json");
+	mg_send(nc, json, strlen(json));
+	free(json);
 }
 
 static void handler_reboot(struct mg_connection *nc) {
@@ -113,13 +111,15 @@ static void handler_reboot(struct mg_connection *nc) {
 static void handler_set_config(struct mg_connection *nc, struct http_message *message) {
 	ESP_LOGD(tag, "handler_set_config");
 	char *body = mgStrToStr(message->body);
-	if (storage_set_config_str(body) == ESP_OK) {
-		handler_get_config(nc, message);
-		//reboot_delayed();
-	} else {
-		mg_http_send_error(nc, 500, "failed to store config");
-	}
+	cJSON* config = cJSON_Parse(body);
 	free(body);
+	if (config) {
+		storage_update_config(config);
+		handler_get_config(nc, message);
+	} else {
+		mg_http_send_error(nc, 500, "invalid config");
+	}
+	cJSON_Delete(config);
 }
 
 /**
