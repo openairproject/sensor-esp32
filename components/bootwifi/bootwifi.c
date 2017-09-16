@@ -26,8 +26,8 @@
 #include <esp_event_loop.h>
 #include <esp_wifi.h>
 #include <driver/gpio.h>
-#include <tcpip_adapter.h>
 #include <lwip/sockets.h>
+#include "bootwifi.h"
 #include "mongoose.h"
 #include "bootwifi.h"
 #include "sdkconfig.h"
@@ -35,6 +35,7 @@
 #include "http_utils.h"
 #include "oap_common.h"
 #include "oap_storage.h"
+#include "freertos/event_groups.h"
 
 /**
  * based on https://github.com/nkolban/esp32-snippets/tree/master/networking/bootwifi
@@ -49,35 +50,39 @@
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
-#define SSID_SIZE (32) // Maximum SSID size
-#define PASSWORD_SIZE (64) // Maximum password size
 
 #define OAP_ACCESS_POINT_IP "192.168.1.1"
 #define OAP_ACCESS_POINT_NETMASK "255.255.255.0"
 
 
-typedef struct {
-	char ssid[SSID_SIZE];
-	char password[PASSWORD_SIZE];
-	tcpip_adapter_ip_info_t ipInfo; // Optional static IP information
-} oc_wifi_t;
+static uint8_t _enable_control_panel;
 
 typedef uint8_t u8_t;
 typedef uint16_t u16_t;
 
 static int g_mongooseStarted = 0; // Has the mongoose server started?
 static int g_mongooseStopRequest = 0; // Request to stop the mongoose server.
-static int reboot_in_progress = 0;
 
 // Forward declarations
+static int _sntp_initialised = 0;
 static int is_station = 0;
 static void become_access_point();
 static void restore_wifi_setup();
 
 static char tag[] = "wifi";
 
+/* FreeRTOS event group to signal when we are connected & ready to make a request */
+static EventGroupHandle_t wifi_event_group = NULL;
+
+/* The event group allows multiple bits for each event,
+   but we only care about one event - are we connected
+   to the AP with an IP? */
+const int CONNECTED_BIT = 0x00000001; //BIT0
+
 static void initialize_sntp(void)
 {
+	if (_sntp_initialised) return;
+	_sntp_initialised = 1;
     ESP_LOGI(tag, "Initializing SNTP");
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, "pool.ntp.org");
@@ -106,8 +111,7 @@ static void handler_get_config(struct mg_connection *nc, struct http_message *me
 static void handler_reboot(struct mg_connection *nc) {
 	mg_send_head(nc, 200, 0, "Content-Type: text/plain");
 	ESP_LOGW(tag, "received reboot request!");
-	reboot_in_progress = 1;
-	esp_restart();
+	oap_reboot();
 }
 
 static void handler_set_config(struct mg_connection *nc, struct http_message *message) {
@@ -225,11 +229,11 @@ int set_access_point_ip()
 }
 
 static void start_mongoose() {
-	if (CONFIG_OAP_CONTROL_PANEL) {
+	if (_enable_control_panel) {
 		if (!g_mongooseStarted) {
 			g_mongooseStarted = 1;
-			xTaskCreatePinnedToCore(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL, 0);
-			//xTaskCreate(&mongooseTask, "bootwifi_mongoose_task", 10000, NULL, 5, NULL);
+			//xTaskCreatePinnedToCore(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL, 0);
+			xTaskCreate(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
 		}
 	} else {
 		ESP_LOGW(tag, "control panel disabled by config flag");
@@ -255,12 +259,13 @@ static void start_mongoose() {
  * SYSTEM_EVENT_WIFI_READY
  */
 static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
-	if (reboot_in_progress) return ESP_OK; //ignore - trying to reconnect now will crash
+	if (is_reboot_in_progress()) return ESP_OK; //ignore - trying to reconnect now will crash
 
 	// Your event handling code here...
 	switch(event->event_id) {
 		// When we have started being an access point, then start being a web server.
 		case SYSTEM_EVENT_AP_START: { // Handle the AP start event
+			xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
 			esp_err_t err;
 			if ((err=set_access_point_ip()) != ESP_OK) {
 				ESP_LOGW(tag, "failed to set ip address [err %x], use default", err);
@@ -280,6 +285,10 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			break;
 		} // SYSTEM_EVENT_AP_START
 
+		case SYSTEM_EVENT_AP_STOP : {
+			break;
+		}
+
 		// If we fail to connect to an access point as a station, become an access point.
 		case SYSTEM_EVENT_STA_DISCONNECTED: {
 			ESP_LOGD(tag, "Station disconnected - reconnecting");
@@ -290,19 +299,28 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			 *
 			 * TODO remember successful connection to wifi and do not fallback to AP if we ever managed connect to wifi.
 			 */
+			xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
 			restore_wifi_setup();
 			break;
 		}
 
 		case SYSTEM_EVENT_STA_GOT_IP: {
-			ESP_LOGD(tag, "********************************************");
-			ESP_LOGD(tag, "* Connected with WIFI network")
-			ESP_LOGD(tag, "* Sensor IP address: " IPSTR, IP2STR(&event->event_info.got_ip.ip_info.ip));
-			ESP_LOGD(tag, "********************************************");
+			//at least in sdk2.1, this event is triggered even in AP mode!
+			if (is_station) {
+				ESP_LOGD(tag, "********************************************");
+				ESP_LOGD(tag, "* Connected with WIFI network")
+				ESP_LOGD(tag, "* Sensor IP address: " IPSTR, IP2STR(&event->event_info.got_ip.ip_info.ip));
+				ESP_LOGD(tag, "********************************************");
 
-			initialize_sntp();
-			start_mongoose();
-
+				xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+				initialize_sntp();
+				/*
+				 * TODO if we attempt to make an SSL request (by OTA, didn't check others) when wifi is in AP mode,
+				 * mongoose goes into infinite loop;
+				 * socket.accept fails immediately. this may be network stack bug.
+				 */
+				start_mongoose();
+			}
 			break;
 		}
 
@@ -316,7 +334,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 /**
  * Retrieve the connection info.  A rc==0 means ok.
  */
-static int get_config(oc_wifi_t *oc_wifi) {
+static esp_err_t get_config(oc_wifi_t *oc_wifi) {
 	memset(oc_wifi, 0, sizeof(oc_wifi_t));
 	ESP_LOGD(tag, "retrieve wifi config");
 	cJSON* wifi = storage_get_config("wifi");
@@ -341,12 +359,6 @@ static int get_config(oc_wifi_t *oc_wifi) {
 	ESP_LOGD(tag, "wifi.ip:" IPSTR, IP2STR(&oc_wifi->ipInfo.ip));
 	ESP_LOGD(tag, "wifi.gateway:" IPSTR, IP2STR(&oc_wifi->ipInfo.gw));
 	ESP_LOGD(tag, "wifi.netmask:" IPSTR, IP2STR(&oc_wifi->ipInfo.netmask));
-
-	if (strlen(oc_wifi->ssid) == 0) {
-		ESP_LOGW(tag, "NULL ssid detected");
-		return ESP_FAIL;
-	}
-
 	return ESP_OK;
 }
 
@@ -405,17 +417,21 @@ static int is_button_pressed() {
 	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
 }
 
-static void restore_wifi_setup() {
+static void restore_wifi_setup(oc_wifi_t* oc_wifi_config) {
 	if (is_button_pressed()) {
-		ESP_LOGI(tag, "GPIO override detected");
+		ESP_LOGI(tag, "forced AP mode");
 		become_access_point();
 	} else {
-		oc_wifi_t oc_wifi = {};
-		int rc = get_config(&oc_wifi);
-		if (rc == 0) {
-			become_station(&oc_wifi);
-		} else {
+		oc_wifi_t oc_wifi;
+		if (oc_wifi_config == NULL) {
+			oc_wifi_config = &oc_wifi;
+			get_config(oc_wifi_config);
+		}
+		if (strlen(oc_wifi_config->ssid) == 0) {
+			ESP_LOGW(tag, "No WIFI SSID configured");
 			become_access_point();
+		} else {
+			become_station(oc_wifi_config);
 		}
 	}
 }
@@ -428,15 +444,29 @@ static void init_wifi() {
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 }
 
-void bootWiFi() {
-	ESP_LOGD(tag, ">> bootWiFi");
+void wifi_boot(oc_wifi_t* wifi_config, uint8_t enable_control_panel) {
+	if (wifi_event_group) {
+		ESP_LOGD(tag, "wifi already booted");
+		return;
+	}
+	ESP_LOGD(tag, "wifi_boot start");
+	wifi_event_group = xEventGroupCreate();
+	_enable_control_panel = enable_control_panel;
 
 	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
 	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
 	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
 
 	init_wifi();
-	restore_wifi_setup();
+	restore_wifi_setup(wifi_config);
 
-	ESP_LOGD(tag, "<< bootWiFi");
+	ESP_LOGD(tag, "wifi_boot done");
+}
+
+esp_err_t wifi_connected_wait_for(uint32_t ms) {
+	return xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, ms ? ms / portTICK_PERIOD_MS : portMAX_DELAY) & CONNECTED_BIT ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t wifi_connected_wait() {
+	return wifi_connected_wait_for(0);
 }

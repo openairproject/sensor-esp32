@@ -34,10 +34,11 @@
  */
 
 #include <stdint.h>
+#include "esp_err.h"
 
 #define OAP_VER_MAJOR 0
 #define OAP_VER_MINOR 4
-#define OAP_VER_PATCH 0
+#define OAP_VER_PATCH 3
 
 typedef struct {
 	uint8_t major;
@@ -45,6 +46,10 @@ typedef struct {
 	uint8_t patch;
 } oap_version_t;
 
+oap_version_t oap_version();
 char* oap_version_str();
+char* oap_version_format(oap_version_t ver);
+esp_err_t oap_version_parse(char* str, oap_version_t* ver);
+unsigned long oap_version_num(oap_version_t ver);
 
 #endif /* MAIN_INCLUDE_OAP_VERSION_H_ */

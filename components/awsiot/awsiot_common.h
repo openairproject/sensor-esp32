@@ -24,13 +24,7 @@
 #define COMPONENTS_AWSIOT_AWSIOT_COMMON_H_
 
 
-typedef struct {
-	char* endpoint;
-	int port;
-	char* thingName;
-	char* cert;
-	char* pkey;
-} awsiot_config_t;
+
 
 
 #endif /* COMPONENTS_AWSIOT_AWSIOT_COMMON_H_ */

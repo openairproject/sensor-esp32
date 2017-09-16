@@ -33,6 +33,7 @@ static const size_t MAX_NVS_VALUE_SIZE = 32 * (126 / 2 - 1);
 static uint8_t nvs_cleaned = 0;
 
 void nvs_clean() {
+	//TODO this fails if wifi is initialised first!
     ESP_LOGW(TAG, "erasing nvs");
 	const esp_partition_t* nvs_partition = esp_partition_find_first(
 				ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
@@ -41,10 +42,12 @@ void nvs_clean() {
 }
 
 void nvs_clean_if_necessary() {
-	if (!nvs_cleaned) {
-		nvs_clean();
-		nvs_cleaned = 1;
-	}
+//  this messes up with nvs cache and causes aborts.
+//  we need to erase flash prior to test
+//	if (!nvs_cleaned) {
+//		nvs_clean();
+//		nvs_cleaned = 1;
+//	}
 	storage_clean();
 }
 
@@ -97,7 +100,7 @@ TEST_CASE("bigblob", "[oap_common]")
 {
 	nvs_clean_if_necessary();
 
-	size_t blob_size = MAX_NVS_VALUE_SIZE * 3 + 10;
+	size_t blob_size = MAX_NVS_VALUE_SIZE * 1 + 10;
 	void* blob = malloc(blob_size);
 
 	TEST_ESP_ERR(ESP_ERR_NVS_NOT_FOUND, storage_get_bigblob("blob", &blob, NULL));
@@ -172,7 +175,7 @@ TEST_CASE("get/set config", "[oap_common]")
 	TEST_ASSERT_NOT_NULL(config);
 
 	//update config
-	size_t foo_size = 2000;
+	size_t foo_size = MAX_NVS_VALUE_SIZE + 1;
 	char* foo = malloc(foo_size+1);
 	memset(foo, 'x', foo_size);
 	foo[foo_size] = 0;

@@ -1,7 +1,7 @@
 /*
- * awsiot_client.h
+ * oap_test.c
  *
- *  Created on: Feb 18, 2017
+ *  Created on: Sep 11, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,24 +20,27 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
-#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#include "esp_log.h"
+#include "oap_test.h"
+#include "bootwifi.h"
+#include "test_wifi.h"
+#include "unity.h"
 
-#include "oap_common.h"
-#include "esp_err.h"
-#include "cJSON.h"
+static const char* TAG = "test";
 
-typedef struct {
-	int enabled;
-	char* endpoint;
-	int port;
-	char* thingName;
-	char* cert;
-	char* pkey;
-} awsiot_config_t;
+void test_init_wifi() {
+	oc_wifi_t wifi_config = {
+			.ssid = OAP_TEST_WIFI_SSID,
+			.password = OAP_TEST_WIFI_PASSWORD
+		};
 
-awsiot_config_t* get_awsiot_config();
-esp_err_t awsiot_configure(cJSON* awsiot);
-esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config);
+	wifi_boot(&wifi_config,0);
+}
 
-#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */
+void test_require_wifi() {
+	test_init_wifi();
+	TEST_ESP_OK(wifi_connected_wait_for(10000));
+
+	ESP_LOGI(TAG, "connected");
+}
+

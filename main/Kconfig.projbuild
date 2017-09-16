@@ -14,4 +14,11 @@ config OAP_RESULT_BUFFER_SIZE
 		Buffer for data that cannot be immediately published because sensor is offline.
 		For some services that can accept only real-time data, this should be set to 1.
 		
+config OAP_CONTROL_PANEL
+	int "enable control panel"
+	default 1
+	help
+		Enable web-based control panel where you can configure various parameters of the sensor,
+		including wifi and data publishing settings		
+		
 endmenu

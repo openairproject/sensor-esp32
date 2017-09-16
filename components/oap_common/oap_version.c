@@ -23,16 +23,52 @@
 #include "oap_version.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "esp_err.h"
 
-static oap_version_t oap_version = { .major = OAP_VER_MAJOR, .minor = OAP_VER_MINOR, .patch = OAP_VER_PATCH };
+static oap_version_t _oap_version = { .major = OAP_VER_MAJOR, .minor = OAP_VER_MINOR, .patch = OAP_VER_PATCH };
 static char* _oap_version_str = NULL;
+
+static const char* VER_FORMAT="%d.%d.%d";
+
+char* oap_version_format(oap_version_t ver) {
+	char* str = malloc(snprintf( NULL, 0, VER_FORMAT, ver.major, ver.minor, ver.patch)+1);
+	sprintf(str, VER_FORMAT, ver.major, ver.minor, ver.patch);
+	return str;
+}
+
+oap_version_t oap_version() {
+	return _oap_version;
+}
 
 char* oap_version_str() {
 	if (!_oap_version_str) {
-		_oap_version_str = malloc(snprintf( NULL, 0, "%d.%d.%d", oap_version.major, oap_version.minor, oap_version.patch)+1);
-		sprintf(_oap_version_str, "%d.%d.%d", oap_version.major, oap_version.minor, oap_version.patch);
+		_oap_version_str = oap_version_format(_oap_version);
 	}
 	return _oap_version_str;
+}
+
+unsigned long oap_version_num(oap_version_t ver) {
+	return 10000 * ver.major + 100 * ver.minor + ver.patch;
+}
+
+esp_err_t oap_version_parse(char* str, oap_version_t* ver)
+{
+	int i = 0, j = 0;
+	while (str[i] != 0 && str[i] != '.') i++;
+	if (str[i] != '.') return ESP_FAIL;
+	int major = atoi(str);
+	i++;
+	int minor = atoi(str+i);
+	while (str[i] != 0 && str[i] != '.') i++;
+	if (str[i] != '.') return ESP_FAIL;
+	i++;
+	int patch = atoi(str+i);
+
+	ver->major = major;
+	ver->minor = minor;
+	ver->patch = patch;
+
+	return ESP_OK;
 }
 
 

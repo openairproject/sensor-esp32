@@ -51,7 +51,7 @@ static nvs_handle storage_open(nvs_open_mode open_mode) {
 void storage_clean() {
 	ESP_ERROR_CHECK(nvs_flash_init());
 	nvs_handle handle = storage_open(NVS_READWRITE);
-	ESP_ERROR_CHECK(nvs_erase_all(handle));
+	ESP_ERROR_CHECK(nvs_erase_all(handle));	//TODO this fails is wifi was initialised before?
 	ESP_ERROR_CHECK(nvs_commit(handle));
 	nvs_close(handle);
 	_config = NULL;
@@ -68,7 +68,7 @@ void storage_erase_blob(const char* key) {
 }
 
 esp_err_t storage_get_blob(const char* key, void** out_value, size_t* length) {
-	nvs_handle handle = storage_open(NVS_READONLY);
+	nvs_handle handle = storage_open(NVS_READWRITE);
 	esp_err_t err;
 	size_t _length;
 	err = nvs_get_blob(handle, key, 0, &_length);
@@ -155,7 +155,7 @@ static esp_err_t storage_set_bigblob_size(nvs_handle handle, const char* key, si
 }
 
 esp_err_t storage_get_bigblob(const char* key, void** out_value, size_t* length) {
-	nvs_handle handle = storage_open(NVS_READONLY);
+	nvs_handle handle = storage_open(NVS_READWRITE);
 	esp_err_t err;
 	//read key.desc to find length and #parts
 	size_t _length;
