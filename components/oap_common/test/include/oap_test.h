@@ -1,7 +1,7 @@
 /*
- * awsiot_client.h
+ * oap_test.h
  *
- *  Created on: Feb 18, 2017
+ *  Created on: Sep 11, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,24 +20,17 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
-#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#ifndef COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
+#define COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
 
-#include "oap_common.h"
-#include "esp_err.h"
-#include "cJSON.h"
+/**
+ * init wifi, do not wait for IP
+ */
+void test_init_wifi();
 
-typedef struct {
-	int enabled;
-	char* endpoint;
-	int port;
-	char* thingName;
-	char* cert;
-	char* pkey;
-} awsiot_config_t;
+/**
+ * init wifi and wait for IP
+ */
+void test_require_wifi();
 
-awsiot_config_t* get_awsiot_config();
-esp_err_t awsiot_configure(cJSON* awsiot);
-esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config);
-
-#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */
+#endif /* COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_ */

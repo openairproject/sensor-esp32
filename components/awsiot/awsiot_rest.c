@@ -32,9 +32,10 @@
 #include "nvs_flash.h"
 
 #include "awsiot_rest.h"
-#include "ssl_client.h"
+//#include "ssl_client.h"
 #include "oap_common.h"
 #include "oap_debug.h"
+#include "esp_request.h"
 
 //#define WEB_SERVER "a32on3oilq3poc.iot.eu-west-1.amazonaws.com"
 //#define WEB_PORT "8443"
@@ -45,9 +46,66 @@ static const char *TAG = "awsiot";
 extern const uint8_t verisign_root_ca_pem_start[] asm("_binary_verisign_root_ca_pem_start");
 extern const uint8_t verisign_root_ca_pem_end[]   asm("_binary_verisign_root_ca_pem_end");
 
+static int download_callback(request_t *req, char *data, int len) {
+	ESP_LOGI(TAG, "response:%s", data);
+	return 0;
+}
+
+esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body) {
+	char uri[100];
+	sprintf(uri, "https://%s:%d", awsiot_config->endpoint, awsiot_config->port);
+//	char host_header[100];
+//	sprintf(host_header, "Host: %s", awsiot_config->endpoint);
+
+	request_t* req = req_new(uri);
+
+	req->ca_cert = req_parse_x509_crt((unsigned char*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
+	if (!req->ca_cert) {
+		ESP_LOGW(TAG, "Invalid CA cert");
+		return ESP_FAIL;
+	}
+
+	req->client_cert = req_parse_x509_crt((unsigned char*)awsiot_config->cert, strlen(awsiot_config->cert)+1);
+	if (!req->client_cert) {
+		ESP_LOGW(TAG, "Invalid client cert");
+		return ESP_FAIL;
+	}
+	req->client_key = req_parse_pkey((unsigned char*)awsiot_config->pkey, strlen(awsiot_config->pkey)+1);
+
+	if (!req->client_key) {
+		ESP_LOGW(TAG, "Invalid client key");
+		return ESP_FAIL;
+	}
+
+	char path[100];
+	sprintf(path, "/things/%s/shadow", awsiot_config->thingName);
+
+
+	req_setopt(req, REQ_SET_METHOD, "POST");
+	req_setopt(req, REQ_SET_PATH, path);
+	//req_setopt(req, REQ_SET_HEADER, host_header);
+	req_setopt(req, REQ_SET_HEADER, "Content-Type: application/json");
+	req_setopt(req, REQ_SET_HEADER, "Connection: close");
+	req_setopt(req, REQ_SET_DATAFIELDS, body);
+
+	req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_callback);
+
+	int status = req_perform(req);
+	req_clean_incl_certs(req);
+
+	if (status != 200) {
+		ESP_LOGW(TAG, "Invalid response code: %d", status);
+		return ESP_FAIL;
+	} else {
+		return ESP_OK;
+	}
+}
+
+
+/*
 #define RESPONSE_BUF_SIZE 1024
 
-esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
+esp_err_t awsiot_update_shadow_old(awsiot_config_t awsiot_config, char* body) {
 	//heap_log* hl = heap_log_take(NULL, "start");
 	sslclient_context ssl_client = {.0};
 	ssl_init(&ssl_client);
@@ -63,7 +121,7 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
 	//heap_log_take(hl, "connected");
 
 	char* rootCA = str_make((void*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
-	if (start_ssl_client(&ssl_client, (unsigned char*)rootCA, (unsigned char*)awsiot_config.cert, (unsigned char*)awsiot_config.pkey) == ESP_OK) {
+	if (start_ssl_client(&ssl_client, (unsigned char*)rootCA, (unsigned char*)awsiot_config.cert, (unsigned char*)awsiot_config.pkey, awsiot_config.endpoint) == ESP_OK) {
 		free(rootCA);
 		//heap_log_take(hl, "start_ssl_client");
 		char* request = malloc(strlen(body) + 250);
@@ -117,4 +175,4 @@ esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body) {
 	ESP_LOGI(TAG, "ssl request done %d", ret);
 
 	return ret;
-}
+}*/

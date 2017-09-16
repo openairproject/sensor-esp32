@@ -23,8 +23,8 @@
 #ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
 #define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
 
-#include "awsiot_common.h"
+#include "awsiot.h"
 
-esp_err_t awsiot_update_shadow(awsiot_config_t awsiot_config, char* body);
+esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body);
 
 #endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_ */

@@ -67,6 +67,9 @@ typedef struct {
 	int test;
 } oap_sensor_config_t;
 
+int is_reboot_in_progress();
+void oap_reboot();
+
 long oap_epoch_sec();
 long oap_epoch_sec_valid();
 

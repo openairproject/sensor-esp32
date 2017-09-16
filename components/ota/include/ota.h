@@ -1,7 +1,7 @@
 /*
- * awsiot_client.h
+ * ota.h
  *
- *  Created on: Feb 18, 2017
+ *  Created on: Sep 10, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,24 +20,14 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
-#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#ifndef COMPONENTS_OTA_INCLUDE_OTA_H_
+#define COMPONENTS_OTA_INCLUDE_OTA_H_
 
-#include "oap_common.h"
-#include "esp_err.h"
-#include "cJSON.h"
+#define OAP_OTA_ENABLED 		CONFIG_OAP_OTA_ENABLED
+#define OAP_OTA_HOST 			CONFIG_OAP_OTA_HOST
+#define OAP_OTA_PATH 			CONFIG_OAP_OTA_PATH
+#define OAP_OTA_CHECK_INTERVAL 	CONFIG_OAP_OTA_CHECK_INTERVAL
 
-typedef struct {
-	int enabled;
-	char* endpoint;
-	int port;
-	char* thingName;
-	char* cert;
-	char* pkey;
-} awsiot_config_t;
+void start_ota_task();
 
-awsiot_config_t* get_awsiot_config();
-esp_err_t awsiot_configure(cJSON* awsiot);
-esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config);
-
-#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */
+#endif /* COMPONENTS_OTA_INCLUDE_OTA_H_ */

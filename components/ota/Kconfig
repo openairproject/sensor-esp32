@@ -1,0 +1,28 @@
+menu "OAP OTA updates"
+
+config OAP_OTA_ENABLED
+    int "enable OTA updates"
+    default 1
+    help
+        todo
+
+config OAP_OTA_HOST
+    string "host"
+    default "https://openairproject.com"
+    help
+        URL of ota server including a protocol
+
+config OAP_OTA_PATH
+    string "path"
+    default /ota
+    help
+        path to ota folder on the server (with file index.txt)
+        
+config OAP_OTA_CHECK_INTERVAL
+    int "interval in seconds"
+    default 3600
+    help
+        determines how often sensor will check for OTA update.
+        value <= 0 means it will be checked only once during startup.
+        
+endmenu

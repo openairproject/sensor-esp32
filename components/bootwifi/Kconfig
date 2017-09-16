@@ -1,11 +1,4 @@
 menu "OAP WIFI"
-
-config OAP_CONTROL_PANEL
-	int "enable control panel"
-	default 1
-	help
-		Enable web-based control panel where you can configure various parameters of the sensor,
-		including wifi and data publishing settings
 		
 config OAP_AP_PASSWORD
 	string "AccessPoint password"

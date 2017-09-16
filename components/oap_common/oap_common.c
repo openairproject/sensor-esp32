@@ -28,9 +28,19 @@
 #include "oap_common.h"
 #include "esp_attr.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/task.h"
 
 static const long FEB22_2017 = 1487795557;
+
+static int _reboot_in_progress = 0;
+int is_reboot_in_progress() {
+	return _reboot_in_progress;
+}
+void oap_reboot() {
+	_reboot_in_progress = 1;
+	esp_restart();
+}
 
 long oap_epoch_sec() {
 	struct timeval tv_start;

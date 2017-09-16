@@ -23,6 +23,20 @@
 #ifndef MAIN_BOOTWIFI_H_
 #define MAIN_BOOTWIFI_H_
 
-void bootWiFi();
+#include <tcpip_adapter.h>
+
+#define SSID_SIZE (32) // Maximum SSID size
+#define PASSWORD_SIZE (64) // Maximum password size
+
+
+typedef struct {
+	char ssid[SSID_SIZE];
+	char password[PASSWORD_SIZE];
+	tcpip_adapter_ip_info_t ipInfo; // Optional static IP information
+} oc_wifi_t;
+
+void wifi_boot(oc_wifi_t* wifi_config, uint8_t enable_control_panel);
+esp_err_t wifi_connected_wait();
+esp_err_t wifi_connected_wait_for(uint32_t ms);
 
 #endif /* MAIN_BOOTWIFI_H_ */

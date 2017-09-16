@@ -47,6 +47,7 @@
 #include "oap_storage.h"
 #include "oap_debug.h"
 #include "awsiot.h"
+#include "ota.h"
 
 static const char *TAG = "app";
 
@@ -256,6 +257,8 @@ static void main_task() {
 	//env_data env = {};
 	//long env_timestamp = 0;
 
+	awsiot_configure(storage_get_config("awsiot"));
+
 	while (1) {
 		long localTime = oap_epoch_sec_valid();
 		long sysTime = oap_epoch_sec();
@@ -277,14 +280,6 @@ static void main_task() {
 	}
 }
 
-static void ota_task() {
-	while (1) {
-		//TODO hit OTA_check, parse response, compare versions
-		//if there's newer version, download ota, reboot
-		delay(5000);
-	}
-}
-
 void app_main()
 {
 	delay(1000);
@@ -294,12 +289,11 @@ void app_main()
 	sensor_config = get_config();
 
 	//wifi/mongoose requires plenty of mem, start it here
-	bootWiFi();
+	wifi_boot(NULL, CONFIG_OAP_CONTROL_PANEL);
 	pm_queue = xQueueCreate(1, sizeof(pm_data_duo_t));
 	led_queue = xQueueCreate(10, sizeof(led_cmd));
 
-	xTaskCreate(ota_task, "ota_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
-	//xTaskCreate(pm_meter_trigger_task, "pm_meter_trigger_task", 1024*4, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	start_ota_task();
 
 	led_init(get_config().led, led_queue);
 	update_led();

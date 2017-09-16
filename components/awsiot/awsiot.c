@@ -33,18 +33,16 @@
 #include "nvs_flash.h"
 #include "awsiot_common.h"
 #include "awsiot_rest.h"
-#include "oap_storage.h"
 #include "oap_common.h"
 #include "oap_debug.h"
 #include "cJSON.h"
 
 static const char *TAG = "awsiot";
-static awsiot_config_t awsiot_config = {0};
+static awsiot_config_t awsiot_config = {
+		.enabled = 1,
+		0
+};
 static int config_sent = 0;
-
-
-#define AWS_NOT_CONFIGURED 1
-static esp_err_t configured = AWS_NOT_CONFIGURED;
 
 
 static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_config) {
@@ -129,84 +127,86 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 	cJSON_Delete(shadow);
 
 	//ESP_LOGD(TAG, "shadow update: %s", body);
-	esp_err_t res = awsiot_update_shadow(awsiot_config, body);
+	esp_err_t res = awsiot_update_shadow(&awsiot_config, body);
 	free(body);
 	config_sent = config_sent || res == ESP_OK;
 	return res;
 }
 
-static void release_config(awsiot_config_t* awsiot_config) {
-	if (awsiot_config->thingName) free(awsiot_config->thingName);
-	if (awsiot_config->cert) free(awsiot_config->cert);
-	if (awsiot_config->pkey) free(awsiot_config->pkey);
-	if (awsiot_config->endpoint) free(awsiot_config->endpoint);
+static void set_config_field(char** field, char* value) {
+	if (*field) {
+		free(*field);
+	} else {
+		*field = value;
+	}
 }
 
-static esp_err_t awsiot_configure(awsiot_config_t* awsiot_config) {
-	cJSON* awsiot = storage_get_config("awsiot");
+esp_err_t awsiot_configure(cJSON* awsiot) {
 	if (!awsiot) {
 		ESP_LOGI(TAG, "config not found");
-		goto fail;
+		return ESP_FAIL;
 	}
 
 	cJSON* field;
 	if (!(field = cJSON_GetObjectItem(awsiot, "enabled")) || !field->valueint) {
 		ESP_LOGI(TAG, "client disabled");
-		goto fail;
+		awsiot_config.enabled = 0;
+		return ESP_FAIL;
+	} else {
+		awsiot_config.enabled = 1;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "endpoint")) && field->valuestring) {
-		awsiot_config->endpoint = str_dup(field->valuestring);
-		ESP_LOGI(TAG, "endpoint: %s", awsiot_config->endpoint);
-	} else {
-		ESP_LOGW(TAG, "endpoint not configured");
-		goto fail;
+		set_config_field(&awsiot_config.endpoint,str_dup(field->valuestring));
+		ESP_LOGI(TAG, "endpoint: %s", awsiot_config.endpoint);
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "port")) && field->valueint) {
-		awsiot_config->port = field->valueint;
-	} else {
-		ESP_LOGW(TAG, "port not configured");
-		goto fail;
+		awsiot_config.port = field->valueint;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "thingName")) && field->valuestring) {
-		awsiot_config->thingName = str_dup(field->valuestring);
-		ESP_LOGI(TAG, "thingName: %s", awsiot_config->thingName);
-	} else {
-		ESP_LOGW(TAG, "apikey not configured");
-		goto fail;
+		set_config_field(&awsiot_config.thingName, str_dup(field->valuestring));
+		ESP_LOGI(TAG, "thingName: %s", awsiot_config.thingName);
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "cert")) && field->valuestring) {
-		awsiot_config->cert = str_dup(field->valuestring);
-	} else {
-		ESP_LOGW(TAG, "cert not configured");
-		goto fail;
+		set_config_field(&awsiot_config.cert, str_dup(field->valuestring));
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "pkey")) && field->valuestring) {
-		awsiot_config->pkey = str_dup(field->valuestring);
-	} else {
-		ESP_LOGW(TAG, "pkey not configured");
-		goto fail;
+		set_config_field(&awsiot_config.pkey,str_dup(field->valuestring));
 	}
 
 	return ESP_OK;
 
-	fail:
-		release_config(awsiot_config);
-		return ESP_FAIL;
 }
 
+awsiot_config_t* get_awsiot_config() {
+	return &awsiot_config;
+}
 
 esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config) {
-	if (configured == AWS_NOT_CONFIGURED) {
-		configured = awsiot_configure(&awsiot_config);
+	if (!awsiot_config.enabled) {
+		ESP_LOGW(TAG, "awsiot disabled");
+		return ESP_FAIL;
 	}
-	if (configured == ESP_OK) {
-		return awsiot_rest_post(meas, sensor_config);
-	} else {
-		return configured;
+	if (!awsiot_config.thingName) {
+		ESP_LOGE(TAG, "thingName not configured");
+		return ESP_FAIL;
 	}
+	if (!awsiot_config.endpoint) {
+		ESP_LOGE(TAG, "endpoint not configured");
+		return ESP_FAIL;
+	}
+	if (!awsiot_config.cert) {
+		ESP_LOGE(TAG, "certificate not configured");
+		return ESP_FAIL;
+	}
+	if (!awsiot_config.pkey) {
+		ESP_LOGE(TAG, "private key not configured");
+		return ESP_FAIL;
+	}
+
+	return awsiot_rest_post(meas, sensor_config);
 }
