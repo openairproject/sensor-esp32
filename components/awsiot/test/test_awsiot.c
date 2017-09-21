@@ -53,7 +53,7 @@ TEST_CASE("publish results to awsiot", "awsiot")
 		ESP_LOGW(TAG, "REQUEST %d (heap %u,  %d bytes)", i, curr_heap, curr_heap-prev_heap);
 		prev_heap = curr_heap;
 		TEST_ESP_OK(publish());
-		delay(1000);
+		if (i) delay(1000);
 	}
 
 	free(get_awsiot_config()->cert);
