@@ -23,6 +23,8 @@
 #ifndef MAIN_BMP280_H_
 #define MAIN_BMP280_H_
 
+#include "oap_common.h"
+
 typedef void(*env_callback)(env_data*);
 
 typedef struct bmx280_config_t {

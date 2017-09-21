@@ -34,8 +34,7 @@
 
 static char* TAG = "bmx280";
 
-static void bmx280_task(bmx280_config_t* bmx280_config) {
-
+esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 	i2c_comm_t i2c_comm = {
 		.i2c_num = bmx280_config->i2c_num,
 		.device_addr = bmx280_config->device_addr
@@ -51,10 +50,11 @@ static void bmx280_task(bmx280_config_t* bmx280_config) {
 	};
 
 	// TODO strangely, if this is executed inside main task, LEDC fails to initialise properly PWM (and blinks in funny ways)... easy to reproduce.
-	if (BME280_init(&bmx280_sensor) == ESP_OK) {
+	esp_err_t ret;
+	if ((ret = BME280_init(&bmx280_sensor)) == ESP_OK) {
 		while(1) {
 			log_task_stack(TAG);
-			if (BME280_read(&bmx280_sensor, &result) == ESP_OK) {
+			if ((ret = BME280_read(&bmx280_sensor, &result)) == ESP_OK) {
 				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Humidity %.2f", result.sensor, result.temp, result.pressure, result.humidity);
 				if (bmx280_config->callback) {
 					bmx280_config->callback(&result);
@@ -62,17 +62,26 @@ static void bmx280_task(bmx280_config_t* bmx280_config) {
 			} else {
 				ESP_LOGW(TAG, "Failed to read data");
 			}
-			delay(5000);//bmx280_config->interval);
+			if (bmx280_config->interval > 0) {
+				delay(bmx280_config->interval);
+			} else {
+				break;
+			}
 		}
 	} else {
 		ESP_LOGE(TAG, "Failed to initialise");
 	}
+	return ret;
+}
+
+static void bmx280_task(bmx280_config_t* bmx280_config) {
+	bmx280_measurement_loop(bmx280_config);
 	vTaskDelete(NULL);
 }
 
 static uint8_t i2c_drivers[3] = {0};
 
-static esp_err_t i2c_setup(bmx280_config_t* config) {
+esp_err_t bmx280_i2c_setup(bmx280_config_t* config) {
 	if (config->i2c_num > 2) {
 		ESP_LOGE(TAG, "invalid I2C BUS NUMBER (%d)", config->i2c_num);
 		return ESP_FAIL;
@@ -101,7 +110,7 @@ static esp_err_t i2c_setup(bmx280_config_t* config) {
 
 esp_err_t bmx280_init(bmx280_config_t* bmx280_config) {
 	esp_err_t res;
-	if ((res = i2c_setup(bmx280_config)) == ESP_OK) {
+	if ((res = bmx280_i2c_setup(bmx280_config)) == ESP_OK) {
 		//2kb => ~380bytes free
 		xTaskCreate(bmx280_task, "bmx280_task", 1024*3, bmx280_config, DEFAULT_TASK_PRIORITY, NULL);
 	}
