@@ -2,6 +2,7 @@
 
 - OTA updates ([#2](https://github.com/openairproject/sensor-esp32/issues/2))
 - fix NVS crash after fresh install ([#14](https://github.com/openairproject/sensor-esp32/issues/14))
+- fix non-unique SSID in AP mode ([#21](https://github.com/openairproject/sensor-esp32/issues/21))
 
 # 0.4.0
 

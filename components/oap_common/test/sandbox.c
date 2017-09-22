@@ -31,7 +31,9 @@
 #include "esp_partition.h"
 #include "esp_log.h"
 #include <string.h>
+#include "esp_system.h"
 
+/*
 typedef struct {
 	uint8_t num;
 	char* str;
@@ -71,4 +73,12 @@ TEST_CASE("structs","sandbox") {
 	ESP_LOGI(TAG, "old str:%s", str);
 	//str[0] = '!'; //error (const allocation)
 	//free(str); //error free() target pointer is outside heap areas
+}*/
+
+/*
+TEST_CASE("mac", "sandbox") {
+	uint8_t mac[6];
+	esp_efuse_mac_get_default(mac);
+	ESP_LOGD("TST", "MAC= %02X:%02X:%02X:%02X:%02X:%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
+*/
