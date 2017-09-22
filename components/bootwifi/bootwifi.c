@@ -406,8 +406,10 @@ static void become_access_point() {
 
 	//generate unique SSID
 	uint8_t mac[6];
-	esp_efuse_read_mac(mac);
-	sprintf((char*)apConfig.ap.ssid, "OpenAirProject-%02X%02X", mac[0], mac[1]);
+	esp_efuse_mac_get_default(mac);
+	//ESP_LOGD(tag, "MAC= %02X:%02X:%02X:%02X:%02X:%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	//using full MAC would be the best but I'm not sure if it is safe (if someone has wifi with MAC filtering)
+	sprintf((char*)apConfig.ap.ssid, "OpenAirProject-%02X%02X%02X%02X", mac[0], mac[1], mac[4], mac[5]);
 
 	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &apConfig));
 	ESP_ERROR_CHECK(esp_wifi_start());
