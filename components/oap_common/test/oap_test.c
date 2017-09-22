@@ -26,6 +26,11 @@
 #include "test_wifi.h"
 #include "unity.h"
 
+#include "esp_attr.h"
+#include "esp_log.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+
 static const char* TAG = "test";
 
 void test_init_wifi() {
@@ -43,4 +48,16 @@ void test_require_wifi() {
 
 	ESP_LOGI(TAG, "connected");
 }
+
+
+static uint32_t IRAM_ATTR time_now()
+{
+    return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+int test_timeout(test_timer_t* t) {
+	if (t->started <= 0) t->started = time_now();
+	return time_now() - t->started > t->wait_for;
+}
+
 

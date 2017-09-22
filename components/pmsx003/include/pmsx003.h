@@ -26,7 +26,7 @@
 #include "oap_common.h"
 #include "driver/uart.h"
 
-typedef void(*pms_callback)(uint8_t sensor, pm_data*);
+typedef void(*pms_callback)(pm_data*);
 
 typedef struct pms_config_t {
 	uint8_t indoor;
