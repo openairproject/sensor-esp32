@@ -40,7 +40,7 @@
 
 static const char* TAG = "pmsX003";
 
-static void pms_init_uart(pms_config_t* config) {
+esp_err_t pms_init_uart(pms_config_t* config) {
 	//configure UART
     uart_config_t uart_config = {
         .baud_rate = 9600,
@@ -50,11 +50,18 @@ static void pms_init_uart(pms_config_t* config) {
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 122,
     };
-    uart_param_config(config->uart_num, &uart_config);
-    uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, config->uart_rts_pin, config->uart_cts_pin);
+    esp_err_t ret;
+    if ((ret = uart_param_config(config->uart_num, &uart_config)) != ESP_OK) {
+    	return ret;
+    }
+
+    if ((ret = uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, config->uart_rts_pin, config->uart_cts_pin)) != ESP_OK) {
+    	return ret;
+    }
     //Install UART driver( We don't need an event queue here)
 
-    uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
+    ret = uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
+    return ret;
 }
 
 static void configure_gpio(uint8_t gpio) {
@@ -62,7 +69,7 @@ static void configure_gpio(uint8_t gpio) {
 		ESP_LOGD(TAG, "configure pin %d as output", gpio);
 		gpio_pad_select_gpio(gpio);
 		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
-		gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY);
+		ESP_ERROR_CHECK(gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY));
 	}
 }
 
@@ -73,7 +80,7 @@ static void set_gpio(uint8_t gpio, uint8_t enabled) {
 	}
 }
 
-static void pms_init_gpio(pms_config_t* config) {
+void pms_init_gpio(pms_config_t* config) {
 	configure_gpio(config->set_pin);
 	configure_gpio(config->heater_pin);
 	configure_gpio(config->fan_pin);
@@ -88,21 +95,29 @@ static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
 	return pm;
 }
 
-static void pms_uart_read(pms_config_t* config) {
-    uint8_t* data = (uint8_t*) malloc(32);
-    while(1) {
-    	int len = uart_read_bytes(config->uart_num, data, 32, 100 / portTICK_RATE_MS);
-        if (!config->enabled) continue;
-        if (len >= 24 && data[0]==0x42 && data[1]==0x4d) {
-        		log_task_stack(TAG);
-        		//ESP_LOGI(TAG, "got frame of %d bytes", len);
-        		pm_data pm = decodepm_data(data, config->indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
+esp_err_t pms_uart_read(pms_config_t* config, uint8_t data[32]) {
+	int len = uart_read_bytes(config->uart_num, data, 32, 100 / portTICK_RATE_MS);
+	if (config->enabled) {
+		if (len >= 24 && data[0]==0x42 && data[1]==0x4d) {
+				log_task_stack(TAG);
+				//ESP_LOGI(TAG, "got frame of %d bytes", len);
+				pm_data pm = decodepm_data(data, config->indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
+				pm.sensor = config->sensor;
 				if (config->callback) {
-					config->callback(config->sensor, &pm);
+					config->callback(&pm);
 				}
-        } else if (len > 0) {
-        	ESP_LOGW(TAG, "invalid frame of %d", len); //we often get an error after this :(
-        }
+		} else if (len > 0) {
+			ESP_LOGW(TAG, "invalid frame of %d", len); //we often get an error after this :(
+			return ESP_FAIL;
+		}
+	}
+	return ESP_OK;
+}
+
+static void pms_task(pms_config_t* config) {
+    uint8_t* data[32];
+    while(1) {
+    	pms_uart_read(config, data);
     }
     vTaskDelete(NULL);
 }
@@ -122,10 +137,10 @@ esp_err_t pms_init(pms_config_t* config) {
 	pms_init_uart(config);
 
 	char task_name[100];
-	sprintf(task_name, "pm_uart_read_%d", config->sensor);
+	sprintf(task_name, "pms_sensor_%d", config->sensor);
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
-	xTaskCreate(pms_uart_read, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
+	xTaskCreate(pms_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
 }
 

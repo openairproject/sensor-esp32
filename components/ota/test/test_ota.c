@@ -121,8 +121,7 @@ TEST_CASE("full ota", "[ota]")
 
 	int ret = check_ota_task(&ota_config);
 
-	//FIXME ignore 'segment invalid length error' - I'm not sure what's wrong with test binary
-	TEST_ASSERT_TRUE(ret == 0x00 || ret == 0x1503);
-
-	//TEST_ASSERT_NOT_NULL(ota_config.update_partition);
+	//if OTA partition is too small, you'll get 'segment invalid length error'
+	TEST_ESP_OK(ret);
+	TEST_ASSERT_NOT_NULL(ota_config.update_partition);
 }

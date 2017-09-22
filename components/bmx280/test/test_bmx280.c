@@ -21,12 +21,6 @@
  */
 
 #include "bmx280.h"
-
-#include <stdio.h>
-#include <ctype.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <time.h>
 #include "unity.h"
 
 esp_err_t bmx280_i2c_setup(bmx280_config_t* config);

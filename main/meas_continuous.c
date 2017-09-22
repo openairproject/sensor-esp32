@@ -32,7 +32,7 @@ typedef struct {
 uint8_t sensor_count;
 sensor_model_t* sensors;
 
-static void collect(uint8_t s, pm_data* pm) {
+static void collect(pm_data* pm) {
 
 }
 

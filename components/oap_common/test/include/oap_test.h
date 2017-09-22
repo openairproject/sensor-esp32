@@ -23,6 +23,8 @@
 #ifndef COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
 #define COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
 
+#include "unity.h"
+
 /**
  * init wifi, do not wait for IP
  */
@@ -32,5 +34,12 @@ void test_init_wifi();
  * init wifi and wait for IP
  */
 void test_require_wifi();
+
+typedef struct {
+	uint32_t started;
+	uint32_t wait_for;
+} test_timer_t;
+
+int test_timeout(test_timer_t* t);
 
 #endif /* COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_ */

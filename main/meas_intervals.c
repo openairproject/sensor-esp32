@@ -43,9 +43,9 @@ static void pm_data_print(char* str, uint8_t sensor, pm_data* pm) {
 	ESP_LOGI(TAG, "%s[%d] pm1.0=%d pm2.5=%d pm10=%d", str, sensor, pm->pm1_0, pm->pm2_5, pm->pm10);
 }
 
-static void collect(uint8_t s, pm_data* pm) {
+static void collect(pm_data* pm) {
 	long localTime;
-	sensor_model_t* sensor = sensors+s;
+	sensor_model_t* sensor = sensors+pm->sensor;
 
 	pm_data* buf = sensor->samples+(sensor->sample_count % CONFIG_OAP_PM_SAMPLE_BUF_SIZE);
 	memcpy(buf, pm, sizeof(pm_data));
@@ -58,9 +58,9 @@ static void collect(uint8_t s, pm_data* pm) {
 
 	if (localTime - startedAt > _params.warmUpTime) {
 		sensor->sample_count++;
-		pm_data_print("collect", s, buf);
+		pm_data_print("collect", pm->sensor, buf);
 	} else {
-		pm_data_print("warming", s, buf);
+		pm_data_print("warming", pm->sensor, buf);
 	}
 }
 
