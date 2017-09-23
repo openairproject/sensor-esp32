@@ -1,3 +1,7 @@
+# 0.5.0
+
+- enable Jenkins build and automated unit tests ([#4](https://github.com/openairproject/sensor-esp32/issues/4))
+
 # 0.4.3
 
 - OTA updates ([#2](https://github.com/openairproject/sensor-esp32/issues/2))

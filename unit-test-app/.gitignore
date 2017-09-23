@@ -1,6 +1,6 @@
 build/
 sdkconfig
-sdkconfig.*
+sdkconfig.old
 .DS_Store
 main/*.bak
 core.dat
