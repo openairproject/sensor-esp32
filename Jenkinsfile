@@ -4,7 +4,7 @@ pipeline {
         stage('build') {
             steps {
             	checkout scm
-                sh 'make clean'
+                sh 'rm -rf build'
                 sh 'bin/make_default.sh'
             }
         }
