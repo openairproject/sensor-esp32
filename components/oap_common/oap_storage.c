@@ -352,7 +352,7 @@ static void storage_init_config() {
 			ESP_LOGE(TAG,"default config is not a proper json\n%s", str);
 			abort();
 		} else {
-			ESP_LOGI(TAG,"default config\n%s",str);
+			ESP_LOGD(TAG,"default config\n%s",str);
 		}
 		free(str);
 		storage_update_config(def_config);

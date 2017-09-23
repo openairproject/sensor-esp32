@@ -49,5 +49,7 @@ TEST_CASE("bmx280 measurement","[bmx280]") {
 	TEST_ASSERT_EQUAL_UINT(9, last_result.sensor);
 	TEST_ASSERT_TRUE_MESSAGE(last_result.temp > 10 && last_result.temp < 50, "invalid temperature");  //let's assume we do it indoors ;)
 	TEST_ASSERT_TRUE_MESSAGE(last_result.pressure>850 && last_result.pressure < 1050, "invalid pressure");
-	TEST_ASSERT_TRUE_MESSAGE(last_result.humidity > 0 && last_result.humidity < 100, "invalid humidity");  //bme280 only
+	if (last_result.humidity != -1) {
+		TEST_ASSERT_TRUE_MESSAGE(last_result.humidity > 0 && last_result.humidity < 100, "invalid humidity");  //bme280 only
+	}
 }

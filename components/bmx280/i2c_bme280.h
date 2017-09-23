@@ -25,6 +25,11 @@
 #define BME280_MODE_NORMAL			0x03 //reads sensors at set interval
 #define BME280_MODE_FORCED			0x01 //reads sensors once when you write this register
 
+#define CHIP_TYPE_BMP 				1
+#define CHIP_TYPE_BME 				2
+
+#define HUMIDITY_MEAS_UNSUPPORTED 	-1
+
 typedef struct bmx280_calib_t {
 	uint16_t dig_T1;
 	int16_t dig_T2;
@@ -55,6 +60,7 @@ typedef struct bme280_sensor_t {
 	uint8_t operation_mode;
 	i2c_comm_t i2c_comm;
 	bmx280_calib_t calib;
+	uint8_t chip_type;
 } bme280_sensor_t;
 
 esp_err_t BME280_verify_chip(bme280_sensor_t* bme280_sensor);

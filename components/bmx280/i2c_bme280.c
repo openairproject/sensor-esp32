@@ -226,8 +226,11 @@ esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data* result){
     temp_reading_t temp_reading = BME280_compensate_T_double(&bme280_sensor->calib, temp_raw);
     result->temp =  temp_reading.temp;//Celsius
     result->pressure = BME280_compensate_P_double(&bme280_sensor->calib, temp_reading.t_fine, pres_raw) / 100.0;  //hPA
-    result->humidity = BME280_compensate_H_double(&bme280_sensor->calib, temp_reading.t_fine, hum_raw);// pct
-
+    if (bme280_sensor->chip_type == CHIP_TYPE_BME) {
+    	result->humidity = BME280_compensate_H_double(&bme280_sensor->calib, temp_reading.t_fine, hum_raw);// pct
+    } else {
+    	result->humidity = HUMIDITY_MEAS_UNSUPPORTED;
+    }
 
     return ESP_OK;
 }
@@ -242,11 +245,13 @@ esp_err_t BME280_verify_chip(bme280_sensor_t* bme280_sensor) {
 
 	switch (chipID) {
 		case BME280_CHIP_ID:
+			bme280_sensor->chip_type=CHIP_TYPE_BME;
 			ESP_LOGI(TAG,"[%x] detected BME280 (0x%X)", bme280_sensor->i2c_comm.device_addr, chipID);
 			return ESP_OK;
 		case BMP280_CHIP_ID1:
 		case BMP280_CHIP_ID2:
 		case BMP280_CHIP_ID3:
+			bme280_sensor->chip_type=CHIP_TYPE_BMP;
 			ESP_LOGI(TAG,"[%x] detected BMP280 - no humidity data (0x%X)", bme280_sensor->i2c_comm.device_addr, chipID);
 			return ESP_OK;
 		default:
