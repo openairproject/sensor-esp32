@@ -5,7 +5,7 @@ pipeline {
             steps {
             	checkout scm
                 sh 'make clean'
-                sh 'make all -j5'
+                sh 'make defconfig all -j5'
             }
         }
         stage('test') {
