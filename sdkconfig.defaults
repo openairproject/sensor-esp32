@@ -439,8 +439,8 @@ CONFIG_OPENSSL_ASSERT_DO_NOTHING=y
 # OAP OTA updates
 #
 CONFIG_OAP_OTA_ENABLED=1
-CONFIG_OAP_OTA_BIN_URI_PREFIX="https://github.com/openairproject/sensor-esp32/releases/"
-CONFIG_OAP_OTA_INDEX_URI="https://raw.githubusercontent.com/openairproject/sensor-esp32/master/ota-info/index.txt"
+CONFIG_OAP_OTA_BIN_URI_PREFIX="https://openairproject.com/ota/"
+CONFIG_OAP_OTA_INDEX_URI="https://openairproject.com/ota/index.txt"
 CONFIG_OAP_OTA_CHECK_INTERVAL=3600
 
 #
