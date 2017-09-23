@@ -21,8 +21,8 @@
 static const char* TAG = "test_ota";
 
 static ota_config_t ota_test_config = {
-		.host = "https://openairproject.com",
-		.path = "/ota-test"
+		.index_uri = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/index.txt",
+		.bin_uri_prefix = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/"
 };
 
 static ota_info_t hello_world_info = {

@@ -1,5 +1,1 @@
 1.2.3|hello-world.bin|304717e6b5d1f4e98d810a36e361b84f62d8363de55fba487b81ebe0b3d4f676
-0.4.0|sensor-esp32-0.4.0.bin|929fd82b12f4e67cfa08a14e763232a95820b7f2b2edcce744e1c1711c7c9e04
-0.3.0|sensor-esp32-0.3.0.bin|123fd82b12f4e67cfa08a14e763232a95820b7f2b2edcce744e1c1711c7c4567
-
-#cat sensor-esp32-0.4.0.bin | openssl dgst -sha256

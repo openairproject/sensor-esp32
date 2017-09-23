@@ -36,8 +36,8 @@
 #define OAP_OTA_ERR_SHA_MISMATCH		0x1005
 
 typedef struct {
-	char* host;
-	char* path;
+	char* bin_uri_prefix;
+	char* index_uri;
 	unsigned int interval; // for <=0 it checks only once
 	int commit_and_reboot;
 	esp_partition_t *update_partition;
