@@ -132,11 +132,7 @@ static int get_ota_status_callback(request_t *req, char *data, int len)
 
 esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
 {
-    request_t* req = req_new(ota_config->host);
-//    ESP_LOGI(TAG, "OTA.HOST:%s", ota_config->host);
-//    ESP_LOGI(TAG, "REQ.HOST:%s", (char*)req_list_get_key(req->opt, "host")->value);
-//    ESP_LOGI(TAG, "REQ.CLIENT_CERT:%p", req->client_cert);
-//    ESP_LOGI(TAG, "REQ.CLIENT_KEY:%p", req->client_key);
+    request_t* req = req_new(ota_config->index_uri);
 
     req->ca_cert = req_parse_x509_crt((unsigned char*)_root_ca_pem_start, _root_ca_pem_end-_root_ca_pem_start);
 
@@ -144,11 +140,7 @@ esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
     memset(&result, 0, sizeof(ost_status_result_t));
     req->meta = &result;
 
-    char path[200];
-    sprintf(path, "%s/index.txt", ota_config->path);
-
     req_setopt(req, REQ_SET_METHOD, "GET");
-    req_setopt(req, REQ_SET_PATH, path);
     req_setopt(req, REQ_SET_HEADER, "Connection: close");
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, get_ota_status_callback);
 
@@ -189,15 +181,13 @@ static int download_ota_binary_callback(request_t *req, char *data, int len)
 
 esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, esp_partition_t *update_partition)
 {
-	//ota partition must be applied in max 16 parts (with binary <1M one part is 64kb)
-    request_t* req = req_new_with_buf(ota_config->host, 2*1024);
+    char file_uri[200];
+    sprintf(file_uri, "%s%s", ota_config->bin_uri_prefix, ota_info->file);
+
+    request_t* req = req_new(file_uri);
     req->ca_cert = req_parse_x509_crt((unsigned char*)_root_ca_pem_start, _root_ca_pem_end-_root_ca_pem_start);
 
-    char path[200];
-    sprintf(path, "%s/%s", ota_config->path, ota_info->file);
-
     req_setopt(req, REQ_SET_METHOD, "GET");
-    req_setopt(req, REQ_SET_PATH, path);
     req_setopt(req, REQ_SET_HEADER, "Connection: close");
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_ota_binary_callback);
 
@@ -335,8 +325,8 @@ static ota_config_t ota_config;
 
 void start_ota_task() {
 	if (OAP_OTA_ENABLED) {
-		ota_config.host = OAP_OTA_HOST;
-		ota_config.path = OAP_OTA_PATH;
+		ota_config.bin_uri_prefix = OAP_OTA_BIN_URI_PREFIX;
+		ota_config.index_uri = OAP_OTA_INDEX_URI;
 		ota_config.min_version = oap_version_num(oap_version());
 		ota_config.commit_and_reboot = 1;
 		ota_config.update_partition = NULL;
