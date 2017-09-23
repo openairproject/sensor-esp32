@@ -22,7 +22,7 @@ pipeline {
 	        post {
 	            success {
 	        	   archiveArtifacts artifacts: 'build/sensor-esp32.*', fingerprint: true
-	        	   archiveArtifacts artifacts: 'build/partitions_singleapp.bin', fingerprint: true
+	        	   archiveArtifacts artifacts: 'build/partitions_two_ota.bin', fingerprint: true
 	        	   archiveArtifacts artifacts: 'build/bootloader/bootloader.bin', fingerprint: true
 	            }
 	        }
