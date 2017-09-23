@@ -8,4 +8,3 @@
 #
 
 COMPONENT_EMBED_TXTFILES := default_config.json
-COMPONENT_EMBED_TXTFILES += root_ca.pem

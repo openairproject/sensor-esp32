@@ -38,7 +38,7 @@
 
 #define OAP_VER_MAJOR 0
 #define OAP_VER_MINOR 5
-#define OAP_VER_PATCH 0
+#define OAP_VER_PATCH 1
 
 typedef struct {
 	uint8_t major;

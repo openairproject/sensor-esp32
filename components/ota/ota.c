@@ -42,8 +42,9 @@
 
 static const char *TAG = "ota";
 
-extern const uint8_t _root_ca_pem_start[] asm("_binary_root_ca_pem_start");
-extern const uint8_t _root_ca_pem_end[]   asm("_binary_root_ca_pem_end");
+
+extern const uint8_t _root_ca_pem_start[] asm("_binary_comodo_ca_pem_start");
+extern const uint8_t _root_ca_pem_end[]   asm("_binary_comodo_ca_pem_end");
 
 void sha_to_hexstr(unsigned char hash[32], unsigned char hex[64]) {
 	for (int i = 0; i < 32; i++) {
@@ -122,7 +123,7 @@ static int get_ota_status_callback(request_t *req, char *data, int len)
 {
 	ESP_LOGD(TAG,"%s", data);
 	ost_status_result_t* result = req->meta;
-	if (!result->found) {
+	if (req->response->status_code == 200 && !result->found) {
 		result->found = 1;
 		result->err = parse_ota_info(&result->binary, data, len);
 		ESP_LOGD(TAG, "parse ota info line... [0x%x]", result->err);
@@ -132,7 +133,13 @@ static int get_ota_status_callback(request_t *req, char *data, int len)
 
 esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
 {
+	ESP_LOGI(TAG, "fetch ota info from %s", ota_config->index_uri);
     request_t* req = req_new(ota_config->index_uri);
+
+//	ESP_LOGI(TAG, "REQ.HOST:%s", (char*)req_list_get_key(req->opt, "host")->value);
+//	ESP_LOGI(TAG, "REQ.PATH:%s", (char*)req_list_get_key(req->opt, "path")->value);
+//	ESP_LOGI(TAG, "REQ.CLIENT_CERT:%p", req->client_cert);
+//	ESP_LOGI(TAG, "REQ.CLIENT_KEY:%p", req->client_key);
 
     req->ca_cert = req_parse_x509_crt((unsigned char*)_root_ca_pem_start, _root_ca_pem_end-_root_ca_pem_start);
 
@@ -140,7 +147,6 @@ esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
     memset(&result, 0, sizeof(ost_status_result_t));
     req->meta = &result;
 
-    req_setopt(req, REQ_SET_METHOD, "GET");
     req_setopt(req, REQ_SET_HEADER, "Connection: close");
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, get_ota_status_callback);
 
@@ -181,13 +187,14 @@ static int download_ota_binary_callback(request_t *req, char *data, int len)
 
 esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, esp_partition_t *update_partition)
 {
-    char file_uri[200];
+    char file_uri[300];
     sprintf(file_uri, "%s%s", ota_config->bin_uri_prefix, ota_info->file);
+
+    ESP_LOGI(TAG, "download ota binary from %s", file_uri);
 
     request_t* req = req_new(file_uri);
     req->ca_cert = req_parse_x509_crt((unsigned char*)_root_ca_pem_start, _root_ca_pem_end-_root_ca_pem_start);
 
-    req_setopt(req, REQ_SET_METHOD, "GET");
     req_setopt(req, REQ_SET_HEADER, "Connection: close");
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_ota_binary_callback);
 
