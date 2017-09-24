@@ -21,8 +21,11 @@
 static const char* TAG = "test_ota";
 
 static ota_config_t ota_test_config = {
-		.index_uri = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/index.txt",
-		.bin_uri_prefix = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/"
+		.index_uri = "https://openairproject.com/ota/test/index.txt",
+		.bin_uri_prefix = "https://openairproject.com/ota/test/",
+		.commit_and_reboot = 0,
+		.update_partition = NULL,
+		.interval = 0
 };
 
 static ota_info_t hello_world_info = {
@@ -115,13 +118,48 @@ TEST_CASE("full ota", "[ota]")
 	ota_config_t ota_config;
 	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
 	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
-	ota_config.commit_and_reboot = 0;
-	ota_config.update_partition = NULL;
-	ota_config.interval = 0;
 
 	int ret = check_ota_task(&ota_config);
 
 	//if OTA partition is too small, you'll get 'segment invalid length error'
 	TEST_ESP_OK(ret);
 	TEST_ASSERT_NOT_NULL(ota_config.update_partition);
+}
+
+TEST_CASE("skip ota if up-to-date", "[ota]")
+{
+	test_init_wifi();
+	ota_config_t ota_config;
+	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
+	ota_config.min_version=oap_version_num(hello_world_info.ver); //the same version
+
+	int ret = check_ota_task(&ota_config);
+	TEST_ASSERT_EQUAL_UINT16(OAP_OTA_ERR_NO_UPDATES, ret);
+}
+
+TEST_CASE("fail ota for sha mismatch", "[ota]")
+{
+	test_init_wifi();
+	ota_config_t ota_config;
+	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
+	ota_config.index_uri = "https://openairproject.com/ota/test/index-sha-mismatch.txt",
+	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
+
+	int ret = check_ota_task(&ota_config);
+	TEST_ASSERT_EQUAL_UINT16(OAP_OTA_ERR_SHA_MISMATCH, ret);
+}
+
+TEST_CASE("fail ota for invalid cert", "[ota]")
+{
+	test_init_wifi();
+	//git uses digicert CA, cloud front - comodo CA
+	ota_config_t ota_config = {
+			.index_uri = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/index.txt",
+			.bin_uri_prefix = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/"
+	};
+
+	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
+
+	int ret = check_ota_task(&ota_config);
+	TEST_ASSERT_EQUAL_UINT16(OAP_OTA_ERR_REQUEST_FAILED, ret);
 }

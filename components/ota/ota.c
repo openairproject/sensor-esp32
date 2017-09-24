@@ -292,7 +292,10 @@ esp_err_t check_ota_task(ota_config_t* ota_config) {
 		ESP_LOGI(TAG, "esp_ota_begin succeeded");
 
 		//download
-		download_ota_binary(ota_config, &ota_info, update_handle);
+		if ((err = download_ota_binary(ota_config, &ota_info, update_handle)) != ESP_OK) {
+			ESP_LOGE(TAG, "download_ota_binary failed [0x%x]", err);
+			goto fail;
+		}
 
 		if ((err=esp_ota_end(update_handle)) != ESP_OK) {
 		   ESP_LOGE(TAG, "esp_ota_end failed [0x%x]", err);
