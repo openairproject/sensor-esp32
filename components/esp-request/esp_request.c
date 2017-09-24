@@ -292,7 +292,7 @@ static int mbedtls_connect(request_t *req)
 		}
 
     } while (0);
-	return 0;
+	return ret;
 }
 
 static int mbedtls_write(request_t *req, char *buffer, int len)
