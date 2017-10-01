@@ -1,7 +1,7 @@
 /*
- * awsiot_client.h
+ * meas.c
  *
- *  Created on: Feb 18, 2017
+ *  Created on: Oct 1, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,12 +20,11 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
-#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#include "pm_meter.h"
 
-#include "oap_common.h"
-#include "oap_publisher.h"
+pm_meter_aux_t pm_meter_aux = {
+	.heater_pin = CONFIG_OAP_HEATER_CONTROL_PIN,
+	.fan_pin = CONFIG_OAP_FAN_CONTROL_PIN
+};
 
-oap_publisher_t awsiot_publisher;
 
-#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */

@@ -28,44 +28,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "c_list.h"
+#include "esp_err.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
+//to silence eclipse errors
+typedef unsigned short uint16_t;
+
 #define DEFAULT_TASK_PRIORITY (10)
-
-typedef struct {
-	uint16_t pm1_0;
-	uint16_t pm2_5;
-	uint16_t pm10;
-	uint8_t sensor;
-} pm_data;
-
-typedef struct {
-	double temp;
-	double pressure;
-	double humidity;
-	uint8_t sensor;
-} env_data;
-
-typedef struct {
-	pm_data* pm;
-	pm_data* pm_aux;
-	env_data* env;
-	env_data* env_int;
-	long int local_time;
-} oap_meas;
-
-typedef struct {
-	int led;
-	int heater;
-	int fan;
-
-	int indoor;
-	int warmUpTime;
-	int measTime;
-	int measInterval;
-	int measStrategy;
-	int test;
-} oap_sensor_config_t;
 
 int is_reboot_in_progress();
 void oap_reboot();
@@ -93,6 +64,5 @@ uint32_t micros();
 uint32_t millis();
 void delay(uint32_t);
 void delayMicroseconds(uint32_t us);
-
 
 #endif /* MAIN_COMMON_COMMON_H_ */

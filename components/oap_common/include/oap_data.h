@@ -1,7 +1,7 @@
 /*
- * meas_continuous.c
+ * oap_data.h
  *
- *  Created on: Mar 25, 2017
+ *  Created on: Oct 1, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,33 +20,32 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "meas_continuous.h"
+#ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_
+#define COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_
 
-static char* TAG = "meas_cont";
+#include "oap_data_pm.h"
+#include "oap_data_env.h"
 
 typedef struct {
-	pms_config_t config;
-	pm_data last;
-} sensor_model_t;
+	pm_data_t* pm;
+	pm_data_t* pm_aux;
+	env_data_t* env;
+	env_data_t* env_int;
+	long int local_time;
+} oap_measurement_t;
 
-uint8_t sensor_count;
-sensor_model_t* sensors;
+typedef struct {
+	int led;
+	int heater;
+	int fan;
 
-static void collect(pm_data* pm) {
+	int indoor;
+	int warm_up_time;
+	int meas_time;
+	int meas_interval;
+	int meas_strategy;	//interval, continuos, etc
+	int test;
+} oap_sensor_config_t;
 
-}
 
-static void start(pms_configs_t* pms_configs, meas_continuous_params_t* params, meas_strategy_callback callback) {
-	sensor_count = pms_configs->count;
-	sensors = malloc(sizeof(sensor_model_t)*sensor_count);
-	for (uint8_t c = 0; c < sensor_count; c++) {
-		sensor_model_t* sensor = sensors+c;
-		memset(sensor, 0, sizeof(sensor_model_t));
-		memcpy(&sensor->config, pms_configs->sensor[c], sizeof(pms_config_t));
-	}
-}
-
-meas_strategy_t meas_continuous = {
-	.collect = &collect,
-	.start = &start
-};
+#endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_ */

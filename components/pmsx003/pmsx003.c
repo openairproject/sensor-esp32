@@ -40,7 +40,7 @@
 
 static const char* TAG = "pmsX003";
 
-esp_err_t pms_init_uart(pms_config_t* config) {
+esp_err_t pms_init_uart(pmsx003_config_t* config) {
 	//configure UART
     uart_config_t uart_config = {
         .baud_rate = 9600,
@@ -80,14 +80,14 @@ static void set_gpio(uint8_t gpio, uint8_t enabled) {
 	}
 }
 
-void pms_init_gpio(pms_config_t* config) {
+void pms_init_gpio(pmsx003_config_t* config) {
 	configure_gpio(config->set_pin);
-	configure_gpio(config->heater_pin);
-	configure_gpio(config->fan_pin);
+	//configure_gpio(config->heater_pin);
+	//configure_gpio(config->fan_pin);
 }
 
-static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
-	pm_data pm = {
+static pm_data_t decodepm_data(uint8_t* data, uint8_t startByte) {
+	pm_data_t pm = {
 		.pm1_0 = ((data[startByte]<<8) + data[startByte+1]),
 		.pm2_5 = ((data[startByte+2]<<8) + data[startByte+3]),
 		.pm10 = ((data[startByte+4]<<8) + data[startByte+5])
@@ -95,14 +95,14 @@ static pm_data decodepm_data(uint8_t* data, uint8_t startByte) {
 	return pm;
 }
 
-esp_err_t pms_uart_read(pms_config_t* config, uint8_t data[32]) {
+esp_err_t pms_uart_read(pmsx003_config_t* config, uint8_t data[32]) {
 	int len = uart_read_bytes(config->uart_num, data, 32, 100 / portTICK_RATE_MS);
 	if (config->enabled) {
 		if (len >= 24 && data[0]==0x42 && data[1]==0x4d) {
 				log_task_stack(TAG);
 				//ESP_LOGI(TAG, "got frame of %d bytes", len);
-				pm_data pm = decodepm_data(data, config->indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
-				pm.sensor = config->sensor;
+				pm_data_t pm = decodepm_data(data, config->indoor ? 4 : 10);	//atmospheric from 10th byte, standard from 4th
+				pm.sensor_idx = config->sensor_idx;
 				if (config->callback) {
 					config->callback(&pm);
 				}
@@ -114,7 +114,7 @@ esp_err_t pms_uart_read(pms_config_t* config, uint8_t data[32]) {
 	return ESP_OK;
 }
 
-static void pms_task(pms_config_t* config) {
+static void pms_task(pmsx003_config_t* config) {
     uint8_t* data[32];
     while(1) {
     	pms_uart_read(config, data);
@@ -122,27 +122,48 @@ static void pms_task(pms_config_t* config) {
     vTaskDelete(NULL);
 }
 
-esp_err_t pms_enable(pms_config_t* config, uint8_t enabled) {
+esp_err_t pmsx003_enable(pmsx003_config_t* config, uint8_t enabled) {
 	ESP_LOGI(TAG,"enable(%d)",enabled);
 	config->enabled = enabled;
 	set_gpio(config->set_pin, enabled);
-	if (config->heater_enabled) set_gpio(config->heater_pin, enabled);
-	if (config->fan_enabled) set_gpio(config->fan_pin, enabled);
+	//if (config->heater_enabled) set_gpio(config->heater_pin, enabled);
+	//if (config->fan_enabled) set_gpio(config->fan_pin, enabled);
 	return ESP_OK; //todo
 }
 
-esp_err_t pms_init(pms_config_t* config) {
+esp_err_t pmsx003_init(pmsx003_config_t* config) {
 	pms_init_gpio(config);
-	pms_enable(config, 0);
+	pmsx003_enable(config, 0);
 	pms_init_uart(config);
 
 	char task_name[100];
-	sprintf(task_name, "pms_sensor_%d", config->sensor);
+	sprintf(task_name, "pms_sensor_%d", config->sensor_idx);
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate(pms_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
 }
 
-
-
+esp_err_t pmsx003_set_hardware_config(pmsx003_config_t* config, uint8_t sensor_idx) {
+	if (sensor_idx == 0) {
+		config->sensor_idx = 0;
+		config->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
+		config->uart_num = CONFIG_OAP_PM_UART_NUM;
+		config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
+		config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;
+		config->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN;
+		config->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN;
+		return ESP_OK;
+	} else if (sensor_idx == 1 && CONFIG_OAP_PM_ENABLED_AUX) {
+		config->sensor_idx = 1;
+		config->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN_AUX;
+		config->uart_num = CONFIG_OAP_PM_UART_NUM_AUX;
+		config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN_AUX;
+		config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN_AUX;
+		config->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN_AUX;
+		config->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN_AUX;
+		return ESP_OK;
+	} else {
+		return ESP_FAIL;
+	}
+}

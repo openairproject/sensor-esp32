@@ -17,28 +17,34 @@ extern const uint8_t device_pkey_pem_start[] asm("_binary_1cbf751210_private_pem
 extern const uint8_t device_pkey_pem_end[]   asm("_binary_1cbf751210_private_pem_key_end");
 
 static esp_err_t publish() {
-	oap_meas meas = {
+	oap_measurement_t meas = {
 		.local_time = 1505156826
 	};
 
 	oap_sensor_config_t sensor_config = {
 		.0
 	};
-	return awsiot_send(&meas, &sensor_config);
+	return awsiot_publisher.publish(&meas, &sensor_config);
 }
 
 static void setup() {
-	awsiot_config_t* awsiot_config = get_awsiot_config();
-	awsiot_config->thingName="test_device_1";
-	awsiot_config->endpoint="a32on3oilq3poc.iot.eu-west-1.amazonaws.com";
-	awsiot_config->port=8443;
-	awsiot_config->cert=str_make((void*)device_cert_pem_start, device_cert_pem_end-device_cert_pem_start);
-	awsiot_config->pkey=str_make((void*)device_pkey_pem_start, device_pkey_pem_end-device_pkey_pem_start);
+	cJSON* cfg = cJSON_CreateObject();
+	cJSON_AddNumberToObject(cfg, "enabled", 1);
+	cJSON_AddStringToObject(cfg, "thingName", "test_device_1");
+	cJSON_AddStringToObject(cfg, "endpoint", "a32on3oilq3poc.iot.eu-west-1.amazonaws.com");
+	cJSON_AddNumberToObject(cfg, "port", 8443);
+	char* cert = str_make((void*)device_cert_pem_start, device_cert_pem_end-device_cert_pem_start);
+	char* pkey = str_make((void*)device_pkey_pem_start, device_pkey_pem_end-device_pkey_pem_start);
+	cJSON_AddStringToObject(cfg, "cert", cert);
+	cJSON_AddStringToObject(cfg, "pkey", pkey);
 
+	TEST_ESP_OK(awsiot_publisher.configure(cfg));
+	cJSON_Delete(cfg);
+	free(cert);
+	free(pkey);
 }
 
-
-TEST_CASE("publish results to awsiot", "awsiot")
+TEST_CASE("publish to awsiot", "[awsiot]")
 {
 	setup();
 	test_require_wifi();
@@ -55,7 +61,4 @@ TEST_CASE("publish results to awsiot", "awsiot")
 		TEST_ESP_OK(publish());
 		if (i) delay(1000);
 	}
-
-	free(get_awsiot_config()->cert);
-	free(get_awsiot_config()->pkey);
 }

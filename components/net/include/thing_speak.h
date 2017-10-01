@@ -20,12 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_HTTP_H_
-#define MAIN_HTTP_H_
+#ifndef COMPONENTS_THING_SPEAK_H_
+#define COMPONENTS_THING_SPEAK_H_
 
-#include "oap_common.h"
 #include "esp_err.h"
+#include "oap_publisher.h"
 
-esp_err_t thing_speak_send(oap_meas* meas);
 
-#endif /* MAIN_HTTP_H_ */
+oap_publisher_t thingspeak_publisher;
+
+#endif

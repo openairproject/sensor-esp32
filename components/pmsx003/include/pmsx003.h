@@ -24,36 +24,36 @@
 #define MAIN_PMS_H_
 
 #include "oap_common.h"
+#include "oap_data_pm.h"
 #include "driver/uart.h"
 
-typedef void(*pms_callback)(pm_data*);
-
-typedef struct pms_config_t {
+typedef struct {
 	uint8_t indoor;
-	uint8_t enabled;
-	uint8_t sensor;
-	pms_callback callback;
+	uint8_t enabled;		//internal, read-only
+	uint8_t sensor_idx;
+	pm_data_callback_f callback;
 	uint8_t set_pin;
-	uint8_t heater_pin;
-	uint8_t fan_pin;
-	uint8_t heater_enabled;
-	uint8_t fan_enabled;
-
 	uart_port_t uart_num;
 	uint8_t uart_txd_pin;
 	uint8_t uart_rxd_pin;
 	uint8_t uart_rts_pin;
 	uint8_t uart_cts_pin;
-} pms_config_t;
+} pmsx003_config_t;
 
 /**
  * pm samples data is send to the queue.
  */
-esp_err_t pms_init(pms_config_t* config);
+esp_err_t pmsx003_init(pmsx003_config_t* config);
 
 /**
  * enable/disable sensor.
  */
-esp_err_t pms_enable(pms_config_t* config, uint8_t enabled);
+esp_err_t pmsx003_enable(pmsx003_config_t* config, uint8_t enabled);
+
+
+/**
+ * fill config based on hardware configuration
+ */
+esp_err_t pmsx003_set_hardware_config(pmsx003_config_t* config, uint8_t sensor_idx);
 
 #endif /* MAIN_PMS_H_ */

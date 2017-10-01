@@ -36,18 +36,6 @@ config OAP_PM_UART_CTS_PIN
     help
         Any gpio pin (no need to connect this line)
 
-config OAP_HEATER_CONTROL_PIN
-    int "external heater gpio"
-    default 21
-    help
-        optional GPIO pin to control a heater. It mirrors state of SET gpio. (0 = none)
-
-config OAP_FAN_CONTROL_PIN
-    int "external fan gpio"
-    default 22
-    help
-        optional GPIO pin to control an additional fan. It mirrors state of SET gpio. (0 = none)
-
 config OAP_PM_ENABLED_AUX
     int "enable secondary PM sensor"
     default 0
