@@ -55,18 +55,18 @@ static ledc_timer_config_t ledc_timer = {
     };
 
 static int MAX_DUTY = 0;
-static rgb LED_OFF = {.v={0,0,0}};
+static rgb_color_t LED_OFF = {.v={0,0,0}};
 
 //brightness for each of R/G/B. LED Green tends to be the brightest
 //so if we use the same resistors we need to compensate for it to get proper orange.
 //this probably should be configureble since it depends on particular LED and resistors.
 static float brightness[] = {1.0f,0.3f,1.0f};
 
-static int calc_duty(rgb color, uint8_t c) {
+static int calc_duty(rgb_color_t color, uint8_t c) {
 	return lroundf(MAX_DUTY * fminf(color.v[c] * brightness[c], 1.0));
 }
 
-void set_color(rgb color) {
+void set_color(rgb_color_t color) {
 	esp_err_t res;
 	int duty;
 	for (int c = 0; c < 3; c++) {
@@ -80,7 +80,7 @@ void set_color(rgb color) {
 	}
 }
 
-void fade_to_color(rgb color, int time) {
+void fade_to_color(rgb_color_t color, int time) {
 	esp_err_t res;
 	int duty;
 	for (int c = 0; c < 3; c++) {
@@ -123,8 +123,8 @@ static void setup_ledc() {
 }
 
 static void led_cycle() {
-	rgb color = {.v={1,1,1}};
-	led_cmd cmd = {
+	rgb_color_t color = {.v={1,1,1}};
+	led_cmd_t cmd = {
 		.mode = LED_SET,
 		.color = color
 	};

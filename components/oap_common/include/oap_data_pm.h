@@ -1,7 +1,7 @@
 /*
- * meas_continuous.h
+ * oap_data_pm.h
  *
- *  Created on: Mar 25, 2017
+ *  Created on: Oct 1, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,13 +20,16 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_MEAS_CONTINUOUS_H_
-#define MAIN_MEAS_CONTINUOUS_H_
+#ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_PM_H_
+#define COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_PM_H_
 
 typedef struct {
+	uint16_t pm1_0;
+	uint16_t pm2_5;
+	uint16_t pm10;
+	uint8_t sensor_idx;
+} pm_data_t;
 
-} meas_continuous_params_t;
+typedef void(*pm_data_callback_f)(pm_data_t*);
 
-#include "meas.h"
-
-#endif /* MAIN_MEAS_CONTINUOUS_H_ */
+#endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_PM_H_ */

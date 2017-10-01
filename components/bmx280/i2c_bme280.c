@@ -19,6 +19,7 @@
 #include <driver/i2c.h>
 #include <esp_log.h>
 #include "i2c_bme280.h"
+#include "oap_common.h"
 
 /*
  * this driver works fine for both BMP280 and BME280.
@@ -204,7 +205,7 @@ static double BME280_compensate_H_double(bmx280_calib_t* calib, BME280_S32_t t_f
 	return var_H;
 }
 
-esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data* result){
+esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data_t* result){
     if(bme280_sensor->operation_mode == BME280_MODE_FORCED){
     	if(trigger_force_read(&bme280_sensor->i2c_comm, bme280_sensor->operation_mode) != ESP_OK){
     		return ESP_FAIL;

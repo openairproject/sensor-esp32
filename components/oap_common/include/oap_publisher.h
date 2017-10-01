@@ -1,7 +1,7 @@
 /*
- * awsiot_client.h
+ * oap_publisher.h
  *
- *  Created on: Feb 18, 2017
+ *  Created on: Oct 1, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,12 +20,20 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
-#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_PUBLISHER_H_
+#define COMPONENTS_OAP_COMMON_INCLUDE_OAP_PUBLISHER_H_
 
-#include "oap_common.h"
-#include "oap_publisher.h"
+#include "cJSON.h"
+#include "oap_data.h"
+#include "esp_err.h"
 
-oap_publisher_t awsiot_publisher;
+typedef esp_err_t(*oap_publisher_configure_f)(cJSON* config);
+typedef esp_err_t(*oap_publisher_publish_f)(oap_measurement_t* meas, oap_sensor_config_t* sensor_config);
 
-#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */
+typedef struct {
+	char* name;
+	oap_publisher_configure_f configure;
+	oap_publisher_publish_f publish;
+} oap_publisher_t;
+
+#endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_PUBLISHER_H_ */

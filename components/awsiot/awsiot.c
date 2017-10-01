@@ -35,17 +35,15 @@
 #include "awsiot_rest.h"
 #include "oap_common.h"
 #include "oap_debug.h"
-#include "cJSON.h"
+#include "oap_publisher.h"
 
 static const char *TAG = "awsiot";
-static awsiot_config_t awsiot_config = {
-		.enabled = 1,
-		0
-};
+
+static awsiot_config_t awsiot_config = {.0};
 static int config_sent = 0;
 
 
-static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_config) {
+static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *sensor_config) {
 	cJSON* shadow = cJSON_CreateObject();
 	cJSON* state = cJSON_CreateObject();
 	cJSON* reported = cJSON_CreateObject();
@@ -84,7 +82,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 		cJSON_AddNumberToObject(pm, "pm1_0", meas->pm->pm1_0);
 		cJSON_AddNumberToObject(pm, "pm2_5", meas->pm->pm2_5);
 		cJSON_AddNumberToObject(pm, "pm10", meas->pm->pm10);
-		cJSON_AddNumberToObject(pm, "sensor", meas->pm->sensor);
+		cJSON_AddNumberToObject(pm, "sensor", meas->pm->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "pm");
 	}
@@ -95,7 +93,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 		cJSON_AddNumberToObject(pm, "pm1_0", meas->pm_aux->pm1_0);
 		cJSON_AddNumberToObject(pm, "pm2_5", meas->pm_aux->pm2_5);
 		cJSON_AddNumberToObject(pm, "pm10", meas->pm_aux->pm10);
-		cJSON_AddNumberToObject(pm, "sensor", meas->pm_aux->sensor);
+		cJSON_AddNumberToObject(pm, "sensor", meas->pm_aux->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "pmAux");
 	}
@@ -106,7 +104,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 		cJSON_AddNumberToObject(weather, "temp", meas->env->temp);
 		cJSON_AddNumberToObject(weather, "pressure", meas->env->pressure);
 		cJSON_AddNumberToObject(weather, "humidity", meas->env->humidity);
-		cJSON_AddNumberToObject(weather, "sensor", meas->env->sensor);
+		cJSON_AddNumberToObject(weather, "sensor", meas->env->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "weather");
 	}
@@ -117,7 +115,7 @@ static esp_err_t awsiot_rest_post(oap_meas* meas, oap_sensor_config_t *sensor_co
 		cJSON_AddNumberToObject(internal, "temp", meas->env_int->temp);
 		cJSON_AddNumberToObject(internal, "pressure", meas->env_int->pressure);
 		cJSON_AddNumberToObject(internal, "humidity", meas->env_int->humidity);
-		cJSON_AddNumberToObject(internal, "sensor", meas->env_int->sensor);
+		cJSON_AddNumberToObject(internal, "sensor", meas->env_int->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "internal");
 	}
@@ -141,7 +139,9 @@ static void set_config_field(char** field, char* value) {
 	}
 }
 
-esp_err_t awsiot_configure(cJSON* awsiot) {
+static esp_err_t awsiot_configure(cJSON* awsiot) {
+	awsiot_config.configured = 0;
+
 	if (!awsiot) {
 		ESP_LOGI(TAG, "config not found");
 		return ESP_FAIL;
@@ -150,63 +150,61 @@ esp_err_t awsiot_configure(cJSON* awsiot) {
 	cJSON* field;
 	if (!(field = cJSON_GetObjectItem(awsiot, "enabled")) || !field->valueint) {
 		ESP_LOGI(TAG, "client disabled");
-		awsiot_config.enabled = 0;
 		return ESP_FAIL;
-	} else {
-		awsiot_config.enabled = 1;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "endpoint")) && field->valuestring) {
 		set_config_field(&awsiot_config.endpoint,str_dup(field->valuestring));
 		ESP_LOGI(TAG, "endpoint: %s", awsiot_config.endpoint);
+	} else {
+		ESP_LOGE(TAG, "endpoint not configured");
+		return ESP_FAIL;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "port")) && field->valueint) {
 		awsiot_config.port = field->valueint;
+	} else {
+		ESP_LOGE(TAG, "port not configured");
+		return ESP_FAIL;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "thingName")) && field->valuestring) {
 		set_config_field(&awsiot_config.thingName, str_dup(field->valuestring));
 		ESP_LOGI(TAG, "thingName: %s", awsiot_config.thingName);
+	} else {
+		ESP_LOGE(TAG, "thingName not configured");
+		return ESP_FAIL;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "cert")) && field->valuestring) {
 		set_config_field(&awsiot_config.cert, str_dup(field->valuestring));
+	} else {
+		ESP_LOGE(TAG, "certificate not configured");
+		return ESP_FAIL;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "pkey")) && field->valuestring) {
 		set_config_field(&awsiot_config.pkey,str_dup(field->valuestring));
+	} else {
+		ESP_LOGE(TAG, "private key not configured");
+		return ESP_FAIL;
 	}
+	awsiot_config.configured = 1;
 
 	return ESP_OK;
 
 }
 
-awsiot_config_t* get_awsiot_config() {
-	return &awsiot_config;
-}
-
-esp_err_t awsiot_send(oap_meas* meas, oap_sensor_config_t *sensor_config) {
-	if (!awsiot_config.enabled) {
-		ESP_LOGW(TAG, "awsiot disabled");
+static esp_err_t awsiot_send(oap_measurement_t* meas, oap_sensor_config_t *sensor_config) {
+	if (!awsiot_config.configured) {
+		ESP_LOGW(TAG, "awsiot not configured");
 		return ESP_FAIL;
 	}
-	if (!awsiot_config.thingName) {
-		ESP_LOGE(TAG, "thingName not configured");
-		return ESP_FAIL;
-	}
-	if (!awsiot_config.endpoint) {
-		ESP_LOGE(TAG, "endpoint not configured");
-		return ESP_FAIL;
-	}
-	if (!awsiot_config.cert) {
-		ESP_LOGE(TAG, "certificate not configured");
-		return ESP_FAIL;
-	}
-	if (!awsiot_config.pkey) {
-		ESP_LOGE(TAG, "private key not configured");
-		return ESP_FAIL;
-	}
-
 	return awsiot_rest_post(meas, sensor_config);
 }
+
+oap_publisher_t awsiot_publisher = {
+	.name = "AWSIoT",
+	.configure = &awsiot_configure,
+	.publish = &awsiot_send
+};

@@ -24,8 +24,21 @@
 #define MAIN_BMP280_H_
 
 #include "oap_common.h"
+#include "oap_data_env.h"
 
-typedef void(*env_callback)(env_data*);
+#define OAP_BMX280_ENABLED CONFIG_OAP_BMX280_ENABLED
+#define OAP_BMX280_I2C_NUM CONFIG_OAP_BMX280_I2C_NUM
+#define OAP_BMX280_ADDRESS CONFIG_OAP_BMX280_ADDRESS
+#define OAP_BMX280_I2C_SDA_PIN CONFIG_OAP_BMX280_I2C_SDA_PIN
+#define OAP_BMX280_I2C_SCL_PIN CONFIG_OAP_BMX280_I2C_SCL_PIN
+
+#define OAP_BMX280_ENABLED_AUX CONFIG_OAP_BMX280_ENABLED_AUX
+#define OAP_BMX280_I2C_NUM_AUX CONFIG_OAP_BMX280_I2C_NUM_AUX
+#define OAP_BMX280_ADDRESS_AUX CONFIG_OAP_BMX280_ADDRESS_AUX
+#define OAP_BMX280_I2C_SDA_PIN_AUX CONFIG_OAP_BMX280_I2C_SDA_PIN_AUX
+#define OAP_BMX280_I2C_SCL_PIN_AUX CONFIG_OAP_BMX280_I2C_SCL_PIN_AUX
+
+typedef void(*env_callback)(env_data_t*);
 
 typedef struct bmx280_config_t {
 
@@ -33,12 +46,14 @@ typedef struct bmx280_config_t {
 	uint8_t device_addr;
 	uint8_t sda_pin;
 	uint8_t scl_pin;
-	uint8_t sensor;	//sensor number (0 - 1)
+	uint8_t sensor_idx;	//sensor number (0 - 1)
 	uint32_t interval;
 	env_callback callback;
 
 } bmx280_config_t;
 
 esp_err_t bmx280_init(bmx280_config_t* config);
+
+esp_err_t bmx280_set_hardware_config(bmx280_config_t* bmx280_config, uint8_t sensor_idx);
 
 #endif /* MAIN_BMP280_H_ */

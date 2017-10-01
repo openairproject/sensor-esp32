@@ -1,7 +1,7 @@
 /*
- * awsiot_client.h
+ * meas_intervals.h
  *
- *  Created on: Feb 18, 2017
+ *  Created on: Mar 25, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,12 +20,17 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
-#define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_
+#ifndef MAIN_MEAS_INTERVALS_H_
+#define MAIN_MEAS_INTERVALS_H_
 
-#include "oap_common.h"
-#include "oap_publisher.h"
 
-oap_publisher_t awsiot_publisher;
+#include "pm_meter.h"
 
-#endif /* COMPONENTS_AWSIOT_INCLUDE_AWSIOT_H_ */
+typedef struct {
+	int warm_up_time;
+	int meas_time;
+	int meas_interval;
+} pm_meter_intervals_params_t;
+
+
+#endif /* MAIN_MEAS_INTERVALS_H_ */

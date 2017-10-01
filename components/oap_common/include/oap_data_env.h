@@ -1,7 +1,7 @@
 /*
- * meas_intervals.h
+ * oap_data_env.h
  *
- *  Created on: Mar 25, 2017
+ *  Created on: Oct 1, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,17 +20,14 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_MEAS_INTERVALS_H_
-#define MAIN_MEAS_INTERVALS_H_
-
-
-#include "meas.h"
+#ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_ENV_H_
+#define COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_ENV_H_
 
 typedef struct {
-	int warmUpTime;
-	int measTime;
-	int measInterval;
-} meas_intervals_params_t;
+	double temp;
+	double pressure;
+	double humidity;
+	uint8_t sensor_idx;
+} env_data_t;
 
-
-#endif /* MAIN_MEAS_INTERVALS_H_ */
+#endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_ENV_H_ */

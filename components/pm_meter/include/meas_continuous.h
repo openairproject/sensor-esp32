@@ -1,5 +1,5 @@
 /*
- * meas.h
+ * meas_continuous.h
  *
  *  Created on: Mar 25, 2017
  *      Author: kris
@@ -20,38 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAIN_MEAS_H_
-#define MAIN_MEAS_H_
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "oap_common.h"
-#include "pmsx003.h"
+#ifndef MAIN_MEAS_CONTINUOUS_H_
+#define MAIN_MEAS_CONTINUOUS_H_
 
 typedef struct {
-  uint8_t count;
-  pm_data data[2];
-} pm_data_duo_t;
 
-typedef struct {
-  uint8_t count;
-  pms_config_t* sensor[2];
-} pms_configs_t;
+} meas_continuous_params_t;
 
-typedef enum {
-	MEAS_START,
-	MEAS_RESULT,
-	MEAS_ERROR
-} meas_event_t;
+#include "pm_meter.h"
 
-typedef void(*meas_strategy_callback)(meas_event_t event, void* data);
-
-typedef void(*meas_strategy_start)(pms_configs_t*, void*, meas_strategy_callback);
-
-typedef struct meas_strategy {
-	pms_callback collect;
-	meas_strategy_start start;
-} meas_strategy_t;
-
-#endif /* MAIN_MEAS_H_ */
+#endif /* MAIN_MEAS_CONTINUOUS_H_ */

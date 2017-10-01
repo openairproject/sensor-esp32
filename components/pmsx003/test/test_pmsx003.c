@@ -24,24 +24,20 @@
 #include "pmsx003.h"
 #include "oap_test.h"
 
-static pm_data last_result;
+static pm_data_t last_result;
 
 static int got_result = 0;
-static void pms_test_callback(pm_data* result) {
+static void pms_test_callback(pm_data_t* result) {
 	got_result = 1;
-	memcpy(&last_result, result, sizeof(pm_data));
+	memcpy(&last_result, result, sizeof(pm_data_t));
 }
 
-static pms_config_t config = {
+static pmsx003_config_t config = {
 	.indoor = 1,
 	.enabled = 1,
-	.sensor = 7,
+	.sensor_idx = 7,
 	.callback = pms_test_callback,
 	.set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN,
-	.heater_pin = 0,
-	.fan_pin = 0,
-	.heater_enabled = 0,
-	.fan_enabled = 0,
 	.uart_num = CONFIG_OAP_PM_UART_NUM,
 	.uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN,
 	.uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN,
@@ -49,9 +45,9 @@ static pms_config_t config = {
 	.uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN
 };
 
-esp_err_t pms_init_uart(pms_config_t* config);
-void pms_init_gpio(pms_config_t* config);
-esp_err_t pms_uart_read(pms_config_t* config, uint8_t data[32]);
+esp_err_t pms_init_uart(pmsx003_config_t* config);
+void pms_init_gpio(pmsx003_config_t* config);
+esp_err_t pms_uart_read(pmsx003_config_t* config, uint8_t data[32]);
 
 static int uart_installed = 0;
 
@@ -69,14 +65,14 @@ TEST_CASE("pmsx003 measurement","pmsx003") {
 		.wait_for = 10000 //it takes a while to spin it up
 	};
 
-	TEST_ESP_OK(pms_enable(&config, 1));
+	TEST_ESP_OK(pmsx003_enable(&config, 1));
 	while (!got_result && !test_timeout(&t)) {
 		pms_uart_read(&config, data);
 	}
-	TEST_ESP_OK(pms_enable(&config, 0));
+	TEST_ESP_OK(pmsx003_enable(&config, 0));
 	TEST_ASSERT_TRUE_MESSAGE(got_result, "timeout while waiting for measurement");
 
-	TEST_ASSERT_EQUAL_INT(config.sensor, last_result.sensor);
+	TEST_ASSERT_EQUAL_INT(config.sensor_idx, last_result.sensor_idx);
 	TEST_ASSERT_TRUE_MESSAGE(last_result.pm1_0 > 0, "no pm1.0");
 	TEST_ASSERT_TRUE_MESSAGE(last_result.pm2_5 > 0, "no pm2.5");
 	TEST_ASSERT_TRUE_MESSAGE(last_result.pm10 > 0, "no pm10");

@@ -20,7 +20,7 @@
 
 #include <driver/i2c.h>
 #include <esp_log.h>
-#include "oap_common.h"
+#include "oap_data_env.h"
 
 #define BME280_MODE_NORMAL			0x03 //reads sensors at set interval
 #define BME280_MODE_FORCED			0x01 //reads sensors once when you write this register
@@ -67,6 +67,6 @@ esp_err_t BME280_verify_chip(bme280_sensor_t* bme280_sensor);
 
 esp_err_t BME280_init(bme280_sensor_t* bme280_sensor);
 
-esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data* result);
+esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data_t* result);
 
 #endif

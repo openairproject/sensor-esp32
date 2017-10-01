@@ -25,20 +25,20 @@
 
 #include "freertos/queue.h"
 
-typedef struct { float v[3]; } rgb;
+typedef struct { float v[3]; } rgb_color_t;
 
 typedef enum {
 	LED_SET = 0,
 	LED_FADE_TO = 1,
 	LED_BLINK = 2,
 	LED_PULSE = 3
-} led_mode;
+} led_mode_t;
 
 typedef struct {
-	led_mode mode;
-	rgb color;
+	led_mode_t mode;
+	rgb_color_t color;
 	uint32_t freq;
-} led_cmd;
+} led_cmd_t;
 
 void led_init(int enabled, xQueueHandle cmd_queue);
 

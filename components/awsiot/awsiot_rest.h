@@ -23,7 +23,14 @@
 #ifndef COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
 #define COMPONENTS_AWSIOT_INCLUDE_AWSIOT_REST_H_
 
-#include "awsiot.h"
+typedef struct {
+	int configured;
+	char* endpoint;
+	int port;
+	char* thingName;
+	char* cert;
+	char* pkey;
+} awsiot_config_t;
 
 esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body);
 
