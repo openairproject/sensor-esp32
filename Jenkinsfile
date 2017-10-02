@@ -12,7 +12,7 @@ pipeline {
             steps {
                 sh 'bin/make_tests.sh'
                 sh 'sleep 3'
-                sh 'bin/run_tests.py'
+                sh 'bin/run_tests.py /dev/ttyUSB0'
             }
         }
         stage('archive') {
