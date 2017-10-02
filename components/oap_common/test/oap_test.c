@@ -32,13 +32,12 @@
 #include "freertos/FreeRTOS.h"
 
 static const char* TAG = "test";
+static oc_wifi_t wifi_config = {
+	.ssid = OAP_TEST_WIFI_SSID,
+	.password = OAP_TEST_WIFI_PASSWORD
+};
 
 void test_init_wifi() {
-	oc_wifi_t wifi_config = {
-			.ssid = OAP_TEST_WIFI_SSID,
-			.password = OAP_TEST_WIFI_PASSWORD
-		};
-
 	wifi_boot(&wifi_config,0);
 }
 
