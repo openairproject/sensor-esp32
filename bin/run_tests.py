@@ -3,7 +3,9 @@ import serial
 import sys
 import time
 
-ser = serial.Serial('/dev/tty.SLAB_USBtoUART',115200,timeout=1)
+#'/dev/tty.SLAB_USBtoUART'
+
+ser = serial.Serial(sys.argv[1],115200,timeout=1)
 
 def readall(exp, timeout = 5):
     line = ser.readline()
@@ -34,7 +36,7 @@ def wait_for_test_result():
 
 ser.write('\n');
 readall('Here\'s the test menu, pick your combo:')
-ser.write('*' if len(sys.argv) == 1 else sys.argv[1])
+ser.write('*' if len(sys.argv) > 1 else sys.argv[2])
 ser.write('\n')
 result = wait_for_test_result().strip()
 sys.stdout.write('TEST RESULT: '+result)
