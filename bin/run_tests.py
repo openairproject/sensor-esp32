@@ -36,6 +36,7 @@ def wait_for_test_result():
 
 ser.write('\n');
 readall('Here\'s the test menu, pick your combo:')
+readall('')
 ser.write('*' if len(sys.argv) <= 2 else sys.argv[2])
 ser.write('\n')
 result = wait_for_test_result().strip()
