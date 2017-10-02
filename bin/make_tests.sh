@@ -3,7 +3,7 @@
 #https://www.esp32.com/viewtopic.php?t=2867
 
 bin="$(dirname "$0")"
-source bin/test_components.sh
+. bin/test_components.sh
 export BATCH_BUILD=1
 project=`pwd`
 
