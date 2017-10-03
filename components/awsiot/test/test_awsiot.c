@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
-#include "esp_log.h"
 #include <string.h>
 #include "unity.h"
 #include "oap_storage.h"
@@ -59,6 +58,6 @@ TEST_CASE("publish to awsiot", "[awsiot]")
 		ESP_LOGW(TAG, "REQUEST %d (heap %u,  %d bytes)", i, curr_heap, curr_heap-prev_heap);
 		prev_heap = curr_heap;
 		TEST_ESP_OK(publish());
-		if (i) delay(1000);
+		if (i) test_delay(1000);
 	}
 }

@@ -24,6 +24,8 @@
 #define COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
 
 #include "unity.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
 
 /**
  * init wifi, do not wait for IP
@@ -41,5 +43,7 @@ typedef struct {
 } test_timer_t;
 
 int test_timeout(test_timer_t* t);
+
+void test_delay(uint32_t ms);
 
 #endif /* COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_ */
