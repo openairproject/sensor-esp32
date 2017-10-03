@@ -131,12 +131,11 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	return res;
 }
 
-static void set_config_field(char** field, char* value) {
+static void set_config_str_field(char** field, char* value) {
 	if (*field) {
 		free(*field);
-	} else {
-		*field = value;
 	}
+	*field = str_dup(value);
 }
 
 static esp_err_t awsiot_configure(cJSON* awsiot) {
@@ -154,7 +153,7 @@ static esp_err_t awsiot_configure(cJSON* awsiot) {
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "endpoint")) && field->valuestring) {
-		set_config_field(&awsiot_config.endpoint,str_dup(field->valuestring));
+		set_config_str_field(&awsiot_config.endpoint, field->valuestring);
 		ESP_LOGI(TAG, "endpoint: %s", awsiot_config.endpoint);
 	} else {
 		ESP_LOGE(TAG, "endpoint not configured");
@@ -169,7 +168,7 @@ static esp_err_t awsiot_configure(cJSON* awsiot) {
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "thingName")) && field->valuestring) {
-		set_config_field(&awsiot_config.thingName, str_dup(field->valuestring));
+		set_config_str_field(&awsiot_config.thingName, field->valuestring);
 		ESP_LOGI(TAG, "thingName: %s", awsiot_config.thingName);
 	} else {
 		ESP_LOGE(TAG, "thingName not configured");
@@ -177,14 +176,14 @@ static esp_err_t awsiot_configure(cJSON* awsiot) {
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "cert")) && field->valuestring) {
-		set_config_field(&awsiot_config.cert, str_dup(field->valuestring));
+		set_config_str_field(&awsiot_config.cert, field->valuestring);
 	} else {
 		ESP_LOGE(TAG, "certificate not configured");
 		return ESP_FAIL;
 	}
 
 	if ((field = cJSON_GetObjectItem(awsiot, "pkey")) && field->valuestring) {
-		set_config_field(&awsiot_config.pkey,str_dup(field->valuestring));
+		set_config_str_field(&awsiot_config.pkey,field->valuestring);
 	} else {
 		ESP_LOGE(TAG, "private key not configured");
 		return ESP_FAIL;

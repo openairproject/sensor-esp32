@@ -75,5 +75,18 @@ TEST_CASE("publish to thingspeak", "[tspk]") {
 		.0
 	};
 
-	TEST_ESP_OK(thingspeak_publisher.publish(&meas, &sensor_config));
+	size_t curr_heap = 0;
+	size_t prev_heap = 0;
+
+	/*
+	 * heap consumption goes to 0 after ~10 requests
+	 * warning - thingspeak cuts off abusive devices after a while
+	 */
+	for (int i = 0; i < 1; i++) {
+		curr_heap = xPortGetFreeHeapSize();
+		ESP_LOGW("test", "REQUEST %d (heap %u,  %d bytes)", i, curr_heap, curr_heap-prev_heap);
+		prev_heap = curr_heap;
+		TEST_ESP_OK(thingspeak_publisher.publish(&meas, &sensor_config));
+		if (i) test_delay(1000);
+	}
 }

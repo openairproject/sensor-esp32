@@ -29,7 +29,6 @@
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_system.h"
-#include "freertos/FreeRTOS.h"
 
 static const char* TAG = "test";
 static oc_wifi_t wifi_config = {
@@ -57,6 +56,11 @@ static uint32_t IRAM_ATTR time_now()
 int test_timeout(test_timer_t* t) {
 	if (t->started <= 0) t->started = time_now();
 	return time_now() - t->started > t->wait_for;
+}
+
+void test_delay(uint32_t ms)
+{
+    vTaskDelay(ms / portTICK_PERIOD_MS);
 }
 
 

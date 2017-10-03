@@ -34,6 +34,13 @@ static const char *TAG = "thingspk";
 static char* apikey = NULL;
 static int _configured = 0;
 
+static void set_config_str_field(char** field, char* value) {
+	if (*field) {
+		free(*field);
+	}
+	*field = str_dup(value);
+}
+
 static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
 	char* payload = malloc(512);
 	sprintf(payload, "api_key=%s", apikey);
@@ -67,6 +74,7 @@ static esp_err_t rest_post(char* uri, char* payload) {
 	req_setopt(req, REQ_SET_POSTFIELDS, payload);
 
 	int response_code = req_perform(req);
+	req_clean(req);
 	if (response_code == 200) {
 		ESP_LOGI(TAG, "update succeeded");
 		return ESP_OK;
@@ -74,6 +82,7 @@ static esp_err_t rest_post(char* uri, char* payload) {
 		ESP_LOGW(TAG, "update failed (response code: %d)", response_code);
 		return ESP_FAIL;
 	}
+
 }
 
 static esp_err_t thing_speak_configure(cJSON* thingspeak) {
@@ -90,8 +99,7 @@ static esp_err_t thing_speak_configure(cJSON* thingspeak) {
 	}
 
 	if ((field = cJSON_GetObjectItem(thingspeak, "apikey")) && field->valuestring) {
-		apikey = malloc(strlen(field->valuestring)+1);
-		strcpy(apikey,field->valuestring);
+		set_config_str_field(&apikey, field->valuestring);
 	} else {
 		ESP_LOGW(TAG, "apikey not configured");
 		return ESP_FAIL;
