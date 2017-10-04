@@ -197,11 +197,13 @@ static void mongooseTask(void *data) {
 		vTaskDelete(NULL);
 		return;
 	}
-	mg_set_protocol_http_websocket(connection);
+	//mg_set_protocol_http_websocket(connection);
 
-	// Keep processing until we are flagged that there is a stop request.
 	while (!g_mongooseStopRequest) {
-		mg_mgr_poll(&mgr, 1000);
+		//THIS RETURNS IMMEDIATELY IF THERE'S ISSUE WITH SOCKET?
+		//if you see that mongoose task is not responding, this is it
+		time_t t = mg_mgr_poll(&mgr, 1000);
+		//ESP_LOGD(tag,"mongoose listening (%lu)",t);
 	}
 
 	// We have received a stop request, so stop being a web server.
@@ -232,8 +234,9 @@ static void start_mongoose() {
 	if (_enable_control_panel) {
 		if (!g_mongooseStarted) {
 			g_mongooseStarted = 1;
-			//xTaskCreatePinnedToCore(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL, 0);
-			xTaskCreate(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
+			//seems more stable but I'm not sure
+			xTaskCreatePinnedToCore(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL, 0);
+			//xTaskCreate(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
 		}
 	} else {
 		ESP_LOGW(tag, "control panel disabled by config flag");
@@ -261,10 +264,13 @@ static void start_mongoose() {
 static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 	if (is_reboot_in_progress()) return ESP_OK; //ignore - trying to reconnect now will crash
 
-	// Your event handling code here...
+
+	ESP_LOGI(tag, "WIFI EVENT: %d", event->event_id);
+
 	switch(event->event_id) {
 		// When we have started being an access point, then start being a web server.
 		case SYSTEM_EVENT_AP_START: { // Handle the AP start event
+			ESP_LOGI(tag, "SYSTEM_EVENT_AP_START");
 			xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
 			esp_err_t err;
 			if ((err=set_access_point_ip()) != ESP_OK) {
@@ -286,12 +292,16 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 		} // SYSTEM_EVENT_AP_START
 
 		case SYSTEM_EVENT_AP_STOP : {
+			ESP_LOGI(tag, "SYSTEM_EVENT_AP_STOP");
 			break;
 		}
 
 		// If we fail to connect to an access point as a station, become an access point.
 		case SYSTEM_EVENT_STA_DISCONNECTED: {
-			ESP_LOGD(tag, "Station disconnected - reconnecting");
+			ESP_LOGI(tag, "SYSTEM_EVENT_STA_DISCONNECTED");
+			
+			//mongooose goes crazy after disconnect, it has to be reinitialised
+			g_mongooseStopRequest=1;
 			/*
 			 * we cannot just switch to APi every time when wifi fails, in most cases we should try to reconnect.
 			 * although if the failure happened just after user configured wifi, there's a good chance
@@ -305,6 +315,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 		}
 
 		case SYSTEM_EVENT_STA_GOT_IP: {
+			ESP_LOGI(tag, "SYSTEM_EVENT_STA_GOT_IP");
 			//at least in sdk2.1, this event is triggered even in AP mode!
 			if (is_station) {
 				ESP_LOGD(tag, "********************************************");
@@ -376,7 +387,7 @@ static void become_station(oc_wifi_t *pConnectionInfo) {
 		tcpip_adapter_dhcpc_start(TCPIP_ADAPTER_IF_STA);
 	}
 
-  ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   wifi_config_t sta_config;
   sta_config.sta.bssid_set = 0;
   memcpy(sta_config.sta.ssid, pConnectionInfo->ssid, SSID_SIZE);
