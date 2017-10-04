@@ -67,7 +67,7 @@ static int g_mongooseStopRequest = 0; // Request to stop the mongoose server.
 static int _sntp_initialised = 0;
 static int is_station = 0;
 static void become_access_point();
-static void restore_wifi_setup();
+static void restore_wifi_setup(oc_wifi_t* oc_wifi);
 
 static char tag[] = "wifi";
 
@@ -300,7 +300,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			 * TODO remember successful connection to wifi and do not fallback to AP if we ever managed connect to wifi.
 			 */
 			xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-			restore_wifi_setup();
+			restore_wifi_setup(NULL);
 			break;
 		}
 
