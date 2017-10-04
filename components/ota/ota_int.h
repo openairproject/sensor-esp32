@@ -50,8 +50,16 @@ typedef struct {
 	oap_version_t ver;
 } ota_info_t;
 
+/*
+ * ota_info has to be freed with free_ota_info
+ */
 esp_err_t is_ota_available(ota_config_t* ota_config, ota_info_t* ota_info);
+
+/*
+ * ota_info has to be freed with free_ota_info
+ */
 esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info);
+void free_ota_info(ota_info_t* ota_info);
 esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, esp_partition_t *update_partition);
 esp_err_t parse_ota_info(ota_info_t* ota_info, char* line, int len);
 esp_err_t check_ota(ota_config_t* ota_config);

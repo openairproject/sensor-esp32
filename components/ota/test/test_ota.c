@@ -95,6 +95,28 @@ TEST_CASE("fetch_last_ota_info", "[ota]")
 	}
 }
 
+//TEST_CASE("fetch_last_ota_info - LL", "[ota]")
+//{
+//	test_require_wifi();
+//	ota_info_t info = {
+//		.sha = NULL,
+//		.file = NULL
+//	};
+//	/*
+//	 * heap consumption goes to 0 after ~5 requests
+//	 */
+//	size_t curr_heap = 0;
+//	size_t prev_heap = 0;
+//	for (int i = 0; i < 1000; i++) {
+//		curr_heap = xPortGetFreeHeapSize();
+//		ESP_LOGW(TAG, "REQUEST %d (heap %u,  %d bytes)", i, curr_heap, curr_heap-prev_heap);
+//		prev_heap = curr_heap;
+//		fetch_last_ota_info(&ota_test_config, &info);
+//		free_ota_info(&info);
+//		if (i) delay(1000);
+//	}
+//}
+
 TEST_CASE("parse_ota_info","[ota]")
 {
 	ota_info_t info;

@@ -295,9 +295,11 @@ static void publish_loop() {
 		long localTime = oap_epoch_sec_valid();
 		long sysTime = oap_epoch_sec();
 		pm_data_pair_t pm_data_pair;
-		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 100)) {
-			log_task_stack("publish_loop");
 
+		log_heap_size("publish_loop");
+
+		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 1000)) {
+			log_task_stack(TAG);
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
 			ledc_set_color(LED_SET, aqi,(1-aqi), 0);

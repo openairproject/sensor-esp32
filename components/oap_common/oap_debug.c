@@ -29,24 +29,27 @@
 #include "esp_log.h"
 #include "freertos/task.h"
 
+#define TAG "MEM"
 /**
  * this method is surprisingly stack heavy - it takes ~ 1000 bytes.
  * before using it, adjust task stack accordingly.
  */
-void log_task_stack(const char* TAG) {
+void log_task_stack(const char* task) {
 	//uxTaskGetStackHighWaterMark is marked as UNTESTED
 	#if !CONFIG_FREERTOS_ASSERT_ON_UNTESTED_FUNCTION
-		ESP_LOGD(TAG, "----------> TASK MIN STACK: %d", uxTaskGetStackHighWaterMark( NULL ));
+		ESP_LOGD(TAG, "task '%s' min stack (%d)", task, uxTaskGetStackHighWaterMark( NULL ));
 	#endif
 }
 
 
 static size_t last_free_heap = 0;
 
-void log_heap_size(const char* TAG, const char* msg) {
+void log_heap_size(const char* msg) {
 	size_t free_heap = xPortGetFreeHeapSize();
 	if (last_free_heap == 0) last_free_heap = free_heap;
-	ESP_LOGD(TAG, "----------> free heap (%s): %d (since last: %d, min: %d)", msg, free_heap, free_heap-last_free_heap, xPortGetMinimumEverFreeHeapSize());
+	ESP_LOGD(TAG, "heap min (%d) free (%d) change (%d) %s",
+			xPortGetMinimumEverFreeHeapSize(),
+			free_heap, free_heap-last_free_heap, msg);
 	last_free_heap = free_heap;
 }
 

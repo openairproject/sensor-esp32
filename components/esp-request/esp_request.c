@@ -261,6 +261,7 @@ static int mbedtls_connect(request_t *req)
         ESP_LOGD(TAG, "Performing the SSL/TLS handshake...");
 
         while ((ret = mbedtls_ssl_handshake(&ssl->ssl_ctx)) != ESP_OK) {
+        	//sometimes it returns -78 and hangs :(
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != -76) {
             	ESP_LOGW(TAG, "mbedtls_ssl_handshake returned 0x%x", -ret);
                 break;
@@ -268,7 +269,10 @@ static int mbedtls_connect(request_t *req)
             vTaskDelay(10 / portTICK_PERIOD_MS);
             vPortYield();
         }
-        if (ret != ESP_OK) break;
+        if (ret != ESP_OK) {
+        	//do we need to release anything here???
+        	break;
+        }
 
         if (req->client_cert && req->client_key) {
             if ((ret = mbedtls_ssl_get_record_expansion(&ssl->ssl_ctx)) >= 0) {

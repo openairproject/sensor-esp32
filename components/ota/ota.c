@@ -131,6 +131,15 @@ static int get_ota_status_callback(request_t *req, char *data, int len)
 	return 0;
 }
 
+void free_ota_info(ota_info_t* ota_info) {
+	if (ota_info) {
+		if (ota_info->file) free(ota_info->file);
+		if (ota_info->sha) free(ota_info->sha);
+		ota_info->file=NULL;
+		ota_info->sha=NULL;
+	}
+}
+
 esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
 {
 	ESP_LOGI(TAG, "fetch ota info from %s", ota_config->index_uri);
@@ -252,7 +261,7 @@ esp_err_t is_ota_update_available(ota_config_t* ota_config, ota_info_t* ota_info
 }
 
 esp_err_t check_ota(ota_config_t* ota_config) {
-	ota_info_t ota_info;
+
 
 	const esp_partition_t* running_partition = esp_ota_get_running_partition();
 	ESP_LOGI(TAG, "running partition = %s", running_partition->label);
@@ -267,6 +276,10 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 	ESP_LOGI(TAG, "update partition = %s", ota_config->update_partition->label);
 	esp_err_t err;
 	esp_ota_handle_t update_handle = 0;
+	ota_info_t ota_info = {
+		.sha =NULL,
+		.file=NULL
+	};
 
 	while (1) {
 		if ((err = wifi_connected_wait_for(30000)) != ESP_OK) {
@@ -274,6 +287,7 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 		}
 
 		ESP_LOGD(TAG, "Check for OTA updates...");
+		log_task_stack(TAG);
 
 		if ((err = is_ota_update_available(ota_config, &ota_info)) != ESP_OK) goto go_sleep;
 
@@ -320,6 +334,7 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 		   ESP_LOGE(TAG,"Interrupt OTA");
 
 		go_sleep:
+		free_ota_info(&ota_info);
 
 		if (ota_config->interval <= 0) {
 			break;
