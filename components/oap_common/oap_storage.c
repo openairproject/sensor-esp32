@@ -288,7 +288,7 @@ static void unmask_sensitive_fields(const cJSON* new_config, const cJSON* old_co
 				cJSON* _wifi = cJSON_GetObjectItem(old_config, "wifi");
 				if (_wifi) {
 					cJSON* _passwordNode = cJSON_GetObjectItem(_wifi, "password");
-					ESP_LOGD(TAG,"detected '%s' token, we need to keep old password (%s)", PASSWORD_NOT_CHANGED, _passwordNode->valuestring);
+					ESP_LOGD(TAG,"detected '%s' token, we need to keep old password", PASSWORD_NOT_CHANGED);
 					if (_passwordNode) {
 						cJSON_DeleteItemFromObject(wifi, "password");
 						cJSON_AddStringToObject(wifi, "password", _passwordNode->valuestring);
