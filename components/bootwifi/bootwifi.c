@@ -36,6 +36,7 @@
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "freertos/event_groups.h"
+#include "server.h"
 
 /**
  * based on https://github.com/nkolban/esp32-snippets/tree/master/networking/bootwifi
@@ -179,41 +180,41 @@ static void mongoose_event_handler(struct mg_connection *nc, int ev, void *evDat
 
 
 // FreeRTOS task to start Mongoose.
-static void mongooseTask(void *data) {
-	struct mg_mgr mgr;
-	struct mg_connection *connection;
-
-	ESP_LOGD(tag, ">> mongooseTask");
-	g_mongooseStopRequest = 0; // Unset the stop request since we are being asked to start.
-
-	mg_mgr_init(&mgr, NULL);
-
-	connection = mg_bind(&mgr, ":80", mongoose_event_handler);
-
-	if (connection == NULL) {
-		ESP_LOGE(tag, "No connection from the mg_bind().");
-		mg_mgr_free(&mgr);
-		ESP_LOGD(tag, "<< mongooseTask");
-		vTaskDelete(NULL);
-		return;
-	}
-	//mg_set_protocol_http_websocket(connection);
-
-	while (!g_mongooseStopRequest) {
-		//THIS RETURNS IMMEDIATELY IF THERE'S ISSUE WITH SOCKET?
-		//if you see that mongoose task is not responding, this is it
-		time_t t = mg_mgr_poll(&mgr, 1000);
-		//ESP_LOGD(tag,"mongoose listening (%lu)",t);
-	}
-
-	// We have received a stop request, so stop being a web server.
-	mg_mgr_free(&mgr);
-	g_mongooseStarted = 0;
-
-	ESP_LOGD(tag, "<< mongooseTask");
-	vTaskDelete(NULL);
-	return;
-} // mongooseTask
+//static void mongooseTask(void *data) {
+//	struct mg_mgr mgr;
+//	struct mg_connection *connection;
+//
+//	ESP_LOGD(tag, ">> mongooseTask");
+//	g_mongooseStopRequest = 0; // Unset the stop request since we are being asked to start.
+//
+//	mg_mgr_init(&mgr, NULL);
+//
+//	connection = mg_bind(&mgr, ":80", mongoose_event_handler);
+//
+//	if (connection == NULL) {
+//		ESP_LOGE(tag, "No connection from the mg_bind().");
+//		mg_mgr_free(&mgr);
+//		ESP_LOGD(tag, "<< mongooseTask");
+//		vTaskDelete(NULL);
+//		return;
+//	}
+//	//mg_set_protocol_http_websocket(connection);
+//
+//	while (!g_mongooseStopRequest) {
+//		//THIS RETURNS IMMEDIATELY IF THERE'S ISSUE WITH SOCKET?
+//		//if you see that mongoose task is not responding, this is it
+//		time_t t = mg_mgr_poll(&mgr, 1000);
+//		//ESP_LOGD(tag,"mongoose listening (%lu)",t);
+//	}
+//
+//	// We have received a stop request, so stop being a web server.
+//	mg_mgr_free(&mgr);
+//	g_mongooseStarted = 0;
+//
+//	ESP_LOGD(tag, "<< mongooseTask");
+//	vTaskDelete(NULL);
+//	return;
+//} // mongooseTask
 
 int set_access_point_ip()
 {
@@ -232,12 +233,7 @@ int set_access_point_ip()
 
 static void start_mongoose() {
 	if (_enable_control_panel) {
-		if (!g_mongooseStarted) {
-			g_mongooseStarted = 1;
-			//seems more stable but I'm not sure
-			xTaskCreatePinnedToCore(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL, 0);
-			//xTaskCreate(&mongooseTask, "mongoose_task", 10000, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
-		}
+		server_start(mongoose_event_handler);
 	} else {
 		ESP_LOGW(tag, "control panel disabled by config flag");
 	}
@@ -293,15 +289,16 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_AP_STOP : {
 			ESP_LOGI(tag, "SYSTEM_EVENT_AP_STOP");
+			server_stop();
 			break;
 		}
 
-		// If we fail to connect to an access point as a station, become an access point.
+		//WARNING - we cannot rely on this event, sometimes it doesn't got triggered
 		case SYSTEM_EVENT_STA_DISCONNECTED: {
 			ESP_LOGI(tag, "SYSTEM_EVENT_STA_DISCONNECTED");
 			
 			//mongooose goes crazy after disconnect, it has to be reinitialised
-			g_mongooseStopRequest=1;
+			server_stop();
 			/*
 			 * we cannot just switch to APi every time when wifi fails, in most cases we should try to reconnect.
 			 * although if the failure happened just after user configured wifi, there's a good chance
@@ -329,6 +326,8 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 				 * TODO if we attempt to make an SSL request (by OTA, didn't check others) when wifi is in AP mode,
 				 * mongoose goes into infinite loop;
 				 * socket.accept fails immediately. this may be network stack bug.
+				 *
+				 * TODO this should RESTART mongoose!
 				 */
 				start_mongoose();
 			}
