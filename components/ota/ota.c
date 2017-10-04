@@ -251,7 +251,7 @@ esp_err_t is_ota_update_available(ota_config_t* ota_config, ota_info_t* ota_info
 	return err;
 }
 
-esp_err_t check_ota_task(ota_config_t* ota_config) {
+esp_err_t check_ota(ota_config_t* ota_config) {
 	ota_info_t ota_info;
 
 	const esp_partition_t* running_partition = esp_ota_get_running_partition();
@@ -331,18 +331,31 @@ esp_err_t check_ota_task(ota_config_t* ota_config) {
 	return err;
 }
 
+static void check_ota_task(ota_config_t* ota_config) {
+	check_ota(ota_config);
+	vTaskDelete(NULL);
+}
+
 static ota_config_t ota_config;
 
-void start_ota_task() {
+void start_ota_task(cJSON* user_ota_config) {
+
 	if (OAP_OTA_ENABLED) {
-		ota_config.bin_uri_prefix = OAP_OTA_BIN_URI_PREFIX;
-		ota_config.index_uri = OAP_OTA_INDEX_URI;
-		ota_config.min_version = oap_version_num(oap_version());
-		ota_config.commit_and_reboot = 1;
-		ota_config.update_partition = NULL;
-		ota_config.interval = 1000 * OAP_OTA_CHECK_INTERVAL; //1h
-		xTaskCreate(check_ota_task, "check_ota_task", 1024*4, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
+		cJSON* ota_interval;
+		if (!user_ota_config ||
+				!(ota_interval = cJSON_GetObjectItem(user_ota_config, "interval")) || ota_interval->valueint < 0) {
+			//disable for -1, for 0 it will run once at startup
+			ESP_LOGI(TAG, "OTA disabled");
+		} else {
+			ota_config.bin_uri_prefix = OAP_OTA_BIN_URI_PREFIX;
+			ota_config.index_uri = OAP_OTA_INDEX_URI;
+			ota_config.min_version = oap_version_num(oap_version());
+			ota_config.commit_and_reboot = 1;
+			ota_config.update_partition = NULL;
+			ota_config.interval = 1000 * ota_interval->valueint;
+			xTaskCreate(check_ota_task, "check_ota_task", 1024*4, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
+		}
 	} else {
-		ESP_LOGI(TAG, "OTA disabled");
+		ESP_LOGI(TAG, "OTA not available");
 	}
 }

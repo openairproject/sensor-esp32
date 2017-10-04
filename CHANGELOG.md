@@ -1,3 +1,8 @@
+# 0.5.1
+
+- configurable OTA interval ([#28](https://github.com/openairproject/sensor-esp32/issues/28))
+- refactored thingspeak client and generic 'publisher' interface
+
 # 0.5.0
 
 - enable Jenkins build and automated unit tests ([#4](https://github.com/openairproject/sensor-esp32/issues/4))

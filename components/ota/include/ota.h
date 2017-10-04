@@ -23,11 +23,13 @@
 #ifndef COMPONENTS_OTA_INCLUDE_OTA_H_
 #define COMPONENTS_OTA_INCLUDE_OTA_H_
 
+#include "oap_common.h"
+#include "cJSON.h"
+
 #define OAP_OTA_ENABLED 		CONFIG_OAP_OTA_ENABLED
 #define OAP_OTA_BIN_URI_PREFIX 	CONFIG_OAP_OTA_BIN_URI_PREFIX
 #define OAP_OTA_INDEX_URI 		CONFIG_OAP_OTA_INDEX_URI
-#define OAP_OTA_CHECK_INTERVAL 	CONFIG_OAP_OTA_CHECK_INTERVAL
 
-void start_ota_task();
+void start_ota_task(cJSON* user_ota_config);
 
 #endif /* COMPONENTS_OTA_INCLUDE_OTA_H_ */

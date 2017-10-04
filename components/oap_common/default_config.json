@@ -15,6 +15,9 @@
 		"endpoint" : "a32on3oilq3poc.iot.eu-west-1.amazonaws.com",
 		"port" : 8443
 	},
+	"ota" : {
+		"interval" : 3600
+	},
 	"sensor" : {
 		"config" : {
 			"indoor" 	: 	0,

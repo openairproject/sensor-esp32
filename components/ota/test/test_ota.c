@@ -119,7 +119,7 @@ TEST_CASE("full ota", "[ota]")
 	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
 	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
 
-	int ret = check_ota_task(&ota_config);
+	int ret = check_ota(&ota_config);
 
 	//if OTA partition is too small, you'll get 'segment invalid length error'
 	TEST_ESP_OK(ret);
@@ -133,7 +133,7 @@ TEST_CASE("skip ota if up-to-date", "[ota]")
 	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
 	ota_config.min_version=oap_version_num(hello_world_info.ver); //the same version
 
-	int ret = check_ota_task(&ota_config);
+	int ret = check_ota(&ota_config);
 	TEST_ASSERT_EQUAL_UINT16(OAP_OTA_ERR_NO_UPDATES, ret);
 }
 
@@ -145,7 +145,7 @@ TEST_CASE("fail ota for sha mismatch", "[ota]")
 	ota_config.index_uri = "https://openairproject.com/ota/test/index-sha-mismatch.txt",
 	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
 
-	int ret = check_ota_task(&ota_config);
+	int ret = check_ota(&ota_config);
 	TEST_ASSERT_EQUAL_UINT16(OAP_OTA_ERR_SHA_MISMATCH, ret);
 }
 
@@ -160,6 +160,6 @@ TEST_CASE("fail ota for invalid cert", "[ota]")
 
 	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
 
-	int ret = check_ota_task(&ota_config);
+	int ret = check_ota(&ota_config);
 	TEST_ASSERT_EQUAL_UINT16(OAP_OTA_ERR_REQUEST_FAILED, ret);
 }

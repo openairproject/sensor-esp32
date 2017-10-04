@@ -353,7 +353,7 @@ void app_main()
 
 	//wifi/mongoose requires plenty of mem, start it here
 	wifi_boot(NULL, CONFIG_OAP_CONTROL_PANEL);
-	start_ota_task();
+	start_ota_task(storage_get_config("ota"));
 
 	ledc_init();
 	pm_meter_init();

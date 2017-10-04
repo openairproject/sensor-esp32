@@ -20,11 +20,4 @@ config OAP_OTA_INDEX_URI
     help
         full URI to file with OTA definition
         
-config OAP_OTA_CHECK_INTERVAL
-    int "interval in seconds"
-    default 3600
-    help
-        determines how often sensor will check for OTA update.
-        value <= 0 means it will be checked only once during startup.
-        
 endmenu
