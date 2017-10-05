@@ -1,4 +1,3 @@
-# Let's keep it the same as for app
 # Name,   Type, SubType, Offset,   Size
 # Note: if you change the phy_init or app partition offset, make sure to change the offset in Kconfig.projbuild
 nvs,      data, nvs,     0x9000,   0x13000

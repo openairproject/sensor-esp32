@@ -53,6 +53,22 @@ void log_heap_size(const char* msg) {
 	last_free_heap = free_heap;
 }
 
+static void* dummy;
+void reduce_heap_size_to(size_t size) {
+	size_t reduce_by = xPortGetFreeHeapSize() - size;
+	if (reduce_by > 0) {
+		ESP_LOGE(TAG, "********************** REDUCE HEAP BY %d TO %d bytes !!!!!!!!!!!", reduce_by, size);
+		do {
+			size_t block = reduce_by > 10000 ? 10000 : reduce_by;
+			reduce_by-=block;
+			dummy = malloc(block);
+			if (!dummy) {
+				ESP_LOGE(TAG, "FAILED TO ALLOCATE!");
+			}
+		} while (reduce_by > 0);
+	}
+}
+
 static int heap_log_count = 0;
 
 /*

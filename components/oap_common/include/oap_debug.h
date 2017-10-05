@@ -33,3 +33,4 @@ void heap_log_free(heap_log* log);
 
 void log_task_stack(const char* task);
 void log_heap_size(const char* msg);
+void reduce_heap_size_to(size_t size);
