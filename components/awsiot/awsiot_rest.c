@@ -58,6 +58,9 @@ esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body) {
 //	sprintf(host_header, "Host: %s", awsiot_config->endpoint);
 
 	request_t* req = req_new(uri);
+	if (!req) {
+		return ESP_FAIL;
+	}
 
 	req->ca_cert = req_parse_x509_crt((unsigned char*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
 	if (!req->ca_cert) {

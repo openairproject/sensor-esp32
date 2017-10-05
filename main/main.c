@@ -357,6 +357,8 @@ void app_main() {
 	delay(1000);
 	ESP_LOGI(TAG,"starting app... firmware %s", oap_version_str());
 
+	//130kb is a nice cap to test against alloc fails
+	//reduce_heap_size_to(130000);
 	storage_init();
 
 	ESP_LOGD(TAG, "retrieve sensor config");

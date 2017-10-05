@@ -43,6 +43,7 @@ static void set_config_str_field(char** field, char* value) {
 
 static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
 	char* payload = malloc(512);
+	if (!payload) return NULL;
 	sprintf(payload, "api_key=%s", apikey);
 
 	if (meas->pm) {
@@ -69,6 +70,9 @@ static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
 
 static esp_err_t rest_post(char* uri, char* payload) {
 	request_t* req = req_new(uri);
+	if (!req) {
+		return ESP_FAIL;
+	}
 	ESP_LOGD(TAG, "request payload: %s", payload);
 
 	req_setopt(req, REQ_SET_POSTFIELDS, payload);
@@ -116,10 +120,13 @@ static esp_err_t thing_speak_send(oap_measurement_t* meas, oap_sensor_config_t* 
 	}
 
 	char* payload = prepare_thingspeak_payload(meas);
-	esp_err_t ret = rest_post(OAP_THING_SPEAK_URI, payload);
-	free(payload);
-
-	return ret;
+	if (payload) {
+		esp_err_t ret = rest_post(OAP_THING_SPEAK_URI, payload);
+		free(payload);
+		return ret;
+	} else {
+		return ESP_FAIL;
+	}
 }
 
 oap_publisher_t thingspeak_publisher = {

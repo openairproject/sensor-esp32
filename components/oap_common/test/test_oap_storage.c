@@ -100,7 +100,7 @@ TEST_CASE("bigblob", "[oap_common]")
 {
 	nvs_clean_if_necessary();
 
-	size_t blob_size = MAX_NVS_VALUE_SIZE * 1 + 10;
+	size_t blob_size = MAX_NVS_VALUE_SIZE * 10 + 10;
 	void* blob = malloc(blob_size);
 
 	TEST_ESP_ERR(ESP_ERR_NVS_NOT_FOUND, storage_get_bigblob("blob", &blob, NULL));
