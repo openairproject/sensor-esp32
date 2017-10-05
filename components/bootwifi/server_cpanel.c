@@ -1,7 +1,7 @@
 /*
- * oap_test.h
+ * server_cpanel.c
  *
- *  Created on: Sep 11, 2017
+ *  Created on: Oct 5, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,37 +20,16 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
-#define COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_
+#include "server_cpanel.h"
+#include "server.h"
+#include "cpanel.h"
 
-#include "unity.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "bootwifi.h"
+void cpanel_wifi_handler(bool connected, bool ap_mode) {
+	if (connected) {
+		server_start(cpanel_event_handler);
+	} else {
+		server_restart();
+	}
+}
 
-/**
- * init wifi, do not wait for IP
- */
-void test_init_wifi();
 
-/**
- * init wifi and wait for IP
- */
-void test_require_wifi();
-
-void test_require_wifi_with(wifi_state_callback_f callback);
-
-void test_require_ap();
-
-void test_require_ap_with(wifi_state_callback_f callback);
-
-typedef struct {
-	uint32_t started;
-	uint32_t wait_for;
-} test_timer_t;
-
-int test_timeout(test_timer_t* t);
-
-void test_delay(uint32_t ms);
-
-#endif /* COMPONENTS_OAP_COMMON_TEST_INCLUDE_OAP_TEST_H_ */

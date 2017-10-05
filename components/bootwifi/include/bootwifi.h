@@ -24,19 +24,30 @@
 #define MAIN_BOOTWIFI_H_
 
 #include <tcpip_adapter.h>
+#include "cJSON.h"
 
 #define SSID_SIZE (32) // Maximum SSID size
 #define PASSWORD_SIZE (64) // Maximum password size
 
+typedef void(*wifi_state_callback_f)(bool connected, bool ap_mode);
 
 typedef struct {
 	char ssid[SSID_SIZE];
 	char password[PASSWORD_SIZE];
 	tcpip_adapter_ip_info_t ipInfo; // Optional static IP information
+	int ap_mode;
+	int control_panel;
+	wifi_state_callback_f callback;
 } oc_wifi_t;
 
-void wifi_boot(oc_wifi_t* wifi_config, uint8_t enable_control_panel);
-esp_err_t wifi_connected_wait();
+
+
+esp_err_t wifi_configure(cJSON* wifi, wifi_state_callback_f wifi_state_callback);
+void wifi_boot();
 esp_err_t wifi_connected_wait_for(uint32_t ms);
+esp_err_t wifi_ap_started_wait_for(uint32_t ms);
+esp_err_t wifi_disconnected_wait_for(uint32_t ms);
+
+
 
 #endif /* MAIN_BOOTWIFI_H_ */

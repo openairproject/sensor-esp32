@@ -1,1 +1,1 @@
-TEST_COMPONENTS='oap_common ota awsiot net bmx280 pmsx003 pm_meter'
+TEST_COMPONENTS='oap_common bmx280 pmsx003 pm_meter awsiot net ota bootwifi'

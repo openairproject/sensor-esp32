@@ -1,3 +1,9 @@
+# 0.6.0
+
+- fix wifi issues ([#32](https://github.com/openairproject/sensor-esp32/issues/32)), ([#19](https://github.com/openairproject/sensor-esp32/issues/19))
+- wifi / control panel refactored and unit-tested
+
+
 # 0.5.1
 
 - configurable OTA interval ([#28](https://github.com/openairproject/sensor-esp32/issues/28))

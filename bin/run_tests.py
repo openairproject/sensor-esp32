@@ -32,7 +32,7 @@ def readall(exp, timeout = 5):
     return lastline
         
 def wait_for_test_result():
-    return readall('Enter next test, or \'enter\' to see menu',10)            
+    return readall('Enter next test, or \'enter\' to see menu',30)            
 
 ser.write('\n');
 readall('Here\'s the test menu, pick your combo:')
