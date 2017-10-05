@@ -12,7 +12,7 @@ pipeline {
             steps {
                 sh 'bin/make_tests.sh'
                 sh 'sleep 3'
-                sh 'bin/run_tests.py /dev/ttyUSB0'
+                sh 'bin/run_tests.py /opt/oap/dev/ttyOAP.TEST'
             }
         }
         stage('archive') {
@@ -22,7 +22,7 @@ pipeline {
 	        post {
 	            success {
 	        	   archiveArtifacts artifacts: 'build/sensor-esp32.*', fingerprint: true
-	        	   archiveArtifacts artifacts: 'build/partitions_two_ota.bin', fingerprint: true
+	        	   archiveArtifacts artifacts: 'build/partitions.bin', fingerprint: true
 	        	   archiveArtifacts artifacts: 'build/bootloader/bootloader.bin', fingerprint: true
 	            }
 	        }
