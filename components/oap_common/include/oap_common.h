@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "c_list.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -35,6 +36,8 @@
 
 //to silence eclipse errors
 typedef unsigned short uint16_t;
+
+
 
 #define DEFAULT_TASK_PRIORITY (10)
 

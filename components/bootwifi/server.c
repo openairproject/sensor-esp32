@@ -20,7 +20,7 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#import "server.h"
+#include "server.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -37,11 +37,66 @@ typedef enum {
 	RESTARTING
 } server_mode_t;
 
+extern int mg_invalid_socket;
+
 static server_mode_t mode = NOT_RUN;
 
-//static EventGroupHandle_t server_event_group = NULL;
-//const int RUNNING_BIT = 0x00000001; //BIT0
-//const int POLLING_BIT = 0x00000010; //BIT1
+/*
+char *mongoose_eventToString(int ev) {
+	static char temp[100];
+	switch (ev) {
+	case MG_EV_CONNECT:
+		return "MG_EV_CONNECT";
+	case MG_EV_ACCEPT:
+		return "MG_EV_ACCEPT";
+	case MG_EV_CLOSE:
+		return "MG_EV_CLOSE";
+	case MG_EV_SEND:
+		return "MG_EV_SEND";
+	case MG_EV_RECV:
+		return "MG_EV_RECV";
+	case MG_EV_HTTP_REQUEST:
+		return "MG_EV_HTTP_REQUEST";
+	case MG_EV_MQTT_CONNACK:
+		return "MG_EV_MQTT_CONNACK";
+	case MG_EV_MQTT_CONNACK_ACCEPTED:
+		return "MG_EV_MQTT_CONNACK";
+	case MG_EV_MQTT_CONNECT:
+		return "MG_EV_MQTT_CONNECT";
+	case MG_EV_MQTT_DISCONNECT:
+		return "MG_EV_MQTT_DISCONNECT";
+	case MG_EV_MQTT_PINGREQ:
+		return "MG_EV_MQTT_PINGREQ";
+	case MG_EV_MQTT_PINGRESP:
+		return "MG_EV_MQTT_PINGRESP";
+	case MG_EV_MQTT_PUBACK:
+		return "MG_EV_MQTT_PUBACK";
+	case MG_EV_MQTT_PUBCOMP:
+		return "MG_EV_MQTT_PUBCOMP";
+	case MG_EV_MQTT_PUBLISH:
+		return "MG_EV_MQTT_PUBLISH";
+	case MG_EV_MQTT_PUBREC:
+		return "MG_EV_MQTT_PUBREC";
+	case MG_EV_MQTT_PUBREL:
+		return "MG_EV_MQTT_PUBREL";
+	case MG_EV_MQTT_SUBACK:
+		return "MG_EV_MQTT_SUBACK";
+	case MG_EV_MQTT_SUBSCRIBE:
+		return "MG_EV_MQTT_SUBSCRIBE";
+	case MG_EV_MQTT_UNSUBACK:
+		return "MG_EV_MQTT_UNSUBACK";
+	case MG_EV_MQTT_UNSUBSCRIBE:
+		return "MG_EV_MQTT_UNSUBSCRIBE";
+	case MG_EV_WEBSOCKET_HANDSHAKE_REQUEST:
+		return "MG_EV_WEBSOCKET_HANDSHAKE_REQUEST";
+	case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
+		return "MG_EV_WEBSOCKET_HANDSHAKE_DONE";
+	case MG_EV_WEBSOCKET_FRAME:
+		return "MG_EV_WEBSOCKET_FRAME";
+	}
+	sprintf(temp, "Unknown event: %d", ev);
+	return temp;
+}*/
 
 
 static esp_err_t main_loop(void *mongoose_event_handler) {
@@ -54,17 +109,18 @@ static esp_err_t main_loop(void *mongoose_event_handler) {
 	connection = mg_bind(&mgr, ":80", mongoose_event_handler);
 
 	if (connection == NULL) {
+		//when this happens usually it won't recover until it gets a new IP
+		//maybe we should reboot?
 		ESP_LOGE(tag, "No connection from the mg_bind().");
 		mg_mgr_free(&mgr);
 		return ESP_FAIL;
 	}
+	//use http
+	mg_set_protocol_http_websocket(connection);
 
-	while (mode == RUNNING) {
-		//THIS RETURNS IMMEDIATELY IF THERE'S ISSUE WITH SOCKET?
-		//if you see that mongoose task is not responding, this is it
-		//TODO we can detect this and restart
-		time_t t = mg_mgr_poll(&mgr, 1000);
-		//ESP_LOGD(tag,"mongoose listening (%lu)",t);
+	mg_invalid_socket=0; //hack for corrupted mongoose sockets (AP mode + http request triggers it)
+	while (mode == RUNNING && !mg_invalid_socket) {
+		mg_mgr_poll(&mgr, 1000);
 	}
 
 	mg_mgr_free(&mgr);
@@ -100,7 +156,6 @@ void server_stop() {
 	ESP_LOGD(tag, "idle");
 	mode = IDLE;
 }
-
 
 void server_start(void *event_handler) {
 	if (mode == NOT_RUN) {

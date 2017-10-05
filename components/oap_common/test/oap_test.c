@@ -29,24 +29,38 @@
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include <string.h>
 
 static const char* TAG = "test";
-static oc_wifi_t wifi_config = {
-	.ssid = OAP_TEST_WIFI_SSID,
-	.password = OAP_TEST_WIFI_PASSWORD
-};
 
-void test_init_wifi() {
-	wifi_boot(&wifi_config,0);
-}
+extern oc_wifi_t oap_wifi_config;
 
 void test_require_wifi() {
-	test_init_wifi();
-	TEST_ESP_OK(wifi_connected_wait_for(10000));
-
-	ESP_LOGI(TAG, "connected");
+	test_require_wifi_with(NULL);
 }
 
+void test_require_wifi_with(wifi_state_callback_f wifi_state_callback) {
+	memset(&oap_wifi_config, 0, sizeof(oap_wifi_config));
+	strcpy(oap_wifi_config.ssid, OAP_TEST_WIFI_SSID);
+	strcpy(oap_wifi_config.password,OAP_TEST_WIFI_PASSWORD);
+	oap_wifi_config.callback = wifi_state_callback;
+	wifi_boot();
+	TEST_ESP_OK(wifi_connected_wait_for(10000));
+	ESP_LOGI(TAG, "connected sta");
+}
+
+void test_require_ap() {
+	test_require_ap_with(NULL);
+}
+
+void test_require_ap_with(wifi_state_callback_f wifi_state_callback) {
+	memset(&oap_wifi_config, 0, sizeof(oap_wifi_config));
+	oap_wifi_config.ap_mode=1;
+	oap_wifi_config.callback = wifi_state_callback;
+	wifi_boot();
+	TEST_ESP_OK(wifi_ap_started_wait_for(10000));
+	ESP_LOGI(TAG, "connected ap");
+}
 
 static uint32_t IRAM_ATTR time_now()
 {
@@ -62,5 +76,3 @@ void test_delay(uint32_t ms)
 {
     vTaskDelay(ms / portTICK_PERIOD_MS);
 }
-
-

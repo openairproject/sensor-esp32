@@ -1,7 +1,7 @@
 /*
- * server.h
+ * cpanel.h
  *
- *  Created on: Oct 4, 2017
+ *  Created on: Oct 5, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,15 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_BOOTWIFI_SERVER_H_
-#define COMPONENTS_BOOTWIFI_SERVER_H_
+#ifndef COMPONENTS_BOOTWIFI_CPANEL_H_
+#define COMPONENTS_BOOTWIFI_CPANEL_H_
+
 
 #include "mongoose.h"
 
-void server_restart();
-void server_stop();
-void server_start(void *event_handler);
+void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData);
 
 
-
-#endif /* COMPONENTS_BOOTWIFI_SERVER_H_ */
+#endif /* COMPONENTS_BOOTWIFI_CPANEL_H_ */

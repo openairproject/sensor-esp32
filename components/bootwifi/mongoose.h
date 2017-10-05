@@ -1,4 +1,4 @@
-#define MG_ENABLE_DEBUG 1
+//#define MG_ENABLE_DEBUG 1
 
 #ifdef MG_MODULE_LINES
 #line 1 "mongoose/src/common.h"

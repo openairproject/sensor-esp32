@@ -1,7 +1,7 @@
 /*
- * http_utils.h
+ * server_cpanel.c
  *
- *  Created on: Feb 11, 2017
+ *  Created on: Oct 5, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,12 +20,16 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_BOOTWIFI_HTTP_UTILS_H_
-#define COMPONENTS_BOOTWIFI_HTTP_UTILS_H_
+#include "server_cpanel.h"
+#include "server.h"
+#include "cpanel.h"
 
-char *mongoose_eventToString(int ev);
-char *mgStrToStr(struct mg_str mgStr);
+void cpanel_wifi_handler(bool connected, bool ap_mode) {
+	if (connected) {
+		server_start(cpanel_event_handler);
+	} else {
+		server_restart();
+	}
+}
 
 
-
-#endif /* COMPONENTS_BOOTWIFI_HTTP_UTILS_H_ */

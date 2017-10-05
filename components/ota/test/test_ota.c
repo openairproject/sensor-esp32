@@ -136,7 +136,7 @@ TEST_CASE("download_ota_binary", "[ota]")
 
 TEST_CASE("full ota", "[ota]")
 {
-	test_init_wifi();
+	test_require_wifi();
 	ota_config_t ota_config;
 	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
 	ota_config.min_version=oap_version_num(hello_world_info.ver) - 1; //one patch earlier
@@ -150,7 +150,7 @@ TEST_CASE("full ota", "[ota]")
 
 TEST_CASE("skip ota if up-to-date", "[ota]")
 {
-	test_init_wifi();
+	test_require_wifi();
 	ota_config_t ota_config;
 	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
 	ota_config.min_version=oap_version_num(hello_world_info.ver); //the same version
@@ -161,7 +161,7 @@ TEST_CASE("skip ota if up-to-date", "[ota]")
 
 TEST_CASE("fail ota for sha mismatch", "[ota]")
 {
-	test_init_wifi();
+	test_require_wifi();
 	ota_config_t ota_config;
 	memcpy(&ota_config, &ota_test_config, sizeof(ota_config_t));
 	ota_config.index_uri = "https://openairproject.com/ota/test/index-sha-mismatch.txt",
@@ -173,7 +173,7 @@ TEST_CASE("fail ota for sha mismatch", "[ota]")
 
 TEST_CASE("fail ota for invalid cert", "[ota]")
 {
-	test_init_wifi();
+	test_require_wifi();
 	//git uses digicert CA, cloud front - comodo CA
 	ota_config_t ota_config = {
 			.index_uri = "https://raw.githubusercontent.com/openairproject/sensor-esp32/master/components/ota/test/files/index.txt",

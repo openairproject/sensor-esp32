@@ -26,6 +26,7 @@
 #include "unity.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "bootwifi.h"
 
 /**
  * init wifi, do not wait for IP
@@ -36,6 +37,12 @@ void test_init_wifi();
  * init wifi and wait for IP
  */
 void test_require_wifi();
+
+void test_require_wifi_with(wifi_state_callback_f callback);
+
+void test_require_ap();
+
+void test_require_ap_with(wifi_state_callback_f callback);
 
 typedef struct {
 	uint32_t started;

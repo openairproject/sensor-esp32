@@ -1,4 +1,7 @@
 #include "mongoose.h"
+
+int mg_invalid_socket=0; //kris
+
 #ifdef MG_MODULE_LINES
 #line 1 "mongoose/src/internal.h"
 #endif
@@ -3193,6 +3196,7 @@ static int mg_accept_conn(struct mg_connection *lc) {
   sock_t sock = accept(lc->sock, &sa.sa, &sa_len);
   if (sock == INVALID_SOCKET) {
     if (mg_is_error(-1)) DBG(("%p: failed to accept: %d", lc, mg_get_errno()));
+    mg_invalid_socket = 1; //kris
     return 0;
   }
   nc = mg_if_accept_new_conn(lc);
