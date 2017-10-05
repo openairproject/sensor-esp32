@@ -48,6 +48,7 @@
 #include "awsiot.h"
 #include "ota.h"
 #include "oap_data.h"
+#include "server_cpanel.h"
 
 static const char *TAG = "app";
 
@@ -181,7 +182,6 @@ static int pmsx003_configure(pm_data_callback_f callback) {
 }
 
 static esp_err_t pm_meter_init() {
-	pm_meter_result_queue = xQueueCreate(1, sizeof(pm_data_pair_t));
 	pm_meter_t* pm_meter;
 	void* params = NULL;
 
@@ -298,7 +298,7 @@ static void publish_loop() {
 
 		log_heap_size("publish_loop");
 
-		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 1000)) {
+		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000)) {
 			log_task_stack(TAG);
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
@@ -343,8 +343,17 @@ void publishers_init() {
 	}
 }
 
-void app_main()
-{
+static void configure_ap_mode_btn() {
+	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
+	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
+}
+
+static int is_ap_mode_pressed() {
+	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
+}
+
+void app_main() {
 	delay(1000);
 	ESP_LOGI(TAG,"starting app... firmware %s", oap_version_str());
 
@@ -354,10 +363,13 @@ void app_main()
 	oap_sensor_config = sensor_config_from_json(cJSON_GetObjectItem(storage_get_config("sensor"), "config"));
 
 	//wifi/mongoose requires plenty of mem, start it here
-	wifi_boot(NULL, CONFIG_OAP_CONTROL_PANEL);
+	configure_ap_mode_btn();
+	wifi_configure(is_ap_mode_pressed() ? NULL : storage_get_config("wifi"), CONFIG_OAP_CONTROL_PANEL ? cpanel_wifi_handler : NULL);
+	wifi_boot();
 	start_ota_task(storage_get_config("ota"));
 
 	ledc_init();
+	pm_meter_result_queue = xQueueCreate(1, sizeof(pm_data_pair_t));
 	pm_meter_init();
 	env_sensors_init();
 	publishers_init();

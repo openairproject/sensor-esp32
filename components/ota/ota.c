@@ -282,9 +282,12 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 	};
 
 	while (1) {
-		if ((err = wifi_connected_wait_for(30000)) != ESP_OK) {
-			goto go_sleep;
-		}
+
+		//	this masks problems with mbedtls and mongoose,
+		//  but without it mongoose in AP mode hangs.
+//				if ((err = wifi_connected_wait_for(30000)) != ESP_OK) {
+//					goto go_sleep;
+//				}
 
 		ESP_LOGD(TAG, "Check for OTA updates...");
 		log_task_stack(TAG);

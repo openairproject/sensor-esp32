@@ -1,7 +1,7 @@
 /*
- * http_utils.c
+ * server.c
  *
- *  Created on: Feb 11, 2017
+ *  Created on: Oct 4, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,10 +20,28 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mongoose.h"
-/**
- * Convert a Mongoose event type to a string.  Used for debugging.
- */
+#include "server.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <freertos/FreeRTOS.h>
+#include "esp_err.h"
+#include "oap_common.h"
+
+#define tag "serv"
+
+typedef enum {
+	NOT_RUN = 0,
+	IDLE,
+	RUNNING,
+	RESTARTING
+} server_mode_t;
+
+extern int mg_invalid_socket;
+
+static server_mode_t mode = NOT_RUN;
+
+/*
 char *mongoose_eventToString(int ev) {
 	static char temp[100];
 	switch (ev) {
@@ -78,14 +96,72 @@ char *mongoose_eventToString(int ev) {
 	}
 	sprintf(temp, "Unknown event: %d", ev);
 	return temp;
-} //eventToString
+}*/
 
 
-// Convert a Mongoose string type to a string.
-char *mgStrToStr(struct mg_str mgStr) {
-	char *retStr = (char *) malloc(mgStr.len + 1);
-	memcpy(retStr, mgStr.p, mgStr.len);
-	retStr[mgStr.len] = 0;
-	return retStr;
-} // mgStrToStr
+static esp_err_t main_loop(void *mongoose_event_handler) {
+	struct mg_mgr mgr;
+	struct mg_connection *connection;
 
+	ESP_LOGD(tag, ">> main_loop");
+	mg_mgr_init(&mgr, NULL);
+
+	connection = mg_bind(&mgr, ":80", mongoose_event_handler);
+
+	if (connection == NULL) {
+		//when this happens usually it won't recover until it gets a new IP
+		//maybe we should reboot?
+		ESP_LOGE(tag, "No connection from the mg_bind().");
+		mg_mgr_free(&mgr);
+		return ESP_FAIL;
+	}
+	//use http
+	mg_set_protocol_http_websocket(connection);
+
+	mg_invalid_socket=0; //hack for corrupted mongoose sockets (AP mode + http request triggers it)
+	while (mode == RUNNING && !mg_invalid_socket) {
+		mg_mgr_poll(&mgr, 1000);
+	}
+
+	mg_mgr_free(&mgr);
+	ESP_LOGD(tag, "<< main_loop");
+	return ESP_OK;
+}
+
+static void server_task(void *mongoose_event_handler) {
+	ESP_LOGD(tag, "start");
+	while (1) {
+		switch (mode) {
+			case RUNNING:
+				if (main_loop(mongoose_event_handler) != ESP_OK) {
+					vTaskDelay(1000 / portTICK_PERIOD_MS);
+				}
+				break;
+			case IDLE:
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				break;
+			default:	//{RESTARTING,NOT_RUN} => RUNNING
+				mode = RUNNING;
+		}
+	}
+	vTaskDelete(NULL);
+}
+
+void server_restart() {
+	ESP_LOGD(tag, "restart");
+	mode = RESTARTING;
+}
+
+void server_stop() {
+	ESP_LOGD(tag, "idle");
+	mode = IDLE;
+}
+
+void server_start(void *event_handler) {
+	if (mode == NOT_RUN) {
+		mode = RUNNING;
+		xTaskCreatePinnedToCore(&server_task, "mongoose_task", 10000, event_handler, DEFAULT_TASK_PRIORITY+1, NULL, 0);
+	} else {
+		server_restart();
+	}
+}

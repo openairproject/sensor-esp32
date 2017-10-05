@@ -261,11 +261,14 @@ static int mbedtls_connect(request_t *req)
         ESP_LOGD(TAG, "Performing the SSL/TLS handshake...");
 
         while ((ret = mbedtls_ssl_handshake(&ssl->ssl_ctx)) != ESP_OK) {
+        	//careful here!
+        	// ret = -76 when network is out, and then it does not recover */
         	//sometimes it returns -78 and hangs :(
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != -76) {
+            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             	ESP_LOGW(TAG, "mbedtls_ssl_handshake returned 0x%x", -ret);
                 break;
             }
+            ESP_LOGD(TAG, "handshake failed (0x%x), try again", -ret);
             vTaskDelay(10 / portTICK_PERIOD_MS);
             vPortYield();
         }

@@ -1,7 +1,7 @@
 /*
- * http_utils.h
+ * server.h
  *
- *  Created on: Feb 11, 2017
+ *  Created on: Oct 4, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,12 +20,15 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_BOOTWIFI_HTTP_UTILS_H_
-#define COMPONENTS_BOOTWIFI_HTTP_UTILS_H_
+#ifndef COMPONENTS_BOOTWIFI_SERVER_H_
+#define COMPONENTS_BOOTWIFI_SERVER_H_
 
-char *mongoose_eventToString(int ev);
-char *mgStrToStr(struct mg_str mgStr);
+#include "mongoose.h"
+
+void server_restart();
+void server_stop();
+void server_start(void *event_handler);
 
 
 
-#endif /* COMPONENTS_BOOTWIFI_HTTP_UTILS_H_ */
+#endif /* COMPONENTS_BOOTWIFI_SERVER_H_ */
