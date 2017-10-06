@@ -48,17 +48,17 @@ parsed_uri_t *parse_uri(const char *url)
         PARSE_FRAGMENT
     } parse_state = 0;
     puri = (parsed_uri_t *)malloc(sizeof(parsed_uri_t));
-    memset(puri, 0, sizeof(parsed_uri_t));
     if(NULL == puri) {
         return NULL;
     }
+    memset(puri, 0, sizeof(parsed_uri_t));
     puri->_uri_len = strlen(url);
     puri->_uri = (char*) malloc(puri->_uri_len + 1);
-    memset(puri->_uri, 0, puri->_uri_len + 1);
     if(puri->_uri == NULL) {
         free_parsed_uri(puri);
         return NULL;
     }
+    memset(puri->_uri, 0, puri->_uri_len + 1);
     strcpy(puri->_uri, url);
     puri->_uri[puri->_uri_len] = 0;
     puri->scheme = NULL;
