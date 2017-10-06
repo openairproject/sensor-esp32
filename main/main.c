@@ -33,10 +33,10 @@
 #include "esp_log.h"
 #include <math.h>
 
+#include "../components/thing-speak/include/thing_speak.h"
 #include "meas_intervals.h"
 #include "meas_continuous.h"
 
-#include "thing_speak.h"
 #include "bootwifi.h"
 #include "rgb_led.h"
 #include "ctrl_btn.h"
