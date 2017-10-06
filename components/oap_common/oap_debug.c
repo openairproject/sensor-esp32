@@ -29,7 +29,7 @@
 #include "esp_log.h"
 #include "freertos/task.h"
 
-#define TAG "MEM"
+#define TAG "mem"
 /**
  * this method is surprisingly stack heavy - it takes ~ 1000 bytes.
  * before using it, adjust task stack accordingly.
