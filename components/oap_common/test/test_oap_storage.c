@@ -10,8 +10,7 @@
 #include "esp_log.h"
 #include <string.h>
 #include "oap_storage.h"
-
-static const char* TAG = "test_oap_storage";
+#include "oap_test.h"
 
 esp_err_t storage_get_blob(const char* key, void** out_value, size_t* length);
 void storage_set_blob(const char* key, void* value, size_t length);
@@ -30,11 +29,10 @@ static const size_t MAX_NVS_VALUE_SIZE = 32 * (126 / 2 - 1);
 //	TEST_ASSERT_EQUAL_INT32(4, sizeof(v_size));
 //}
 
-static uint8_t nvs_cleaned = 0;
 
 void nvs_clean() {
 	//TODO this fails if wifi is initialised first!
-    ESP_LOGW(TAG, "erasing nvs");
+    ESP_LOGW(TEST, "erasing nvs");
 	const esp_partition_t* nvs_partition = esp_partition_find_first(
 				ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
 	assert(nvs_partition && "partition table must have an NVS partition");
@@ -96,34 +94,89 @@ TEST_CASE("blob", "[oap_common]")
     free(blob3);
 }
 
+
+void* alloc_bloc(size_t size) {
+	char* blob1 = malloc(size);
+	for (int i = 0; i < size; i++) {
+		blob1[i]='0' + (i % 10);
+	}
+	blob1[size-1]=0;
+	return blob1;
+}
+
+void* alloc_bloc2(size_t size, char val) {
+	char* blob1 = malloc(size);
+	for (int i = 0; i < size; i++) {
+		blob1[i]=val;
+	}
+	blob1[size-1]=0;
+	return blob1;
+}
+
+//TEST_CASE("try to reproduce with partially saved config", "[oap_common]")
+//{
+//	ESP_ERROR_CHECK(nvs_flash_init());
+//	size_t blob1_size = 0;
+//	char* blob1 = NULL;
+//
+//	storage_get_bigblob("blob", &blob1, &blob1_size);
+//	if (blob1) {
+//		ESP_LOGI(TEST, "SIZE: %d", blob1_size);
+//		ESP_LOGI(TEST, "%s", blob1);
+//	}
+//
+//	blob1_size = MAX_NVS_VALUE_SIZE * 2 + 10;
+//	blob1 = alloc_bloc2(blob1_size, blob1 && blob1[0] == 'x' ? '.' : 'x');
+//
+//	ESP_LOGI(TEST, "store blob1");
+//	storage_set_bigblob("blob", blob1, blob1_size);
+//}
+
 TEST_CASE("bigblob", "[oap_common]")
 {
 	nvs_clean_if_necessary();
 
-	size_t blob_size = MAX_NVS_VALUE_SIZE * 10 + 10;
-	void* blob = malloc(blob_size);
+	//store big blob
+	size_t blob1_size = MAX_NVS_VALUE_SIZE * 10 + 10;
+	void* blob1 = alloc_bloc(blob1_size);
+	TEST_ESP_ERR(ESP_ERR_NVS_NOT_FOUND, storage_get_bigblob("blob", &blob1, NULL));
+	ESP_LOGI(TEST, "store blob1");
+	storage_set_bigblob("blob", blob1, blob1_size);
 
-	TEST_ESP_ERR(ESP_ERR_NVS_NOT_FOUND, storage_get_bigblob("blob", &blob, NULL));
+	//read blob
+	void* blob1_r = NULL;
+	size_t blob1_r_size;
+	ESP_LOGI(TEST, "read blob1");
+	TEST_ESP_OK(storage_get_bigblob("blob", &blob1_r, &blob1_r_size));
+	TEST_ASSERT_NOT_NULL(blob1_r);
+	TEST_ASSERT_EQUAL_UINT32(blob1_size, blob1_r_size);
+	TEST_ASSERT_EQUAL_MEMORY(blob1, blob1_r, blob1_size);
 
-	storage_set_bigblob("blob", blob, blob_size);
+	//override blob
+	size_t blob2_size = blob1_r_size;
+	void* blob2 = alloc_bloc(blob2_size);
+	ESP_LOGI(TEST, "override with blob2");
+	storage_set_bigblob("blob", blob2, blob2_size);
 
-	void* blob2;
-	size_t blob2_size;
-	TEST_ESP_OK(storage_get_bigblob("blob", &blob2, &blob2_size));
-	TEST_ASSERT_EQUAL_UINT32(blob_size, blob2_size);
-	TEST_ASSERT_EQUAL_MEMORY(blob, blob2, blob_size);
+	//read blob
+	void* blob2_r = NULL;
+	size_t blob2_r_size;
+	ESP_LOGI(TEST, "read blob2");
+	TEST_ESP_OK(storage_get_bigblob("blob", &blob2_r, &blob2_r_size));
+	TEST_ASSERT_NOT_NULL(blob2_r);
+	TEST_ASSERT_EQUAL_UINT32(blob2_size, blob2_r_size);
+	TEST_ASSERT_EQUAL_MEMORY(blob2, blob2_r, blob2_size);
 
-	void* blob3;
-	TEST_ESP_OK(storage_get_bigblob("blob", &blob3, NULL));
-	TEST_ASSERT_EQUAL_MEMORY(blob, blob3, blob_size);
 
-	storage_set_bigblob("blob", blob, MAX_NVS_VALUE_SIZE + 1);
-
+	//override with small blob
+	ESP_LOGI(TEST, "override with small blob");
+	storage_set_bigblob("blob", blob1, MAX_NVS_VALUE_SIZE + 1);
 	TEST_ESP_ERR(ESP_ERR_NVS_NOT_FOUND, storage_get_blob("blob.2", blob2, NULL));
 
-	free(blob);
+	free(blob1);
+	free(blob1_r);
 	free(blob2);
-	free(blob3);
+	free(blob2_r);
 }
 
 TEST_CASE("get default config", "[oap_common]")
@@ -185,7 +238,7 @@ TEST_CASE("get/set config", "[oap_common]")
 	cJSON_Delete(config);
 
 	//re-init
-	ESP_LOGI(TAG, "re-init");
+	ESP_LOGI(TEST, "re-init");
 	storage_init();
 	config = storage_get_config(NULL);
 	TEST_ASSERT_NOT_NULL(config);

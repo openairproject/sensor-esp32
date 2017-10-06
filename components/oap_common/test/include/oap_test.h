@@ -28,6 +28,8 @@
 #include "freertos/FreeRTOS.h"
 #include "bootwifi.h"
 
+#define TEST "TEST"
+
 /**
  * init wifi, do not wait for IP
  */
