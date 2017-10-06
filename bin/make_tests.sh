@@ -7,4 +7,4 @@ bin="$(dirname "$0")"
 export BATCH_BUILD=1
 project=`pwd`
 
-make -C unit-test-app EXTRA_COMPONENT_DIRS=$project/components TEST_COMPONENTS="$TEST_COMPONENTS" defconfig all flash $1 -j5
+make -C unit-test-app EXTRA_COMPONENT_DIRS=$project/components TEST_COMPONENTS="$TEST_COMPONENTS" defconfig all flash $1 -j5 > /dev/null
