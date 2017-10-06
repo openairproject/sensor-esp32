@@ -198,7 +198,7 @@ static int mbedtls_connect(request_t *req)
 	mbedtls_ctr_drbg_init(&ssl->drbg_ctx);
 
     do {
-    	ESP_LOGD(TAG, "Seeding the random number generator");
+    	ESP_LOGV(TAG, "Seeding the random number generator");
         mbedtls_entropy_init(&ssl->entropy_ctx);
 
         if ((ret = mbedtls_ctr_drbg_seed(&ssl->drbg_ctx, mbedtls_entropy_func,
@@ -260,15 +260,17 @@ static int mbedtls_connect(request_t *req)
 
         ESP_LOGD(TAG, "Performing the SSL/TLS handshake...");
 
-        while ((ret = mbedtls_ssl_handshake(&ssl->ssl_ctx)) != ESP_OK) {
+        int attempts = 0;
+        while ((ret = mbedtls_ssl_handshake(&ssl->ssl_ctx)) != ESP_OK && attempts < 10) {
         	//careful here!
-        	// ret = -76 when network is out, and then it does not recover */
-        	//sometimes it returns -78 and hangs :(
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+        	// ret = 0x4c happens from time to time, esp just after network init - sometimes it recovers, sometimes it doesn't
+        	// it cannot recover from 0x4e (no network)
+            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != 0x4c) {
             	ESP_LOGW(TAG, "mbedtls_ssl_handshake returned 0x%x", -ret);
                 break;
             }
-            ESP_LOGD(TAG, "handshake failed (0x%x), try again", -ret);
+            attempts++;
+            ESP_LOGD(TAG, "handshake failed (0x%x), try again (%d)", -ret, attempts);
             vTaskDelay(10 / portTICK_PERIOD_MS);
             vPortYield();
         }
@@ -557,9 +559,9 @@ static int req_process_upload(request_t *req)
 
     found = req_list_get_key(req->opt, "postfield");
     if(found) {
-        ESP_LOGD(TAG, "Begin write %d bytes", strlen((char*)found->value));
+        ESP_LOGV(TAG, "begin write %d bytes", strlen((char*)found->value));
         int bwrite = req->_write(req, (char*)found->value, strlen((char*)found->value));
-        ESP_LOGD(TAG, "end write %d bytes", bwrite);
+        ESP_LOGV(TAG, "end write %d bytes", bwrite);
         if(bwrite < 0) {
             ESP_LOGE(TAG, "Error write");
             return -1;
@@ -596,7 +598,7 @@ static int fill_buffer(request_t *req)
         req->buffer->bytes_write = bytes_inside_buffer;
         if(req->buffer->bytes_write < 0)
             req->buffer->bytes_write = 0;
-        ESP_LOGD(TAG, "move=%d, write=%d, read=%d", bytes_inside_buffer, req->buffer->bytes_write, req->buffer->bytes_read);
+        ESP_LOGV(TAG, "move=%d, write=%d, read=%d", bytes_inside_buffer, req->buffer->bytes_write, req->buffer->bytes_read);
     }
     if(!req->buffer->at_eof)
     {
@@ -606,10 +608,10 @@ static int fill_buffer(request_t *req)
             req->buffer->bytes_read = 0;
         }
         buffer_free_bytes = req->buffer_size - req->buffer->bytes_write;
-        ESP_LOGD(TAG, "Begin read %d bytes", buffer_free_bytes);
+        ESP_LOGV(TAG, "Begin read %d bytes", buffer_free_bytes);
         bread = req->_read(req, (void*)(req->buffer->data + req->buffer->bytes_write), buffer_free_bytes);
         // ESP_LOGD(TAG, "bread = %d, bytes_write = %d, buffer_free_bytes = %d", bread, req->buffer->bytes_write, buffer_free_bytes);
-        ESP_LOGD(TAG, "End read, byte read= %d bytes", bread);
+        ESP_LOGV(TAG, "End read, byte read= %d bytes", bread);
         if(bread < 0) {
             req->buffer->at_eof = 1;
             return -1;
@@ -656,7 +658,7 @@ static int req_process_download(request_t *req)
         if(process_header) {
             while((line = req_readline(req)) != NULL) {
                 if(line[0] == 0) {
-                    ESP_LOGD(TAG, "end process_idx=%d", req->buffer->bytes_read);
+                    ESP_LOGV(TAG, "end process_idx=%d", req->buffer->bytes_read);
                     header_off = req->buffer->bytes_read;
                     process_header = 0; //end of http header
                     break;
@@ -671,7 +673,7 @@ static int req_process_download(request_t *req)
                         }
                     } else {
                         req_list_set_from_string(req->response->header, line);
-                        ESP_LOGD(TAG, "header line: %s", line);
+                        ESP_LOGV(TAG, "header line: %s", line);
                     }
                 }
             }
