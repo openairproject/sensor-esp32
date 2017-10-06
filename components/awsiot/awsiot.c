@@ -36,6 +36,7 @@
 #include "oap_common.h"
 #include "oap_debug.h"
 #include "oap_publisher.h"
+#include "bootwifi.h"
 
 static const char *TAG = "awsiot";
 
@@ -198,6 +199,11 @@ static esp_err_t awsiot_send(oap_measurement_t* meas, oap_sensor_config_t *senso
 	if (!awsiot_config.configured) {
 		ESP_LOGW(TAG, "awsiot not configured");
 		return ESP_FAIL;
+	}
+	esp_err_t ret;
+	if ((ret = wifi_connected_wait_for(5000)) != ESP_OK) {
+		ESP_LOGW(TAG, "no connectivity, skip");
+		return ret;
 	}
 	return awsiot_rest_post(meas, sensor_config);
 }

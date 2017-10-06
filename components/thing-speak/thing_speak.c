@@ -20,11 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "thing_speak.h"
+#include "../thing-speak/include/thing_speak.h"
+
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "oap_debug.h"
 #include "esp_request.h"
+#include "bootwifi.h"
 
 //to use https we'd need to install CA cert first.
 #define OAP_THING_SPEAK_URI "http://api.thingspeak.com/update"
@@ -118,6 +120,11 @@ static esp_err_t thing_speak_send(oap_measurement_t* meas, oap_sensor_config_t* 
 	if (!_configured) {
 		ESP_LOGE(TAG, "thingspeak not configured");
 		return ESP_FAIL;
+	}
+	esp_err_t ret;
+	if ((ret = wifi_connected_wait_for(5000)) != ESP_OK) {
+		ESP_LOGW(TAG, "no connectivity, skip");
+		return ret;
 	}
 
 	char* payload = prepare_thingspeak_payload(meas);
