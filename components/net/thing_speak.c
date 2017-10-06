@@ -76,6 +76,7 @@ static esp_err_t rest_post(char* uri, char* payload) {
 	ESP_LOGD(TAG, "request payload: %s", payload);
 
 	req_setopt(req, REQ_SET_POSTFIELDS, payload);
+	req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONNECTION_CLOSE);
 
 	int response_code = req_perform(req);
 	req_clean(req);
