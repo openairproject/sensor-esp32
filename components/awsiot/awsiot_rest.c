@@ -64,18 +64,21 @@ esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body) {
 
 	req->ca_cert = req_parse_x509_crt((unsigned char*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
 	if (!req->ca_cert) {
+		req_clean_incl_certs(req);
 		ESP_LOGW(TAG, "Invalid CA cert");
 		return ESP_FAIL;
 	}
 
 	req->client_cert = req_parse_x509_crt((unsigned char*)awsiot_config->cert, strlen(awsiot_config->cert)+1);
 	if (!req->client_cert) {
+		req_clean_incl_certs(req);
 		ESP_LOGW(TAG, "Invalid client cert");
 		return ESP_FAIL;
 	}
 	req->client_key = req_parse_pkey((unsigned char*)awsiot_config->pkey, strlen(awsiot_config->pkey)+1);
 
 	if (!req->client_key) {
+		req_clean_incl_certs(req);
 		ESP_LOGW(TAG, "Invalid client key");
 		return ESP_FAIL;
 	}

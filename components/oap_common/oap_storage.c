@@ -222,6 +222,7 @@ void storage_set_bigblob(const char* key, void* value, size_t length) {
 		sprintf(part, "%s.%x", key, p);
 		ESP_LOGD(TAG, "store part '%s': %d-%d", part, start, end);
 		ESP_ERROR_CHECK(nvs_set_blob(handle, part, value+start, end-start));
+		nvs_commit(handle);
 		p++;
 	}
 
@@ -229,6 +230,7 @@ void storage_set_bigblob(const char* key, void* value, size_t length) {
 		sprintf(part, "%s.%x", key, p);
 		ESP_LOGD(TAG, "remove part '%s'", part);
 		err = nvs_erase_key(handle, part);
+		nvs_commit(handle);
 		if (err != ESP_ERR_NVS_NOT_FOUND) {
 			ESP_ERROR_CHECK(err);
 		}
