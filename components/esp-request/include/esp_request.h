@@ -9,6 +9,11 @@
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 
+#define HTTP_HEADER_CONTENT_TYPE_JSON "Content-Type: application/json"
+#define HTTP_HEADER_CONNECTION_CLOSE "Connection: close"
+#define HTTP_POST 	"POST"
+#define HTTP_GET 	"GET"
+
 typedef enum {
     REQ_SET_METHOD = 0x01,
     REQ_SET_HEADER,
@@ -83,7 +88,6 @@ request_t *req_new(const char *url);
 request_t *req_new_with_buf(const char *uri, size_t buffer_size);
 void req_setopt(request_t *req, REQ_OPTS opt, void* data);
 void req_clean(request_t *req);
-void req_clean_incl_certs(request_t *req);
 int req_perform(request_t *req);
 
 void req_free_x509_crt(mbedtls_x509_crt* crt);

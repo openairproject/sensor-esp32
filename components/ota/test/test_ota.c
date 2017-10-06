@@ -128,11 +128,11 @@ TEST_CASE("parse_ota_info","[ota]")
 	TEST_ASSERT_EQUAL_STRING("929fd82b12f4e67cfa08a14e763232a95820b7f2b2edcce744e1c1711c7c9e04", info.sha);
 }
 
-TEST_CASE("download_ota_binary", "[ota]")
-{
-	test_require_wifi();
-	TEST_ESP_OK(download_ota_binary(&ota_test_config, &hello_world_info, NULL));
-}
+//TEST_CASE("download_ota_binary", "[ota]")
+//{
+//	test_require_wifi();
+//	TEST_ESP_OK(download_ota_binary(&ota_test_config, &hello_world_info, NULL));
+//}
 
 TEST_CASE("full ota", "[ota]")
 {

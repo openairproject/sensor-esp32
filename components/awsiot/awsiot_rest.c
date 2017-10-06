@@ -64,21 +64,21 @@ esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body) {
 
 	req->ca_cert = req_parse_x509_crt((unsigned char*)verisign_root_ca_pem_start, verisign_root_ca_pem_end-verisign_root_ca_pem_start);
 	if (!req->ca_cert) {
-		req_clean_incl_certs(req);
+		req_clean(req);
 		ESP_LOGW(TAG, "Invalid CA cert");
 		return ESP_FAIL;
 	}
 
 	req->client_cert = req_parse_x509_crt((unsigned char*)awsiot_config->cert, strlen(awsiot_config->cert)+1);
 	if (!req->client_cert) {
-		req_clean_incl_certs(req);
+		req_clean(req);
 		ESP_LOGW(TAG, "Invalid client cert");
 		return ESP_FAIL;
 	}
 	req->client_key = req_parse_pkey((unsigned char*)awsiot_config->pkey, strlen(awsiot_config->pkey)+1);
 
 	if (!req->client_key) {
-		req_clean_incl_certs(req);
+		req_clean(req);
 		ESP_LOGW(TAG, "Invalid client key");
 		return ESP_FAIL;
 	}
@@ -87,17 +87,17 @@ esp_err_t awsiot_update_shadow(awsiot_config_t* awsiot_config, char* body) {
 	sprintf(path, "/things/%s/shadow", awsiot_config->thingName);
 
 
-	req_setopt(req, REQ_SET_METHOD, "POST");
+	req_setopt(req, REQ_SET_METHOD, HTTP_POST);
 	req_setopt(req, REQ_SET_PATH, path);
 	//req_setopt(req, REQ_SET_HEADER, host_header);
-	req_setopt(req, REQ_SET_HEADER, "Content-Type: application/json");
-	req_setopt(req, REQ_SET_HEADER, "Connection: close");
+	req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONTENT_TYPE_JSON);
+	req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONNECTION_CLOSE);
 	req_setopt(req, REQ_SET_DATAFIELDS, body);
 
 	req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_callback);
 
 	int status = req_perform(req);
-	req_clean_incl_certs(req);
+	req_clean(req);
 
 	if (status != 200) {
 		ESP_LOGW(TAG, "Invalid response code: %d", status);

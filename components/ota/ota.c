@@ -159,11 +159,11 @@ esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
     memset(&result, 0, sizeof(ost_status_result_t));
     req->meta = &result;
 
-    req_setopt(req, REQ_SET_HEADER, "Connection: close");
+    req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONNECTION_CLOSE);
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, get_ota_status_callback);
 
     int status = req_perform(req);
-    req_clean_incl_certs(req);
+    req_clean(req);
 
     if (status != 200) {
         ESP_LOGW(TAG, "error response code=%d", status);
@@ -246,7 +246,7 @@ esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, es
     }
 
     mbedtls_sha256_free(&sha_context);
-	req_clean_incl_certs(req);
+	req_clean(req);
     return ret;
 }
 
@@ -378,7 +378,7 @@ void start_ota_task(cJSON* user_ota_config) {
 			ota_config.commit_and_reboot = 1;
 			ota_config.update_partition = NULL;
 			ota_config.interval = 1000 * ota_interval->valueint;
-			xTaskCreate(check_ota_task, "check_ota_task", 1024*5, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
+			xTaskCreate(check_ota_task, "check_ota_task", 1024*6, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
 		}
 	} else {
 		ESP_LOGI(TAG, "OTA not available");

@@ -27,9 +27,14 @@
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "oap_common.h"
 
 #define TAG "http"
+
+#define SSL_MUTEX 1
 
 static const char *pers = "esp32-tls";
 
@@ -184,13 +189,31 @@ mbedtls_pk_context* req_parse_pkey(unsigned char* buf, size_t buflen) {
 	}
 }
 
+
+/*
+ * making concurrent SSL requests is problematic - they consume a lot of heap,
+ * and there's something wrong with mbedtls internally. we create a mutex to allow only one at once.
+ */
+#if SSL_MUTEX
+	static SemaphoreHandle_t ssl_semaphore = NULL;
+#endif
+
 static int mbedtls_connect(request_t *req)
 {
+#if SSL_MUTEX
+	if (!ssl_semaphore) ssl_semaphore = xSemaphoreCreateMutex();
+	if(!xSemaphoreTake( ssl_semaphore, ( TickType_t ) 10000 / portTICK_PERIOD_MS )) {
+		ESP_LOGW(TAG, "couldn't acquire lock for SSL request");
+		return ESP_FAIL;
+	}
+#endif
+
     nossl_connect(req);
     REQ_CHECK(req->socket < 0, "socket failed", return -1);
     int ret;
 
     req_ssl* ssl = malloc(sizeof(req_ssl));
+    if (!ssl) return ESP_FAIL;
     memset(ssl, 0, sizeof(req_ssl));
     req->ssl = ssl;
 	mbedtls_ssl_init(&ssl->ssl_ctx);
@@ -361,6 +384,10 @@ static int mbedtls_close(request_t *req)
 		req->ssl = NULL;
 	}
 
+#if SSL_MUTEX
+	xSemaphoreGive(ssl_semaphore);
+#endif
+
 	return 0;
 }
 
@@ -510,7 +537,7 @@ void req_setopt(request_t *req, REQ_OPTS opt, void* data)
             break;
         case REQ_SET_POSTFIELDS:
             req_list_set_key(req->header, "Content-Type", "application/x-www-form-urlencoded");
-            req_list_set_key(req->opt, "method", "POST");
+            req_list_set_key(req->opt, "method", HTTP_POST);
         case REQ_SET_DATAFIELDS:
             post_len = strlen((char*)data);
             sprintf(len_str, "%d", post_len);
@@ -712,6 +739,10 @@ static int req_process_download(request_t *req)
 int req_perform(request_t *req)
 {
     do {
+    	ESP_LOGD(TAG, "%s %s%s",
+    			(char*)req_list_get_key(req->opt, "method")->value,
+				(char*)req_list_get_key(req->opt, "host")->value,
+				(char*)req_list_get_key(req->opt, "path")->value);
         REQ_CHECK(req->_connect(req) < 0, "Error connnect", break);
         REQ_CHECK(req_process_upload(req) < 0, "Error send request", break);
         REQ_CHECK(req_process_download(req) < 0, "Error download", break);
@@ -745,13 +776,9 @@ void req_clean(request_t *req)
     free(req->response);
     free(req->buffer->data);
     free(req->buffer);
-    free(req);
-}
 
-void req_clean_incl_certs(request_t *req) {
-	req_clean(req);
-	if (req->ca_cert) {
-		req_free_x509_crt(req->ca_cert);
+    if (req->ca_cert) {
+    	req_free_x509_crt(req->ca_cert);
 	}
 	if (req->client_cert) {
 		req_free_x509_crt(req->client_cert);
@@ -759,4 +786,6 @@ void req_clean_incl_certs(request_t *req) {
 	if (req->client_key) {
 		req_free_pkey(req->client_key);
 	}
+
+    free(req);
 }
