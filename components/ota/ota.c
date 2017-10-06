@@ -378,7 +378,7 @@ void start_ota_task(cJSON* user_ota_config) {
 			ota_config.commit_and_reboot = 1;
 			ota_config.update_partition = NULL;
 			ota_config.interval = 1000 * ota_interval->valueint;
-			xTaskCreate(check_ota_task, "check_ota_task", 1024*4, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
+			xTaskCreate(check_ota_task, "check_ota_task", 1024*5, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
 		}
 	} else {
 		ESP_LOGI(TAG, "OTA not available");

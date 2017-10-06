@@ -29,7 +29,7 @@
 
 #include "oap_common.h"
 
-#define TAG "HTTP_REQ"
+#define TAG "http"
 
 static const char *pers = "esp32-tls";
 
