@@ -169,6 +169,12 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			if ((err=set_access_point_ip()) != ESP_OK) {
 				ESP_LOGW(tag, "failed to set ip address [err %x], use default", err);
 			}
+
+			tcpip_adapter_ip_info_t ip_info;
+			tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip_info);
+
+			ESP_LOGW(tag, "****** SENSOR IP (AP %s) http://"IPSTR, ap_config.ap.ssid, IP2STR(&ip_info.ip));
+			wifi_state_change(true, true);
 			break;
 		}
 
@@ -222,8 +228,9 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 
 					break;
 				case WIFI_MODE_AP:
-					ESP_LOGW(tag, "****** SENSOR IP (AP %s) http://"IPSTR, ap_config.ap.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
-					wifi_state_change(true, true);
+					//after v2.1, in AP mode, SYSTEM_EVENT_STA_GOT_IP is fired! it does not happen <= 2.1
+					//ESP_LOGW(tag, "****** SENSOR IP (AP %s) http://"IPSTR, ap_config.ap.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
+					//wifi_state_change(true, true);
 					break;
 				default:
 					ESP_LOGW(tag, "unsupported wifi mode: %d", mode);
