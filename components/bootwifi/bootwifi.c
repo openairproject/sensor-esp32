@@ -112,14 +112,6 @@ static esp_err_t set_access_point_ip() {
     tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP);
     return err;
 }
-//
-//static void start_mongoose() {
-//	if (_enable_control_panel) {
-//		server_start(cpanel_event_handler);
-//	} else {
-//		ESP_LOGW(tag, "control panel disabled by config flag");
-//	}
-//}
 
 static void log_wifi_event(void *ctx, system_event_t *event) {
 	switch(event->event_id) {
@@ -131,6 +123,7 @@ static void log_wifi_event(void *ctx, system_event_t *event) {
 		case  SYSTEM_EVENT_STA_DISCONNECTED: 	ESP_LOGI(tag, "SYSTEM_EVENT_STA_DISCONNECTED"); break;
 		case  SYSTEM_EVENT_STA_AUTHMODE_CHANGE: ESP_LOGI(tag, "SYSTEM_EVENT_STA_AUTHMODE_CHANGE"); break;
 		case  SYSTEM_EVENT_STA_GOT_IP: 			ESP_LOGI(tag, "SYSTEM_EVENT_STA_GOT_IP"); break;
+		//esp-idf v2.1+
 		//case  SYSTEM_EVENT_STA_LOST_IP: 		ESP_LOGI(tag, "SYSTEM_EVENT_STA_LOST_IP"); break;
 		case  SYSTEM_EVENT_AP_START: 			ESP_LOGI(tag, "SYSTEM_EVENT_AP_START"); break;
 		case  SYSTEM_EVENT_AP_STOP: 			ESP_LOGI(tag, "SYSTEM_EVENT_AP_STOP"); break;
@@ -173,7 +166,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			tcpip_adapter_ip_info_t ip_info;
 			tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip_info);
 
-			ESP_LOGW(tag, "****** SENSOR IP (AP %s) http://"IPSTR, ap_config.ap.ssid, IP2STR(&ip_info.ip));
+			ESP_LOGI(tag, "\n*** SENSOR IP (access point '%s') http://"IPSTR"\n", ap_config.ap.ssid, IP2STR(&ip_info.ip));
 			wifi_state_change(true, true);
 			break;
 		}
@@ -213,7 +206,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 
 			switch (mode) {
 				case WIFI_MODE_STA:
-					ESP_LOGW(tag, "****** SENSOR IP (STA %s) http://"IPSTR, oap_wifi_config.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
+					ESP_LOGI(tag, "\n*** SENSOR IP (network '%s') http://"IPSTR"\n", oap_wifi_config.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
 
 					initialize_sntp();
 					/*
@@ -229,7 +222,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 					break;
 				case WIFI_MODE_AP:
 					//after v2.1, in AP mode, SYSTEM_EVENT_STA_GOT_IP is fired! it does not happen <= 2.1
-					//ESP_LOGW(tag, "****** SENSOR IP (AP %s) http://"IPSTR, ap_config.ap.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
+					//ESP_LOGI(tag, "****** SENSOR IP (AP %s) http://"IPSTR, ap_config.ap.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
 					//wifi_state_change(true, true);
 					break;
 				default:

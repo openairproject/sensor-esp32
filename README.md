@@ -16,7 +16,7 @@ After booting up for the first time, sensor becomes an access point and enables 
 Required parts:
 
 ESP32 DevKit Board (other boards should also work after minor modifications).
-Plantower PMS5003 (or 3003. 7003 should work too, but it wasn't tested yet)
+Plantower PMS5003 (or PMS3003 or PMS7003)
 Any push button
 
 Optional parts:
@@ -70,7 +70,7 @@ take it under consideration during build, isolate all connections properly
 
 ## Building firmware
 
-Firmware was written with native espressif-sdk [https://github.com/espressif/esp-idf].
+Firmware is written in native espressif-sdk v2.1 [http://esp-idf.readthedocs.io/en/v2.1/get-started/index.html]
 After installing and setting up SDK, connect your ESP32 board to your PC.
 This may require installing custom USB driver (it depends on uart chipset used on your ESP32 board, for DevKit it 
 should be Silabs chip - [http://www.silabs.com/products/mcu/pages/usbtouartbridgevcpdrivers.aspx]).

@@ -197,7 +197,7 @@ static esp_err_t awsiot_configure(cJSON* awsiot) {
 
 static esp_err_t awsiot_send(oap_measurement_t* meas, oap_sensor_config_t *sensor_config) {
 	if (!awsiot_config.configured) {
-		ESP_LOGW(TAG, "awsiot not configured");
+		ESP_LOGE(TAG, "awsiot not configured");
 		return ESP_FAIL;
 	}
 	esp_err_t ret;

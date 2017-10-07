@@ -111,7 +111,7 @@ static esp_err_t main_loop(void *mongoose_event_handler) {
 	if (connection == NULL) {
 		//when this happens usually it won't recover until it gets a new IP
 		//maybe we should reboot?
-		ESP_LOGE(tag, "No connection from the mg_bind().");
+		ESP_LOGW(tag, "No connection from the mg_bind().");
 		mg_mgr_free(&mgr);
 		return ESP_FAIL;
 	}
