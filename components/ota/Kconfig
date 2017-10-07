@@ -4,11 +4,11 @@ config OAP_OTA_ENABLED
     int "enable OTA updates"
     default 1
     help
-        todo
+        enable automatic over-the-air updates
 
 config OAP_OTA_BIN_URI_PREFIX
     string "bin uri prefix"
-    default "https://github.com/openairproject/sensor-esp32/releases/"
+    default "https://openairproject.com/ota/"
     help
         This prefix will be used to construct a full URI of a binary with OTA file.
         It is recommended to define as strictly as possible to increase security.
@@ -16,7 +16,7 @@ config OAP_OTA_BIN_URI_PREFIX
 
 config OAP_OTA_INDEX_URI
     string "index uri"
-    default "https://raw.githubusercontent.com/openairproject/sensor-esp32/gitota/ota/index.txt"
+    default "https://openairproject.com/ota/index.txt""
     help
         full URI to file with OTA definition
         

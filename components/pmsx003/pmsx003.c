@@ -115,7 +115,7 @@ esp_err_t pms_uart_read(pmsx003_config_t* config, uint8_t data[32]) {
 }
 
 static void pms_task(pmsx003_config_t* config) {
-    uint8_t* data[32];
+    uint8_t data[32];
     while(1) {
     	pms_uart_read(config, data);
     }
@@ -140,7 +140,7 @@ esp_err_t pmsx003_init(pmsx003_config_t* config) {
 	sprintf(task_name, "pms_sensor_%d", config->sensor_idx);
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
-	xTaskCreate(pms_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
+	xTaskCreate((TaskFunction_t)pms_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
 }
 

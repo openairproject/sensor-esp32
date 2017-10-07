@@ -141,7 +141,6 @@ static void task() {
 }
 
 static TaskHandle_t task_handle = NULL;
-
 static void start(pm_sensor_enable_handler_pair_t* pm_sensor_handlers, pm_meter_intervals_params_t* params, pm_meter_output_f callback) {
 	ESP_LOGI(TAG, "start");
 	_callback = callback;
@@ -167,6 +166,6 @@ static void stop() {
 
 pm_meter_t pm_meter_intervals = {
 	.input = &collect,
-	.start = &start,
+	.start = (pm_meter_start_f)&start,
 	.stop = &stop
 };

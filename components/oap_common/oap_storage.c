@@ -281,7 +281,7 @@ cJSON* storage_get_config_to_update() {
 	return copy;
 }
 
-static void unmask_sensitive_fields(const cJSON* new_config, const cJSON* old_config) {
+static void unmask_sensitive_fields(cJSON* new_config, cJSON* old_config) {
 	if (old_config) {
 		cJSON* wifi = cJSON_GetObjectItem(new_config, "wifi");
 		if (wifi) {
@@ -301,7 +301,7 @@ static void unmask_sensitive_fields(const cJSON* new_config, const cJSON* old_co
 	}
 }
 
-void storage_update_config(const cJSON* config) {
+void storage_update_config(cJSON* config) {
 	ESP_LOGD(TAG, "update config");
 	if (!config) return;
 	unmask_sensitive_fields(config, _config);
@@ -321,8 +321,8 @@ static void storage_init_config() {
 	ESP_LOGD(TAG, "get config");
 
 	int err;
-	if ((err = storage_get_bigblob("config", &str, NULL)) == ESP_ERR_NVS_NOT_FOUND) {
-		err = storage_get_blob("config", &str, NULL);	//backward comp, config used to be stored as single string
+	if ((err = storage_get_bigblob("config", (void**)&str, NULL)) == ESP_ERR_NVS_NOT_FOUND) {
+		err = storage_get_blob("config", (void**)&str, NULL);	//backward comp, config used to be stored as single string
 	}
 
 	cJSON* stored = NULL;

@@ -32,7 +32,7 @@ static int fake_sensor0_enabled = 0;
 static int fake_sensor1_enabled = 0;
 static list_t* strategy_events = NULL;
 
-#define MEM "test"
+#define TAG "test"
 
 typedef struct {
 	pm_meter_event_t event_type;
@@ -47,15 +47,15 @@ static void strategy_callback(pm_meter_event_t event, void* data) {
 	record->event_type = event;
 	switch (event) {
 		case PM_METER_START:
-			ESP_LOGI(MEM, "MEAS_START");
+			ESP_LOGI(TAG, "MEAS_START");
 			break;
 		case PM_METER_RESULT :
-			ESP_LOGI(MEM, "MEAS_RESULT");
+			ESP_LOGI(TAG, "MEAS_RESULT");
 			record->result = malloc(sizeof(pm_data_pair_t));
 			memcpy(record->result, data, sizeof(pm_data_pair_t));
 			break;
 		case PM_METER_ERROR:
-			ESP_LOGI(MEM, "MEAS_ERROR: %s", (char*)data);
+			ESP_LOGI(TAG, "MEAS_ERROR: %s", (char*)data);
 			record->error = strdup((char*)data);
 			break;
 	}
@@ -143,7 +143,7 @@ TEST_CASE("meas intervals","[meas]") {
 
 	//check
 	if (!result_record) {
-		list_deleteListAndValues(strategy_events, &free_record);
+		list_deleteListAndValues(strategy_events, (node_value_predicate)&free_record);
 		TEST_FAIL_MESSAGE("timeout while waiting for measurement result_record");
 	} else {
 		pm_data_pair_t* meas_data = ((test_meas_record_t*)(result_record->value))->result;
@@ -160,7 +160,7 @@ TEST_CASE("meas intervals","[meas]") {
 		TEST_ASSERT_EQUAL_INT16(2, meas_data->pm_data[1].pm2_5);
 		TEST_ASSERT_EQUAL_INT16(3, meas_data->pm_data[1].pm10);
 		TEST_ASSERT_FALSE_MESSAGE(fake_sensor1_enabled, "sensor1 not disabled after measurement");
-		list_deleteListAndValues(strategy_events, &free_record);
+		list_deleteListAndValues(strategy_events, (node_value_predicate)&free_record);
 	}
 
 }

@@ -112,7 +112,7 @@ esp_err_t bmx280_init(bmx280_config_t* bmx280_config) {
 	esp_err_t res;
 	if ((res = bmx280_i2c_setup(bmx280_config)) == ESP_OK) {
 		//2kb => ~380bytes free
-		xTaskCreate(bmx280_task, "bmx280_task", 1024*3, bmx280_config, DEFAULT_TASK_PRIORITY, NULL);
+		xTaskCreate((TaskFunction_t)bmx280_task, "bmx280_task", 1024*3, bmx280_config, DEFAULT_TASK_PRIORITY, NULL);
 	}
 	return res;
 }
