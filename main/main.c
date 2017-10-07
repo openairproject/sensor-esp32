@@ -33,7 +33,7 @@
 #include "esp_log.h"
 #include <math.h>
 
-#include "../components/thing-speak/include/thing_speak.h"
+#include "thing_speak.h"
 #include "meas_intervals.h"
 #include "meas_continuous.h"
 

@@ -20,7 +20,7 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../thing-speak/include/thing_speak.h"
+#include "thing_speak.h"
 
 #include "oap_common.h"
 #include "oap_storage.h"
