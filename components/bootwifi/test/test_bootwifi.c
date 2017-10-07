@@ -53,9 +53,11 @@ TEST_CASE("test wifi AP","[wifi]") {
 //	test_delay(10000);
 //}
 
-TEST_CASE("reconnect wifi","[wifi]") {
-	test_require_wifi();
-	esp_wifi_stop();
-	TEST_ESP_OK(wifi_disconnected_wait_for(5000));
-	TEST_ESP_OK(wifi_connected_wait_for(10000));
-}
+// this test is unstable - sometimes it reconnects before we're able to detect disconnect
+//
+//TEST_CASE("reconnect wifi","[wifi]") {
+//	test_require_wifi();
+//	esp_wifi_stop();
+//	TEST_ESP_OK(wifi_disconnected_wait_for(5000));
+//	TEST_ESP_OK(wifi_connected_wait_for(10000));
+//}
