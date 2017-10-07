@@ -111,7 +111,6 @@ extern pm_meter_t pm_meter_continuous;
 #define PM_RESULT_SEND_TIMEOUT 100
 
 static void pm_meter_result_handler(pm_data_pair_t* pm_data_pair) {
-	ESP_LOGI(TAG, "STOP MEASUREMENT: %d", pm_data_pair->pm_data[0].pm2_5);
 	if (!xQueueSend(pm_meter_result_queue, pm_data_pair, PM_RESULT_SEND_TIMEOUT)) {
 		ESP_LOGW(TAG,"pm_meter_result_queue overflow");
 	}
@@ -120,14 +119,15 @@ static void pm_meter_result_handler(pm_data_pair_t* pm_data_pair) {
 static void pm_meter_output_handler(pm_meter_event_t event, void* data) {
 	switch (event) {
 	case PM_METER_START:
-		ESP_LOGI(TAG, "START MEASUREMENT");
+		ESP_LOGI(TAG, "start measurement");
 		ledc_set_mode(LED_PULSE);
 		break;
 	case PM_METER_RESULT:
+		ESP_LOGI(TAG, "finished measurement");
 		pm_meter_result_handler((pm_data_pair_t*)data);
 		break;
 	case PM_METER_ERROR:
-		ESP_LOGW(TAG, "FAILED MEASUREMENT: %s", (char*)data);
+		ESP_LOGW(TAG, "failed measurement: %s", (char*)data);
 		break;
 	}
 }
@@ -262,7 +262,7 @@ static void env_sensors_init() {
 		bmx280_config[0].callback = &env_sensor_callback;
 
 		if (bmx280_init(&bmx280_config[0]) != ESP_OK) {
-			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor 0");
+			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 0);
 		}
 	}
 
@@ -271,7 +271,7 @@ static void env_sensors_init() {
 		bmx280_config[1].callback = &env_sensor_callback;
 
 		if (bmx280_init(&bmx280_config[1]) != ESP_OK) {
-			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor 1");
+			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 1);
 		}
 	}
 }

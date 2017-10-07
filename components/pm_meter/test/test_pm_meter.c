@@ -32,7 +32,7 @@ static int fake_sensor0_enabled = 0;
 static int fake_sensor1_enabled = 0;
 static list_t* strategy_events = NULL;
 
-#define TAG "test"
+#define MEM "test"
 
 typedef struct {
 	pm_meter_event_t event_type;
@@ -47,15 +47,15 @@ static void strategy_callback(pm_meter_event_t event, void* data) {
 	record->event_type = event;
 	switch (event) {
 		case PM_METER_START:
-			ESP_LOGI(TAG, "MEAS_START");
+			ESP_LOGI(MEM, "MEAS_START");
 			break;
 		case PM_METER_RESULT :
-			ESP_LOGI(TAG, "MEAS_RESULT");
+			ESP_LOGI(MEM, "MEAS_RESULT");
 			record->result = malloc(sizeof(pm_data_pair_t));
 			memcpy(record->result, data, sizeof(pm_data_pair_t));
 			break;
 		case PM_METER_ERROR:
-			ESP_LOGI(TAG, "MEAS_ERROR: %s", (char*)data);
+			ESP_LOGI(MEM, "MEAS_ERROR: %s", (char*)data);
 			record->error = strdup((char*)data);
 			break;
 	}

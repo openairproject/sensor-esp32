@@ -32,14 +32,14 @@
 #include "freertos/semphr.h"
 #include "oap_common.h"
 
-#define TAG "http"
+#define MEM "http"
 
 #define SSL_MUTEX 1
 
 static const char *pers = "esp32-tls";
 
 #define REQ_BUFFER_LEN (2048)
-#define REQ_CHECK(check, log, ret) if(check) {ESP_LOGE(TAG, log);ret;}
+#define REQ_CHECK(check, log, ret) if(check) {ESP_LOGE(MEM, log);ret;}
 
 #ifdef MBEDTLS_DEBUG_C
 
@@ -143,7 +143,7 @@ static int nossl_connect(request_t *req)
     tv.tv_usec = 0;
     setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    ESP_LOGD(TAG, "[sock=%d],connecting to server IP:%s,Port:%s...",
+    ESP_LOGD(MEM, "[sock=%d],connecting to server IP:%s,Port:%s...",
              socket, ipaddr_ntoa((const ip_addr_t*)&remote_ip.sin_addr.s_addr), (char*)port->value);
     if(connect(socket, (struct sockaddr *)(&remote_ip), sizeof(struct sockaddr)) != 0) {
         close(socket);
@@ -165,7 +165,7 @@ mbedtls_x509_crt* req_parse_x509_crt(unsigned char *buf, size_t buflen) {
 	if (ret == ESP_OK) {
 		return crt;
 	} else {
-		ESP_LOGW(TAG, "failed to parse x509 cert: 0x%x", ret);
+		ESP_LOGW(MEM, "failed to parse x509 cert: 0x%x", ret);
 		req_free_x509_crt(crt);
 		return NULL;
 	}
@@ -183,7 +183,7 @@ mbedtls_pk_context* req_parse_pkey(unsigned char* buf, size_t buflen) {
 	if (ret == ESP_OK) {
 		return pkey;
 	} else {
-		ESP_LOGW(TAG, "failed to parse key: 0x%x", -ret);
+		ESP_LOGW(MEM, "failed to parse key: 0x%x", -ret);
 		req_free_pkey(pkey);
 		return NULL;
 	}
@@ -203,7 +203,7 @@ static int mbedtls_connect(request_t *req)
 #if SSL_MUTEX
 	if (!ssl_semaphore) ssl_semaphore = xSemaphoreCreateMutex();
 	if(!xSemaphoreTake( ssl_semaphore, ( TickType_t ) 10000 / portTICK_PERIOD_MS )) {
-		ESP_LOGW(TAG, "couldn't acquire lock for SSL request");
+		ESP_LOGW(MEM, "couldn't acquire lock for SSL request");
 		return ESP_FAIL;
 	}
 #endif
@@ -221,12 +221,12 @@ static int mbedtls_connect(request_t *req)
 	mbedtls_ctr_drbg_init(&ssl->drbg_ctx);
 
     do {
-    	ESP_LOGV(TAG, "Seeding the random number generator");
+    	ESP_LOGV(MEM, "Seeding the random number generator");
         mbedtls_entropy_init(&ssl->entropy_ctx);
 
         if ((ret = mbedtls_ctr_drbg_seed(&ssl->drbg_ctx, mbedtls_entropy_func,
                                          &ssl->entropy_ctx, (const unsigned char *) pers, strlen(pers))) != ESP_OK) {
-        	ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", -ret);
+        	ESP_LOGW(MEM, "mbedtls_ctr_drbg_seed returned %d", -ret);
             break;
         }
 
@@ -235,7 +235,7 @@ static int mbedtls_connect(request_t *req)
         MBEDTLS_SSL_VERIFY_NONE if not.
         */
         if (req->ca_cert) {
-        	ESP_LOGD(TAG, "Set CA certificate");
+        	ESP_LOGD(MEM, "Set CA certificate");
             mbedtls_ssl_conf_authmode(&ssl->ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
             mbedtls_ssl_conf_ca_chain(&ssl->ssl_conf, req->ca_cert, NULL);
             //mbedtls_ssl_conf_verify(&ssl->ssl_ctx, my_verify, NULL );
@@ -244,9 +244,9 @@ static int mbedtls_connect(request_t *req)
         }
 
         if (req->client_cert && req->client_key) {
-            ESP_LOGD(TAG, "Set client cert/pkey");
+            ESP_LOGD(MEM, "Set client cert/pkey");
             if ((ret = mbedtls_ssl_conf_own_cert(&ssl->ssl_conf, req->client_cert, req->client_key)) != ESP_OK) {
-                ESP_LOGW(TAG, "mbedtls_ssl_conf_own_cert returned 0x%x", -ret);
+                ESP_LOGW(MEM, "mbedtls_ssl_conf_own_cert returned 0x%x", -ret);
                 break;
             }
         }
@@ -254,17 +254,17 @@ static int mbedtls_connect(request_t *req)
         // Hostname set here should match CN in server certificate
         if((ret = mbedtls_ssl_set_hostname(&ssl->ssl_ctx, req_list_get_key(req->opt, "host")->value)) != ESP_OK)
         {
-            ESP_LOGW(TAG, "mbedtls_ssl_set_hostname returned 0x%x", -ret);
+            ESP_LOGW(MEM, "mbedtls_ssl_set_hostname returned 0x%x", -ret);
             break;
         }
 
-        ESP_LOGD(TAG, "Setting up the SSL/TLS structure...");
+        ESP_LOGD(MEM, "Setting up the SSL/TLS structure...");
 
         if ((ret = mbedtls_ssl_config_defaults(&ssl->ssl_conf,
                                                MBEDTLS_SSL_IS_CLIENT,
                                                MBEDTLS_SSL_TRANSPORT_STREAM,
                                                MBEDTLS_SSL_PRESET_DEFAULT)) != ESP_OK) {
-        	ESP_LOGW(TAG, "mbedtls_ssl_config_defaults returned 0x%x", -ret);
+        	ESP_LOGW(MEM, "mbedtls_ssl_config_defaults returned 0x%x", -ret);
             break;
         }
 
@@ -275,13 +275,13 @@ static int mbedtls_connect(request_t *req)
 #endif
 
         if ((ret = mbedtls_ssl_setup(&ssl->ssl_ctx, &ssl->ssl_conf)) != ESP_OK) {
-        	ESP_LOGW(TAG, "mbedtls_ssl_setup returned 0x%x", -ret);
+        	ESP_LOGW(MEM, "mbedtls_ssl_setup returned 0x%x", -ret);
             break;
         }
 
         mbedtls_ssl_set_bio(&ssl->ssl_ctx, &req->socket, mbedtls_net_send, mbedtls_net_recv, NULL );
 
-        ESP_LOGD(TAG, "Performing the SSL/TLS handshake...");
+        ESP_LOGD(MEM, "Performing the SSL/TLS handshake...");
 
         int attempts = 0;
         while ((ret = mbedtls_ssl_handshake(&ssl->ssl_ctx)) != ESP_OK && attempts < 10) {
@@ -289,11 +289,11 @@ static int mbedtls_connect(request_t *req)
         	// ret = 0x4c happens from time to time, esp just after network init - sometimes it recovers, sometimes it doesn't
         	// it cannot recover from 0x4e (no network)
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != 0x4c) {
-            	ESP_LOGW(TAG, "mbedtls_ssl_handshake returned 0x%x", -ret);
+            	ESP_LOGW(MEM, "mbedtls_ssl_handshake returned 0x%x", -ret);
                 break;
             }
             attempts++;
-            ESP_LOGD(TAG, "handshake failed (0x%x), try again (%d)", -ret, attempts);
+            ESP_LOGD(MEM, "handshake failed (0x%x), try again (%d)", -ret, attempts);
             vTaskDelay(10 / portTICK_PERIOD_MS);
             vPortYield();
         }
@@ -304,23 +304,23 @@ static int mbedtls_connect(request_t *req)
 
         if (req->client_cert && req->client_key) {
             if ((ret = mbedtls_ssl_get_record_expansion(&ssl->ssl_ctx)) >= 0) {
-            	ESP_LOGD(TAG, "Record expansion is %d", ret);
+            	ESP_LOGV(MEM, "Record expansion is %d", ret);
             } else {
-                ESP_LOGD(TAG, "Record expansion is unknown (compression)"); //not error
+                ESP_LOGV(MEM, "Record expansion is unknown (compression)"); //not error
             }
         }
 
-		ESP_LOGD(TAG, "Verifying peer X.509 certificate...");
+		ESP_LOGD(MEM, "Verifying peer X.509 certificate...");
 
 		if ((ret = mbedtls_ssl_get_verify_result(&ssl->ssl_ctx)) != ESP_OK) {
-			ESP_LOGE(TAG, "Failed to verify peer certificate!");
+			ESP_LOGW(MEM, "Failed to verify peer certificate!");
 			char buf[512];
 			bzero(buf, sizeof(buf));
 			mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", ret);
-			ESP_LOGW(TAG, "verification info: %s", buf);
+			ESP_LOGW(MEM, "verification info: %s", buf);
 			break;
 		} else {
-			ESP_LOGD(TAG, "Certificate verified.");
+			ESP_LOGD(MEM, "Certificate verified.");
 		}
 
     } while (0);
@@ -333,7 +333,7 @@ static int mbedtls_write(request_t *req, char *buffer, int len)
     int ret = -1;
     while ((ret = mbedtls_ssl_write(&req->ssl->ssl_ctx, (unsigned char *)buffer, len)) <= 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE && ret != -76) {
-        	ESP_LOGE(TAG, "mbedtls_ssl_write returned 0x%x", ret);
+        	ESP_LOGW(MEM, "mbedtls_ssl_write returned 0x%x", ret);
             break;
         }
     }
@@ -353,10 +353,10 @@ static int mbedtls_read(request_t *req, char *buffer, int len)
 		if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
 			continue;
 		} else if (ret == -0x4C) {
-			ESP_LOGW(TAG, "timeout");
+			ESP_LOGW(MEM, "timeout");
 			break;
 		} else if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-			ESP_LOGW(TAG, "peer close");
+			ESP_LOGW(MEM, "peer close");
 			break;
 		} else {
 			break;
@@ -372,7 +372,7 @@ static int nossl_read(request_t *req, char *buffer, int len)
 
 static int mbedtls_close(request_t *req)
 {
-	ESP_LOGD(TAG, "Cleaning SSL connection.");
+	ESP_LOGD(MEM, "Cleaning SSL connection.");
 	close(req->socket);
 
 	if (req->ssl) {
@@ -522,7 +522,7 @@ void req_setopt(request_t *req, REQ_OPTS opt, void* data)
         case REQ_SET_SECURITY:
             req_list_set_key(req->opt, "secure", data);
             if(req_list_check_key(req->opt, "secure", "true")) {
-                ESP_LOGD(TAG, "Secure");
+                ESP_LOGD(MEM, "Secure");
                 req->_read = mbedtls_read;
                 req->_write = mbedtls_write;
                 req->_connect = mbedtls_connect;
@@ -586,11 +586,11 @@ static int req_process_upload(request_t *req)
 
     found = req_list_get_key(req->opt, "postfield");
     if(found) {
-        ESP_LOGV(TAG, "begin write %d bytes", strlen((char*)found->value));
+        ESP_LOGV(MEM, "begin write %d bytes", strlen((char*)found->value));
         int bwrite = req->_write(req, (char*)found->value, strlen((char*)found->value));
-        ESP_LOGV(TAG, "end write %d bytes", bwrite);
+        ESP_LOGV(MEM, "end write %d bytes", bwrite);
         if(bwrite < 0) {
-            ESP_LOGE(TAG, "Error write");
+            ESP_LOGW(MEM, "error write");
             return -1;
         }
     }
@@ -625,7 +625,7 @@ static int fill_buffer(request_t *req)
         req->buffer->bytes_write = bytes_inside_buffer;
         if(req->buffer->bytes_write < 0)
             req->buffer->bytes_write = 0;
-        ESP_LOGV(TAG, "move=%d, write=%d, read=%d", bytes_inside_buffer, req->buffer->bytes_write, req->buffer->bytes_read);
+        ESP_LOGV(MEM, "move=%d, write=%d, read=%d", bytes_inside_buffer, req->buffer->bytes_write, req->buffer->bytes_read);
     }
     if(!req->buffer->at_eof)
     {
@@ -635,10 +635,10 @@ static int fill_buffer(request_t *req)
             req->buffer->bytes_read = 0;
         }
         buffer_free_bytes = req->buffer_size - req->buffer->bytes_write;
-        ESP_LOGV(TAG, "Begin read %d bytes", buffer_free_bytes);
+        ESP_LOGV(MEM, "Begin read %d bytes", buffer_free_bytes);
         bread = req->_read(req, (void*)(req->buffer->data + req->buffer->bytes_write), buffer_free_bytes);
         // ESP_LOGD(TAG, "bread = %d, bytes_write = %d, buffer_free_bytes = %d", bread, req->buffer->bytes_write, buffer_free_bytes);
-        ESP_LOGV(TAG, "End read, byte read= %d bytes", bread);
+        ESP_LOGV(MEM, "End read, byte read= %d bytes", bread);
         if(bread < 0) {
             req->buffer->at_eof = 1;
             return -1;
@@ -685,7 +685,7 @@ static int req_process_download(request_t *req)
         if(process_header) {
             while((line = req_readline(req)) != NULL) {
                 if(line[0] == 0) {
-                    ESP_LOGV(TAG, "end process_idx=%d", req->buffer->bytes_read);
+                    ESP_LOGV(MEM, "end process_idx=%d", req->buffer->bytes_read);
                     header_off = req->buffer->bytes_read;
                     process_header = 0; //end of http header
                     break;
@@ -696,11 +696,11 @@ static int req_process_download(request_t *req)
                             char statusCode[4] = { 0 };
                             memcpy(statusCode, temp + 9, 3);
                             req->response->status_code = atoi(statusCode);
-                            ESP_LOGD(TAG, "status code: %d", req->response->status_code);
+                            ESP_LOGD(MEM, "status code: %d", req->response->status_code);
                         }
                     } else {
                         req_list_set_from_string(req->response->header, line);
-                        ESP_LOGV(TAG, "header line: %s", line);
+                        ESP_LOGV(MEM, "header line: %s", line);
                     }
                 }
             }
@@ -739,7 +739,7 @@ static int req_process_download(request_t *req)
 int req_perform(request_t *req)
 {
     do {
-    	ESP_LOGD(TAG, "%s %s%s",
+    	ESP_LOGD(MEM, "%s %s%s",
     			(char*)req_list_get_key(req->opt, "method")->value,
 				(char*)req_list_get_key(req->opt, "host")->value,
 				(char*)req_list_get_key(req->opt, "path")->value);
@@ -752,7 +752,7 @@ int req_perform(request_t *req)
             if(found) {
                 req_list_set_key(req->header, "Referer", (const char*)found->value);
                 req_setopt_from_uri(req, (const char*)found->value);
-                ESP_LOGD(TAG, "Following: %s", (char*)found->value);
+                ESP_LOGD(MEM, "Following: %s", (char*)found->value);
                 req->_close(req);
                 continue;
             }

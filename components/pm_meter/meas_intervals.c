@@ -27,7 +27,7 @@
 #include "esp_err.h"
 #include "freertos/task.h"
 
-static char* TAG = "pm_meter_int";
+static char* TAG = "meter_intv";
 
 typedef struct {
 	pm_sensor_enable_handler_f handler;
