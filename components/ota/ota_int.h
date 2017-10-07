@@ -40,7 +40,7 @@ typedef struct {
 	char* index_uri;
 	unsigned int interval; // for <=0 it checks only once
 	int commit_and_reboot;
-	esp_partition_t *update_partition;
+	const esp_partition_t *update_partition;
 	unsigned long min_version;
 } ota_config_t;
 
@@ -60,7 +60,6 @@ esp_err_t is_ota_available(ota_config_t* ota_config, ota_info_t* ota_info);
  */
 esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info);
 void free_ota_info(ota_info_t* ota_info);
-esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, esp_partition_t *update_partition);
 esp_err_t parse_ota_info(ota_info_t* ota_info, char* line, int len);
 esp_err_t check_ota(ota_config_t* ota_config);
 

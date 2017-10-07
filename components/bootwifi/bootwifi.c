@@ -166,7 +166,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			tcpip_adapter_ip_info_t ip_info;
 			tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip_info);
 
-			ESP_LOGI(tag, "\n*** SENSOR IP (access point '%s') http://"IPSTR"\n", ap_config.ap.ssid, IP2STR(&ip_info.ip));
+			ESP_LOGI(tag, "\n\n*** SENSOR IP (access point '%s') http://"IPSTR"\n", ap_config.ap.ssid, IP2STR(&ip_info.ip));
 			wifi_state_change(true, true);
 			break;
 		}
@@ -206,7 +206,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 
 			switch (mode) {
 				case WIFI_MODE_STA:
-					ESP_LOGI(tag, "\n*** SENSOR IP (network '%s') http://"IPSTR"\n", oap_wifi_config.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
+					ESP_LOGI(tag, "\n\n*** SENSOR IP (network '%s') http://"IPSTR"\n", oap_wifi_config.ssid, IP2STR(&event->event_info.got_ip.ip_info.ip));
 
 					initialize_sntp();
 					/*

@@ -40,7 +40,7 @@
 #include "esp_request.h"
 #include "mbedtls/sha256.h"
 
-#define MEM "ota"
+#define TAG "ota"
 
 
 extern const uint8_t _root_ca_pem_start[] asm("_binary_comodo_ca_pem_start");
@@ -91,20 +91,20 @@ esp_err_t parse_ota_info(ota_info_t* ota_info, char* line, int len) {
 	} while(line[i] && i < len);
 
 	if (!ver) {
-		ESP_LOGW(MEM, "malformed status (no version)");
+		ESP_LOGW(TAG, "malformed status (no version)");
 		goto fail;
 	}
 	if (!file) {
-		ESP_LOGW(MEM, "malformed status (no file)");
+		ESP_LOGW(TAG, "malformed status (no file)");
 		goto fail;
 	}
 	if (!sha) {
-		ESP_LOGW(MEM, "malformed status (no sha)");
+		ESP_LOGW(TAG, "malformed status (no sha)");
 		goto fail;
 	}
 
 	if (oap_version_parse(ver, &ota_info->ver) != ESP_OK) {
-		ESP_LOGW(MEM, "malformed status (invalid version: '%s')", ver);
+		ESP_LOGW(TAG, "malformed status (invalid version: '%s')", ver);
 		goto fail;
 	}
 	ota_info->file = file;
@@ -121,12 +121,12 @@ esp_err_t parse_ota_info(ota_info_t* ota_info, char* line, int len) {
 
 static int get_ota_status_callback(request_t *req, char *data, int len)
 {
-	ESP_LOGD(MEM,"index:\n%s", data);
+	ESP_LOGD(TAG,"index:\n%s", data);
 	ost_status_result_t* result = req->meta;
 	if (req->response->status_code == 200 && !result->found) {
 		result->found = 1;
 		result->err = parse_ota_info(&result->binary, data, len);
-		ESP_LOGD(MEM, "parse ota info line... [0x%x]", result->err);
+		ESP_LOGD(TAG, "parse ota info line... [0x%x]", result->err);
 	}
 	return 0;
 }
@@ -142,7 +142,7 @@ void free_ota_info(ota_info_t* ota_info) {
 
 esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
 {
-	ESP_LOGI(MEM, "fetch ota info from %s", ota_config->index_uri);
+	ESP_LOGI(TAG, "fetch ota info from %s", ota_config->index_uri);
     request_t* req = req_new(ota_config->index_uri);
     if (!req) {
     	return OAP_OTA_ERR_REQUEST_FAILED;
@@ -166,7 +166,7 @@ esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
     req_clean(req);
 
     if (status != 200) {
-        ESP_LOGW(MEM, "error response code=%d", status);
+        ESP_LOGW(TAG, "error response code=%d", status);
     	return OAP_OTA_ERR_REQUEST_FAILED;
     }
 
@@ -183,26 +183,26 @@ esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
 
 typedef struct {
 	mbedtls_sha256_context* sha_context;
-	esp_partition_t *update_partition;
+	esp_ota_handle_t ota_handle;
 } ota_download_callback_meta;
 
-static int download_ota_binary_callback(request_t *req, char *data, int len)
+static int download_ota_binary_callback(request_t *req, char *data, size_t len)
 {
 	ota_download_callback_meta* meta = req->meta;
     mbedtls_sha256_update(meta->sha_context, (unsigned char *)data, len);
-    if (meta->update_partition) {
-    	return esp_ota_write(meta->update_partition, (const void *)data, len);
+    if (meta->ota_handle) {
+    	return esp_ota_write(meta->ota_handle, (const void *)data, len);
     } else {
     	return 0;
     }
 }
 
-esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, esp_partition_t *update_partition)
+static esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, esp_ota_handle_t ota_handle)
 {
     char file_uri[300];
     sprintf(file_uri, "%s%s", ota_config->bin_uri_prefix, ota_info->file);
 
-    ESP_LOGI(MEM, "download ota binary from %s", file_uri);
+    ESP_LOGI(TAG, "download ota binary from %s", file_uri);
 
     request_t* req = req_new(file_uri);
     if (!req) {
@@ -219,29 +219,29 @@ esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_info, es
 
     ota_download_callback_meta meta = {
     	.sha_context = &sha_context,
-		.update_partition = update_partition
+		.ota_handle = ota_handle
     };
 
     req->meta = &meta;
 
     int status = req_perform(req);
-    ESP_LOGI(MEM, "status=%d", status);
+    ESP_LOGI(TAG, "status=%d", status);
 
     esp_err_t ret;
     if (status == 200) {
-    	ESP_LOGI(MEM, "ota file downloaded");
+    	ESP_LOGI(TAG, "ota file downloaded");
 		ret = ESP_OK;
     	unsigned char hash[32];
     	mbedtls_sha256_finish(&sha_context, hash);
     	char* hex = sha_to_hex(hash);
-		ESP_LOGI(MEM, "file sha256=%s", hex);
+		ESP_LOGI(TAG, "file sha256=%s", hex);
 		if (strcmp(hex, ota_info->sha) != 0) {
-			ESP_LOGE(MEM, "invalid sha (expected: %s)", ota_info->sha);
+			ESP_LOGE(TAG, "invalid sha (expected: %s)", ota_info->sha);
 			ret = OAP_OTA_ERR_SHA_MISMATCH;
 		}
 		free(hex);
     } else {
-    	ESP_LOGW(MEM, "error response code=%d", status);
+    	ESP_LOGW(TAG, "error response code=%d", status);
     	ret = OAP_OTA_ERR_REQUEST_FAILED;
     }
 
@@ -255,13 +255,13 @@ esp_err_t is_ota_update_available(ota_config_t* ota_config, ota_info_t* ota_info
 	if (err == ESP_OK) {
 		unsigned long remote_ver = oap_version_num(ota_info->ver);
 		if (remote_ver <= ota_config->min_version) {
-			ESP_LOGD(MEM, "remote ver: %lu <= min ver: %lu", remote_ver, ota_config->min_version);
+			ESP_LOGD(TAG, "remote ver: %lu <= min ver: %lu", remote_ver, ota_config->min_version);
 			err = OAP_OTA_ERR_NO_UPDATES;
 		} else {
-			ESP_LOGD(MEM, "new update found (%lu)", remote_ver);
+			ESP_LOGD(TAG, "new update found (%lu)", remote_ver);
 		}
 	} else {
-		ESP_LOGD(MEM, "fetch_last_ota_info failed [0x%x]", err);
+		ESP_LOGD(TAG, "fetch_last_ota_info failed [0x%x]", err);
 	}
 	return err;
 }
@@ -270,16 +270,16 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 
 
 	const esp_partition_t* running_partition = esp_ota_get_running_partition();
-	ESP_LOGI(MEM, "running partition = %s", running_partition->label);
+	ESP_LOGI(TAG, "running partition = %s", running_partition->label);
 
-	if (ota_config->update_partition == NULL) {
+	if (!ota_config->update_partition) {
 		ota_config->update_partition = esp_ota_get_next_update_partition(NULL);
 	}
 	if (ota_config->update_partition == NULL) {
-		ESP_LOGE(MEM, "no suitable OTA partition found");
+		ESP_LOGE(TAG, "no suitable OTA partition found");
 		return ESP_FAIL;
 	}
-	ESP_LOGI(MEM, "update partition = %s", ota_config->update_partition->label);
+	ESP_LOGI(TAG, "update partition = %s", ota_config->update_partition->label);
 	esp_err_t err;
 	esp_ota_handle_t update_handle = 0;
 	ota_info_t ota_info = {
@@ -292,52 +292,52 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 			goto go_sleep;
 		}
 
-		ESP_LOGD(MEM, "Check for OTA updates...");
-		log_task_stack(MEM);
+		ESP_LOGD(TAG, "Check for OTA updates...");
+		log_task_stack(TAG);
 
 		if ((err = is_ota_update_available(ota_config, &ota_info)) != ESP_OK) goto go_sleep;
 
 		char* verstr = oap_version_format(ota_info.ver);
-		ESP_LOGW(MEM,"NEW FIRMWARE AVAILABLE: %s", verstr);
+		ESP_LOGW(TAG,"NEW FIRMWARE AVAILABLE: %s", verstr);
 		free(verstr);
 
-		ESP_LOGI(MEM, "Writing to partition subtype %d at offset 0x%x",
+		ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
 				ota_config->update_partition->subtype, ota_config->update_partition->address);
 
 		err = esp_ota_begin(ota_config->update_partition, OTA_SIZE_UNKNOWN, &update_handle);
 		if (err != ESP_OK) {
-			ESP_LOGE(MEM, "esp_ota_begin failed [0x%x]", err);
+			ESP_LOGE(TAG, "esp_ota_begin failed [0x%x]", err);
 			goto fail;
 		}
-		ESP_LOGI(MEM, "esp_ota_begin succeeded");
+		ESP_LOGI(TAG, "esp_ota_begin succeeded");
 
 		//download
 		if ((err = download_ota_binary(ota_config, &ota_info, update_handle)) != ESP_OK) {
-			ESP_LOGE(MEM, "download_ota_binary failed [0x%x]", err);
+			ESP_LOGE(TAG, "download_ota_binary failed [0x%x]", err);
 			goto fail;
 		}
 
 		if ((err=esp_ota_end(update_handle)) != ESP_OK) {
-		   ESP_LOGE(MEM, "esp_ota_end failed [0x%x]", err);
+		   ESP_LOGE(TAG, "esp_ota_end failed [0x%x]", err);
 		   goto fail;
 		}
 
 		if (ota_config->commit_and_reboot) {
 			if ((err = esp_ota_set_boot_partition(ota_config->update_partition)) != ESP_OK) {
-			   ESP_LOGE(MEM, "esp_ota_set_boot_partition failed [0x%x]", err);
+			   ESP_LOGE(TAG, "esp_ota_set_boot_partition failed [0x%x]", err);
 			   goto fail;
 			}
 
-			ESP_LOGW(MEM, "OTA applied. Prepare to restart system!");
+			ESP_LOGW(TAG, "OTA applied. Prepare to restart system!");
 			oap_reboot();
 			return ESP_OK;
 		} else {
-			ESP_LOGW(MEM, "OTA downloaded but configured to be ignored");
+			ESP_LOGW(TAG, "OTA downloaded but configured to be ignored");
 			goto go_sleep;
 		}
 
 		fail:
-		   ESP_LOGE(MEM,"Interrupt OTA");
+		   ESP_LOGE(TAG,"Interrupt OTA");
 
 		go_sleep:
 		free_ota_info(&ota_info);
@@ -345,7 +345,7 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 		if (ota_config->interval <= 0) {
 			break;
 		} else {
-			ESP_LOGD(MEM, "sleep for %d sec", ota_config->interval/1000);
+			ESP_LOGD(TAG, "sleep for %d sec", ota_config->interval/1000);
 			delay(ota_config->interval);
 		}
 	}
@@ -367,7 +367,7 @@ void start_ota_task(cJSON* user_ota_config) {
 		if (!user_ota_config ||
 				!(ota_interval = cJSON_GetObjectItem(user_ota_config, "interval")) || ota_interval->valueint < 0) {
 			//disable for -1, for 0 it will run once at startup
-			ESP_LOGI(MEM, "OTA disabled");
+			ESP_LOGI(TAG, "OTA disabled");
 		} else {
 			ota_config.bin_uri_prefix = OAP_OTA_BIN_URI_PREFIX;
 			ota_config.index_uri = OAP_OTA_INDEX_URI;
@@ -375,9 +375,9 @@ void start_ota_task(cJSON* user_ota_config) {
 			ota_config.commit_and_reboot = 1;
 			ota_config.update_partition = NULL;
 			ota_config.interval = 1000 * ota_interval->valueint;
-			xTaskCreate(check_ota_task, "check_ota_task", 1024*6, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
+			xTaskCreate((TaskFunction_t)check_ota_task, "check_ota_task", 1024*6, &ota_config, DEFAULT_TASK_PRIORITY, NULL);
 		}
 	} else {
-		ESP_LOGI(MEM, "OTA not available");
+		ESP_LOGI(TAG, "OTA not available");
 	}
 }

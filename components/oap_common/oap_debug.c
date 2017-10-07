@@ -29,7 +29,7 @@
 #include "esp_log.h"
 #include "freertos/task.h"
 
-#define MEM "mem"
+#define TAG "mem"
 /**
  * this method is surprisingly stack heavy - it takes ~ 1000 bytes.
  * before using it, adjust task stack accordingly.
@@ -37,7 +37,7 @@
 void log_task_stack(const char* task) {
 	//uxTaskGetStackHighWaterMark is marked as UNTESTED
 	#if !CONFIG_FREERTOS_ASSERT_ON_UNTESTED_FUNCTION
-		ESP_LOGD(MEM, "stack min (%d) - task '%s'", uxTaskGetStackHighWaterMark( NULL ), task);
+		ESP_LOGD(TAG, "stack min (%d) - task '%s'", uxTaskGetStackHighWaterMark( NULL ), task);
 	#endif
 }
 
@@ -47,7 +47,7 @@ static size_t last_free_heap = 0;
 void log_heap_size(const char* msg) {
 	size_t free_heap = xPortGetFreeHeapSize();
 	if (last_free_heap == 0) last_free_heap = free_heap;
-	ESP_LOGD(MEM, "heap min (%d) free (%d) change (%d) - '%s'",
+	ESP_LOGD(TAG, "heap min (%d) free (%d) change (%d) - '%s'",
 			xPortGetMinimumEverFreeHeapSize(),
 			free_heap, free_heap-last_free_heap, msg);
 	last_free_heap = free_heap;
@@ -57,13 +57,13 @@ static void* dummy;
 void reduce_heap_size_to(size_t size) {
 	size_t reduce_by = xPortGetFreeHeapSize() - size;
 	if (reduce_by > 0) {
-		ESP_LOGE(MEM, "********************** REDUCE HEAP BY %d TO %d bytes !!!!!!!!!!!", reduce_by, size);
+		ESP_LOGE(TAG, "********************** REDUCE HEAP BY %d TO %d bytes !!!!!!!!!!!", reduce_by, size);
 		do {
 			size_t block = reduce_by > 10000 ? 10000 : reduce_by;
 			reduce_by-=block;
 			dummy = malloc(block);
 			if (!dummy) {
-				ESP_LOGE(MEM, "FAILED TO ALLOCATE!");
+				ESP_LOGE(TAG, "FAILED TO ALLOCATE!");
 			}
 		} while (reduce_by > 0);
 	}

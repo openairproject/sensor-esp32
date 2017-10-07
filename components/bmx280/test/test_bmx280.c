@@ -25,7 +25,7 @@
 
 esp_err_t bmx280_i2c_setup(bmx280_config_t* config);
 esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config);
-static env_data_t last_result = {.0};
+static env_data_t last_result;
 
 static void collect_result(env_data_t* result) {
 	memcpy(&last_result, result, sizeof(env_data_t));
@@ -42,6 +42,7 @@ static bmx280_config_t cfg = {
 };
 
 TEST_CASE("bmx280 measurement","[bmx280]") {
+	bzero(&last_result, 0);
 	TEST_ASSERT_TRUE(CONFIG_OAP_BMX280_ENABLED);
 	TEST_ESP_OK(bmx280_i2c_setup(&cfg));
 	TEST_ESP_OK(bmx280_measurement_loop(&cfg));

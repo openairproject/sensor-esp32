@@ -53,7 +53,7 @@ unsigned long oap_version_num(oap_version_t ver) {
 
 esp_err_t oap_version_parse(char* str, oap_version_t* ver)
 {
-	int i = 0, j = 0;
+	int i = 0;
 	while (str[i] != 0 && str[i] != '.') i++;
 	if (str[i] != '.') return ESP_FAIL;
 	int major = atoi(str);
