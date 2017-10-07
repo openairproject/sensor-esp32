@@ -304,7 +304,7 @@ static int mbedtls_connect(request_t *req)
 
         if (req->client_cert && req->client_key) {
             if ((ret = mbedtls_ssl_get_record_expansion(&ssl->ssl_ctx)) >= 0) {
-            	ESP_LOGD(TAG, "Record expansion is %d\n", ret);
+            	ESP_LOGD(TAG, "Record expansion is %d", ret);
             } else {
                 ESP_LOGD(TAG, "Record expansion is unknown (compression)"); //not error
             }
