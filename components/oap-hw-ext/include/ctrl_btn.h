@@ -23,15 +23,14 @@
 #ifndef MAIN_BTN_H_
 #define MAIN_BTN_H_
 
-#include "freertos/queue.h"
-#include "driver/gpio.h"
+typedef enum {
+	SINGLE_CLICK,
+	MANY_CLICKS,
+	TOO_MANY_CLICKS
+} btn_action_t;
+typedef void(*btn_callback_f)(btn_action_t);
 
-typedef struct {
-	uint8_t 	index;
-	gpio_num_t 	gpio;
-	uint8_t 	level;
-} btn_event;
-
-xQueueHandle btn_init(gpio_num_t* btns_gpio, uint8_t num_of_btns);
+bool is_ap_mode_pressed();
+esp_err_t btn_configure(btn_callback_f callback);
 
 #endif /* MAIN_BTN_H_ */

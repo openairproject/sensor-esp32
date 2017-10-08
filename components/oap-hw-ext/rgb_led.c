@@ -39,7 +39,7 @@ static const char* TAG = "rgbled";
 static xQueueHandle cmd_queue;
 static gpio_num_t led_gpio[] = {CONFIG_OAP_LED_R_PIN,CONFIG_OAP_LED_G_PIN,CONFIG_OAP_LED_B_PIN};
 
-#define DEFAULT_FREQ 1500
+#define DEFAULT_FREQ 1000
 
 static ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE;
 

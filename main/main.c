@@ -50,6 +50,8 @@
 #include "oap_data.h"
 #include "server_cpanel.h"
 
+#define ESP_INTR_FLAG_DEFAULT 0
+
 static const char *TAG = "app";
 
 
@@ -69,26 +71,24 @@ static led_cmd_t ledc_state = {
 	.color = {.v = {0,0,1}} //initial color (when no samples collected)
 };
 
-static void ledc_set() {
+static void ledc_update() {
 	xQueueSend(ledc_queue, &ledc_state, 100);
 }
 
 static void ledc_set_mode(led_mode_t mode) {
 	ledc_state.mode = mode;
-	ledc_set();
 }
 
-static void ledc_set_color(led_mode_t mode, float r, float g, float b) {
+static void ledc_set_color(float r, float g, float b) {
 	ledc_state.color.v[0] = r;
 	ledc_state.color.v[1] = g;
 	ledc_state.color.v[2] = b;
-	ledc_set_mode(mode);
 }
 
 static void ledc_init() {
 	ledc_queue = xQueueCreate(10, sizeof(led_cmd_t));
 	led_init(oap_sensor_config.led, ledc_queue);
-	ledc_set();
+	ledc_update();
 }
 
 
@@ -121,6 +121,7 @@ static void pm_meter_output_handler(pm_meter_event_t event, void* data) {
 	case PM_METER_START:
 		ESP_LOGI(TAG, "start measurement");
 		ledc_set_mode(LED_PULSE);
+		ledc_update();
 		break;
 	case PM_METER_RESULT:
 		ESP_LOGI(TAG, "finished measurement");
@@ -302,7 +303,9 @@ static void publish_loop() {
 			log_task_stack(TAG);
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
-			ledc_set_color(LED_SET, aqi,(1-aqi), 0);
+			ledc_set_color(aqi,(1-aqi), 0);
+			ledc_set_mode(LED_SET);
+			ledc_update();
 
 			oap_measurement_t meas = {
 				.pm = &pm_data_pair.pm_data[0],
@@ -343,17 +346,29 @@ void publishers_init() {
 	}
 }
 
-static void configure_ap_mode_btn() {
-	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
-	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
-	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
-}
 
-static int is_ap_mode_pressed() {
-	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
+static void btn_handler(btn_action_t action) {
+	switch (action) {
+		case MANY_CLICKS :
+			ESP_LOGW(TAG, "about to perform factory reset!");
+			ledc_set_mode(LED_BLINK);
+			ledc_update();
+			break;
+		case TOO_MANY_CLICKS :
+			reset_to_factory_partition();
+			break;
+		default:
+			break;
+	}
 }
 
 void app_main() {
+	//silence annoying logs
+	esp_log_level_set("ledc", ESP_LOG_INFO);
+	esp_log_level_set("nvs", ESP_LOG_INFO);
+	esp_log_level_set("tcpip_adapter", ESP_LOG_INFO);
+
+	//a sec to start flashing
 	delay(1000);
 	ESP_LOGI(TAG,"starting app... firmware %s", oap_version_str());
 
@@ -361,11 +376,10 @@ void app_main() {
 	//reduce_heap_size_to(130000);
 	storage_init();
 
-	ESP_LOGD(TAG, "retrieve sensor config");
 	oap_sensor_config = sensor_config_from_json(cJSON_GetObjectItem(storage_get_config("sensor"), "config"));
 
 	//wifi/mongoose requires plenty of mem, start it here
-	configure_ap_mode_btn();
+	btn_configure(&btn_handler);
 	wifi_configure(is_ap_mode_pressed() ? NULL : storage_get_config("wifi"), CONFIG_OAP_CONTROL_PANEL ? cpanel_wifi_handler : NULL);
 	wifi_boot();
 	start_ota_task(storage_get_config("ota"));

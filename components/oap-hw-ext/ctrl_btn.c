@@ -30,93 +30,80 @@
 #include "oap_common.h"
 #include "ctrl_btn.h"
 #include "esp_log.h"
+#include "esp_err.h"
+#include "driver/gpio.h"
+#include "freertos/queue.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
+#define TAG "btn"
 
-static QueueHandle_t gpio_evt_queue = NULL;
-static QueueHandle_t btn_events = NULL;
+typedef struct {
+	uint8_t gpio_num;
+	uint32_t timestamp;
+} gpio_event_t;
 
+static QueueHandle_t gpio_evt_queue;
+static uint32_t last_click = 0;
+static btn_callback_f _callback = NULL;
 
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+	uint32_t t = millis();
+	/*
+	 * TODO is there a way to programmatically eliminate flickering?
+	 */
+	if (t - last_click < 80) return;
+	last_click = t;
+    gpio_event_t gpio_evt = {
+    	.gpio_num = (uint8_t)(uint32_t)arg,
+		.timestamp = t
+    };
+    xQueueSendFromISR(gpio_evt_queue, &gpio_evt, NULL);
 }
 
-static long int now() {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+static void gpio_watchdog_task() {
+	gpio_event_t gpio_evt;
+	int count = 0;
+	uint32_t first_click = 0;
+
+	while(1) {
+		if (xQueueReceive(gpio_evt_queue, &gpio_evt, 1000)) {
+			_callback(SINGLE_CLICK);
+			//20 sec to perform the action
+			if (!first_click || gpio_evt.timestamp - first_click > 20000) {
+				first_click = gpio_evt.timestamp;
+				count = 0;
+			}
+			count++;
+			ESP_LOGD(TAG, "click gpio[%d] [%d in sequence]",gpio_evt.gpio_num, count);
+
+			//due to flickering we cannot precisely count all clicks anyway
+			if (count == 10) {
+				_callback(MANY_CLICKS);
+			}
+			if (count >= 20) {
+				_callback(TOO_MANY_CLICKS);
+				first_click=0;
+				count=0;
+			}
+		}
+	}
 }
 
-static uint8_t gpio_to_index[40] = {-1};
-
-static void btn_task()
-{
-    uint32_t io_num;
-    uint8_t level[40] = {0};
-    long int time = now();
-    long int _time;
-
-
-    for(;;) {
-        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-
-        	//debounce
-        	_time = now();
-        	if (_time - time > 50 || io_num >= 40) {
-        		btn_event event = {
-        			.index = gpio_to_index[io_num],
-        			.gpio = io_num,
-					.level= gpio_get_level(io_num)
-        		};
-
-        		if (level[event.gpio] == event.level) continue;
-
-        		time = _time;
-        		level[event.gpio] = event.level;
-        		xQueueSend(btn_events, &event, 500);
-        	}
-        }
-    }
+esp_err_t btn_configure(btn_callback_f callback) {
+	_callback = callback;
+	gpio_evt_queue = xQueueCreate(10, sizeof(gpio_event_t));
+	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
+	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
+	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_POSEDGE);
+	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+	gpio_isr_handler_add(CONFIG_OAP_BTN_0_PIN, gpio_isr_handler, (void*) CONFIG_OAP_BTN_0_PIN);
+	xTaskCreate((TaskFunction_t)gpio_watchdog_task, "gpio_watchdog_task", 1024*2, NULL, DEFAULT_TASK_PRIORITY+2, NULL);
+	return ESP_OK; //TODO handle errors
 }
 
-
-QueueHandle_t btn_init(gpio_num_t *btn_gpio, uint8_t num_of_btns)
-{
-	btn_events = xQueueCreate(1, sizeof(btn_event));
-    gpio_config_t io_conf;
-
-    //interrupt of ...
-    io_conf.intr_type = GPIO_INTR_ANYEDGE;
-    //bit mask of the pins,
-    io_conf.pin_bit_mask = 0;
-    //set as input mode
-    io_conf.mode = GPIO_MODE_INPUT;
-    //set pull-up mode
-    io_conf.pull_up_en = 0;
-    io_conf.pull_down_en = 1;
-
-    for (int n = 0; n < num_of_btns; n++) {
-    	io_conf.pin_bit_mask |=  (uint64_t)(((uint64_t)1)<<((uint64_t)(btn_gpio[n])));
-    }
-
-    gpio_config(&io_conf);
-
-    //create a queue to handle gpio event from isr
-    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-    //start gpio task
-    xTaskCreate(btn_task, "btn_task", 2048, NULL, DEFAULT_TASK_PRIORITY, NULL);
-
-    //install gpio isr service
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-    //hook isr handler for specific gpio pin
-    for (int n = 0; n < num_of_btns; n++) {
-    	gpio_to_index[btn_gpio[n]] = n;
-    	gpio_isr_handler_add(btn_gpio[n], gpio_isr_handler, (void*) btn_gpio[n]);
-    }
-
-    return btn_events;
+bool is_ap_mode_pressed() {
+	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
 }
-
 
