@@ -71,6 +71,17 @@ static int is_white_char(int ch) {
 	return ch == '\n' || ch == '\r' || ch == '\t';
 }
 
+void reset_to_factory_partition() {
+	ESP_LOGW(TAG, "RESET TO FACTORY");
+	const esp_partition_t *factory = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
+	if (factory) {
+		esp_ota_set_boot_partition(factory);
+		oap_reboot();
+	} else {
+		ESP_LOGE(TAG, "no factory partition?");
+	}
+}
+
 esp_err_t parse_ota_info(ota_info_t* ota_info, char* line, int len) {
 	if (len <= 0) return OAP_OTA_ERR_EMPTY_RESPONSE;
 	char* ver = NULL; char* file = NULL; char* sha = NULL;

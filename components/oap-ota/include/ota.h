@@ -31,5 +31,6 @@
 #define OAP_OTA_INDEX_URI 		CONFIG_OAP_OTA_INDEX_URI
 
 void start_ota_task(cJSON* user_ota_config);
+void reset_to_factory_partition();
 
 #endif /* COMPONENTS_OTA_INCLUDE_OTA_H_ */
