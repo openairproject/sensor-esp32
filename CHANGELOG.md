@@ -1,3 +1,8 @@
+# 1.0.0
+
+- use stable esp-idf release instead of working version (too many issues with wifi/ssl)
+- ability to reset to factory firmware [#40](https://github.com/openairproject/sensor-esp32/issues/40))
+
 # 0.6.0
 
 - fix wifi issues ([#32](https://github.com/openairproject/sensor-esp32/issues/32)), ([#19](https://github.com/openairproject/sensor-esp32/issues/19))
