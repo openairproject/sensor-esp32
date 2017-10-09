@@ -90,13 +90,13 @@ to find out what name of the serial port was assigned to our sensor (the easiest
 
 5. Now it is time to install "esptool", which is a firmware uploader from the manufacturer of ESP32 chip (Espressif company). Detailed instructions can be found here: <https://github.com/espressif/esptool/blob/master/README.md>, but if you already have Python and pip installed, just do
 
-	pip install esptool
+		pip install esptool
 	
 By default it should be installed to "/usr/local/bin/".
 
 6. It is time to perform the uplaod ('flashing'):
 
-	esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -u --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 bootloader.bin 0x30000 sensor-esp32.bin 0x8000 partitions.bin
+		esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -u --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 bootloader.bin 0x30000 sensor-esp32.bin 0x8000 partitions.bin
 	
 Use --port from the step 3, and three bin files downloaded in step 4.
 
