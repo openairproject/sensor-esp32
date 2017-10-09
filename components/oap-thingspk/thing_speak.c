@@ -62,11 +62,11 @@ static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
 			meas->env->humidity);
 	}
 
-	if (meas->env_int) {
-		sprintf(payload, "%s&field7=%.2f&field8=%.2f", payload,
-			meas->env_int->temp,
-			meas->env_int->humidity);
-	}
+	//memory metrics
+	sprintf(payload, "%s&field7=%d&field8=%d", payload,
+		avg_free_heap_size(),
+		xPortGetMinimumEverFreeHeapSize());
+
 	return payload;
 }
 
