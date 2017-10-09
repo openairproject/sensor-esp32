@@ -42,7 +42,7 @@ typedef unsigned short uint16_t;
 #define DEFAULT_TASK_PRIORITY (10)
 
 int is_reboot_in_progress();
-void oap_reboot();
+void oap_reboot(char* cause);
 
 long oap_epoch_sec();
 long oap_epoch_sec_valid();

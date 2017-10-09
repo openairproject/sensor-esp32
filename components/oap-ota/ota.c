@@ -72,11 +72,10 @@ static int is_white_char(int ch) {
 }
 
 void reset_to_factory_partition() {
-	ESP_LOGW(TAG, "RESET TO FACTORY");
 	const esp_partition_t *factory = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_FACTORY, NULL);
 	if (factory) {
 		esp_ota_set_boot_partition(factory);
-		oap_reboot();
+		oap_reboot("reset to factory");
 	} else {
 		ESP_LOGE(TAG, "no factory partition?");
 	}
@@ -282,7 +281,9 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 
 	const esp_partition_t* running_partition = esp_ota_get_running_partition();
 	ESP_LOGI(TAG, "running partition = %s", running_partition->label);
-
+	if (strcmp("factory", running_partition->label) != 0) {
+		ESP_LOGW(TAG, "OTA partition! Reset to factory for a DEV mode!");
+	}
 	if (!ota_config->update_partition) {
 		ota_config->update_partition = esp_ota_get_next_update_partition(NULL);
 	}
@@ -340,7 +341,7 @@ esp_err_t check_ota(ota_config_t* ota_config) {
 			}
 
 			ESP_LOGW(TAG, "OTA applied. Prepare to restart system!");
-			oap_reboot();
+			oap_reboot("OTA update");
 			return ESP_OK;
 		} else {
 			ESP_LOGW(TAG, "OTA downloaded but configured to be ignored");

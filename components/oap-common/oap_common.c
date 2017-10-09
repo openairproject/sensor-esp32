@@ -37,7 +37,8 @@ static int _reboot_in_progress = 0;
 int is_reboot_in_progress() {
 	return _reboot_in_progress;
 }
-void oap_reboot() {
+void oap_reboot(char* cause) {
+	ESP_LOGW("oap", "REBOOT ON DEMAND (%s)", cause);
 	_reboot_in_progress = 1;
 	esp_restart();
 }
