@@ -94,7 +94,7 @@ The procedure below was tested on Mac and Linux (Windows users, by now you shoul
 	
 	By default it should be installed to "/usr/local/bin/".
 
-6. It is time to perform the uplaod ('flashing'):
+6. It is time to perform the flashing:
 
 		esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -u --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 bootloader.bin 0x30000 sensor-esp32.bin 0x8000 partitions.bin
 	
