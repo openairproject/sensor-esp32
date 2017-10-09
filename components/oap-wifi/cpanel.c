@@ -58,8 +58,7 @@ static void handler_get_config(struct mg_connection *nc, struct http_message *me
 
 static void handler_reboot(struct mg_connection *nc) {
 	mg_send_head(nc, 200, 0, "Content-Type: text/plain");
-	ESP_LOGW(tag, "received reboot request!");
-	oap_reboot();
+	oap_reboot("requested by user");
 }
 
 static void handler_set_config(struct mg_connection *nc, struct http_message *message) {

@@ -1,7 +1,11 @@
+# 1.1.0
+
+- reboot after crash or when watchdog detects hanging task for 10sec ([#43](https://github.com/openairproject/sensor-esp32/issues/43))
+
 # 1.0.0
 
 - use stable esp-idf release instead of working version (too many issues with wifi/ssl)
-- ability to reset to factory firmware [#40](https://github.com/openairproject/sensor-esp32/issues/40))
+- ability to reset to factory firmware ([#40](https://github.com/openairproject/sensor-esp32/issues/40))
 
 # 0.6.0
 
