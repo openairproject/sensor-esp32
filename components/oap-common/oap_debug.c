@@ -61,13 +61,9 @@ void log_heap_size(const char* msg) {
 	size_t free_heap = xPortGetFreeHeapSize();
 	if (heap_samples[sample_idx%SAMPLES] == 0) heap_samples[sample_idx%SAMPLES] = free_heap;
 
-
-
-	ESP_LOGD(TAG, "heap min %d avg %d free %d change %d (%s)",
+	ESP_LOGD(TAG, "heap min %d avg %d (%s)",
 			xPortGetMinimumEverFreeHeapSize(),
 			avg_free_heap_size(),
-			free_heap,
-			free_heap-heap_samples[sample_idx%SAMPLES],
 			msg);
 	heap_samples[sample_idx%SAMPLES] = free_heap;
 	sample_idx++;
