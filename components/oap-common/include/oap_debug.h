@@ -30,6 +30,7 @@ void heap_log_print(heap_log* log, heap_log* prev);
 heap_log* heap_log_take(heap_log* log, const char* msg);
 void heap_log_free(heap_log* log);
 
+size_t avg_free_heap_size();
 
 void log_task_stack(const char* task);
 void log_heap_size(const char* msg);

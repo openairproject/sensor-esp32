@@ -37,20 +37,40 @@
 void log_task_stack(const char* task) {
 	//uxTaskGetStackHighWaterMark is marked as UNTESTED
 	#if !CONFIG_FREERTOS_ASSERT_ON_UNTESTED_FUNCTION
-		ESP_LOGD(TAG, "stack min (%d) - task '%s'", uxTaskGetStackHighWaterMark( NULL ), task);
+		ESP_LOGD(TAG, "stack min %d (task %s)", uxTaskGetStackHighWaterMark( NULL ), task);
 	#endif
 }
 
+/**
+ * current free heap is not very useful because it changes dynamically with multiple tasks running in parallel.
+ * to detect any leaks, we use a time window and choose the max value as real 'free heap'
+ */
+#define SAMPLES 10
+static size_t heap_samples[SAMPLES] = {.0};
+uint8_t sample_idx = 0;
 
-static size_t last_free_heap = 0;
+size_t avg_free_heap_size() {
+	size_t max = 0;
+	for (int i = 0; i < SAMPLES; i++) {
+		if (heap_samples[i] > max) max = heap_samples[i];
+	}
+	return max;
+}
 
 void log_heap_size(const char* msg) {
 	size_t free_heap = xPortGetFreeHeapSize();
-	if (last_free_heap == 0) last_free_heap = free_heap;
-	ESP_LOGD(TAG, "heap min (%d) free (%d) change (%d) - '%s'",
+	if (heap_samples[sample_idx%SAMPLES] == 0) heap_samples[sample_idx%SAMPLES] = free_heap;
+
+
+
+	ESP_LOGD(TAG, "heap min %d avg %d free %d change %d (%s)",
 			xPortGetMinimumEverFreeHeapSize(),
-			free_heap, free_heap-last_free_heap, msg);
-	last_free_heap = free_heap;
+			avg_free_heap_size(),
+			free_heap,
+			free_heap-heap_samples[sample_idx%SAMPLES],
+			msg);
+	heap_samples[sample_idx%SAMPLES] = free_heap;
+	sample_idx++;
 }
 
 static void* dummy;

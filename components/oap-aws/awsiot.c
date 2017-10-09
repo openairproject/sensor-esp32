@@ -60,7 +60,7 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	cJSON_AddItemToObject(reported, "status", status);
 
 	cJSON_AddNumberToObject(results, "uid", rand()); //what about 0?
-	cJSON_AddNumberToObject(status, "heap", xPortGetFreeHeapSize());
+	cJSON_AddNumberToObject(status, "heap", avg_free_heap_size());
 	cJSON_AddNumberToObject(status, "heap_min", xPortGetMinimumEverFreeHeapSize());
 
 
