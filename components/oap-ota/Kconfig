@@ -16,7 +16,7 @@ config OAP_OTA_BIN_URI_PREFIX
 
 config OAP_OTA_INDEX_URI
     string "index uri"
-    default "https://openairproject.com/ota/index.txt""
+    default "https://openairproject.com/ota/index.txt"
     help
         full URI to file with OTA definition
         
