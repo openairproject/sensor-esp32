@@ -1,3 +1,9 @@
+# 1.2.0
+
+- a few IDF configuration changes (run on single core, reduce flash freq)
+- clean up logs
+- update esp-idf 2.1 to include KRACK fix
+
 # 1.1.0
 
 - reboot after crash or when watchdog detects hanging task for 10sec ([#43](https://github.com/openairproject/sensor-esp32/issues/43))
