@@ -10,6 +10,7 @@ pipeline {
         }
         stage('test') {
             steps {
+            	sh '/opt/oap/dev/tty_refresh.sh'
                 sh 'bin/make_tests.sh'
                 sh 'sleep 3'
                 sh 'bin/run_tests.py /opt/oap/dev/ttyOAP.TEST'
