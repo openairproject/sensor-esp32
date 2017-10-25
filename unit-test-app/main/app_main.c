@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 #include "unity.h"
 #include "unity_config.h"
+#include "oap_test.h"
 
 void unityTask(void *pvParameters)
 {
@@ -13,6 +14,7 @@ void unityTask(void *pvParameters)
 
 void app_main()
 {
+	test_reset_hw();
     // Note: if unpinning this task, change the way run times are calculated in
     // unity_platform
     xTaskCreatePinnedToCore(unityTask, "unityTask", 8192, NULL,

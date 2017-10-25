@@ -30,6 +30,7 @@
 
 #define TEST "TEST"
 
+void test_reset_hw();
 /**
  * init wifi, do not wait for IP
  */

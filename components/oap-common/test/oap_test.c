@@ -76,3 +76,18 @@ void test_delay(uint32_t ms)
 {
     vTaskDelay(ms / portTICK_PERIOD_MS);
 }
+
+static void configure_gpio(uint8_t gpio) {
+	if (gpio > 0) {
+		ESP_LOGD(TAG, "configure pin %d as output", gpio);
+		gpio_pad_select_gpio(gpio);
+		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
+		ESP_ERROR_CHECK(gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY));
+	}
+}
+
+void test_reset_hw() {
+	ESP_LOGI(TAG,"reset peripherals");
+	configure_gpio(GPIO_NUM_10);	//disable pm1
+	configure_gpio(GPIO_NUM_2);		//disable pm2
+}
