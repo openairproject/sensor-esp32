@@ -82,8 +82,6 @@ static void set_gpio(uint8_t gpio, uint8_t enabled) {
 
 void pms_init_gpio(pmsx003_config_t* config) {
 	configure_gpio(config->set_pin);
-	//configure_gpio(config->heater_pin);
-	//configure_gpio(config->fan_pin);
 }
 
 static pm_data_t decodepm_data(uint8_t* data, uint8_t startByte) {

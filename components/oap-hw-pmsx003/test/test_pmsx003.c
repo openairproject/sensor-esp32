@@ -51,6 +51,11 @@ esp_err_t pms_uart_read(pmsx003_config_t* config, uint8_t data[32]);
 
 static int uart_installed = 0;
 
+void tearDown(void)
+{
+	test_reset_hw();
+}
+
 TEST_CASE("pmsx003 measurement","pmsx003") {
 	pms_init_gpio(&config);
 	if (!uart_installed) {
