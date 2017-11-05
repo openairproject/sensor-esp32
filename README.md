@@ -122,7 +122,7 @@ After rebooting sensor will connect to your wifi
 If there's a need to force sensor into Access Point mode again (e.g. when it can't connect to specified wifi),
 reboot the device with a control button pressed down.
 
-![Schema](doc/images/sensor_settings.png?raw=true =320x)
+![Schema](doc/images/sensor_settings.png?raw=true=320x)
 
 ## Building firmware
 
@@ -158,5 +158,6 @@ That's it.
 
 Happy DIY time!
 	
----	
-![Schema](doc/images/prototype.jpg?raw=true =600x)
+---
+
+![Prototype](doc/images/prototype.jpg?raw=true=600x)
