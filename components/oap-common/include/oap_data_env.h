@@ -26,7 +26,10 @@
 typedef struct {
 	double temp;
 	double pressure;
+	double sealevel;
 	double humidity;
+	uint32_t co2;
+	uint32_t height;
 	uint8_t sensor_idx;
 } env_data_t;
 

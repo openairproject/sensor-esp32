@@ -26,7 +26,8 @@
 typedef enum {
 	SINGLE_CLICK,
 	MANY_CLICKS,
-	TOO_MANY_CLICKS
+	TOO_MANY_CLICKS,
+	LONG_PRESS
 } btn_action_t;
 typedef void(*btn_callback_f)(btn_action_t);
 

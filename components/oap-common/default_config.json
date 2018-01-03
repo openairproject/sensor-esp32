@@ -4,7 +4,8 @@
 		"password": "",
 		"ip": "",
 		"gw": "",
-		"netmask": ""
+		"netmask": "",
+		"sensorId": ""
 	},
 	"thingspeak": {
 		"enabled": 0,
@@ -28,7 +29,12 @@
 			"warmUpTime":	30,
 			"measInterval": 300,
 			"test"		:	0,
-			"measStrategy":	0
+			"measStrategy"	:	0,
+			"height"	:	573
 		}
+	},
+	"baycom": {
+		"enabled": 0,
+		"url": "https://username:password@ota-sensor-server/pushvals.cgi"
 	}
 }

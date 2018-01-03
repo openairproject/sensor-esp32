@@ -36,6 +36,7 @@
 #include "oap_common.h"
 #include "oap_debug.h"
 #include "oap_publisher.h"
+#include "oap_storage.h"
 #include "bootwifi.h"
 
 static const char *TAG = "awsiot";
@@ -130,13 +131,6 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	free(body);
 	config_sent = config_sent || res == ESP_OK;
 	return res;
-}
-
-static void set_config_str_field(char** field, char* value) {
-	if (*field) {
-		free(*field);
-	}
-	*field = str_dup(value);
 }
 
 static esp_err_t awsiot_configure(cJSON* awsiot) {

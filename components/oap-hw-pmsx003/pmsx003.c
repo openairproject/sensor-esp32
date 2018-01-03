@@ -31,6 +31,7 @@
 #include "esp_log.h"
 #include "pmsx003.h"
 #include "oap_debug.h"
+#include "oap_common.h"
 
 /*
  * Driver for Plantower PMS3003 / PMS5003 / PMS7003 dust sensors.
@@ -62,22 +63,6 @@ esp_err_t pms_init_uart(pmsx003_config_t* config) {
 
     ret = uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
     return ret;
-}
-
-static void configure_gpio(uint8_t gpio) {
-	if (gpio > 0) {
-		ESP_LOGD(TAG, "configure pin %d as output", gpio);
-		gpio_pad_select_gpio(gpio);
-		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
-		ESP_ERROR_CHECK(gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY));
-	}
-}
-
-static void set_gpio(uint8_t gpio, uint8_t enabled) {
-	if (gpio > 0) {
-		ESP_LOGD(TAG, "set pin %d => %d", gpio, enabled);
-		gpio_set_level(gpio, enabled);
-	}
 }
 
 void pms_init_gpio(pmsx003_config_t* config) {

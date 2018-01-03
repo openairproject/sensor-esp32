@@ -124,6 +124,11 @@
             <label>Netmask</label>
             <input type="text" name="wifi.netmask" class="short"/>
             </row>
+
+            <row>
+                <label>Hostname / Sensor ID *</label>
+                <input type="text" name="wifi.sensorId" required autocorrect="off" autocapitalize="off" spellcheck="false">
+            </row>
         </fieldset>
         
         <fieldset>
@@ -180,6 +185,24 @@
             <row>
                 <label>Measurement strategy (adv)</label>
                 <input type="number" name="sensor.config.measStrategy" class="short"/>
+            </row>
+
+            <row>
+                <label>Height (m)</label>
+                <input type="number" name="sensor.config.height" class="short"/>
+            </row>
+        </fieldset>
+
+        <fieldset>
+            <legend>BayCom Client</legend>
+            <row>
+                <label>Enabled</label>
+                <input type="checkbox" value="1" name="baycom.enabled" checked>
+            </row>
+
+            <row>
+                <label>URL *</label>
+                <input type="text" name="baycom.url" required autocorrect="off" autocapitalize="off" spellcheck="false">
             </row>
         </fieldset>
 

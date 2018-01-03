@@ -20,61 +20,59 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "thing_speak.h"
+#include "baycom.h"
 
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "oap_debug.h"
 #include "esp_request.h"
 #include "bootwifi.h"
+#include "cJSON.h"
 
-//to use https we'd need to install CA cert first.
-#define OAP_THING_SPEAK_URI "http://api.thingspeak.com/update"
+extern const uint8_t _root_ca_pem_start[] asm("_binary_lets_encrypt_x3_cross_signed_pem_start");
+extern const uint8_t _root_ca_pem_end[]   asm("_binary_lets_encrypt_x3_cross_signed_pem_end");
 
-static const char *TAG = "thingspk";
+static const char *TAG = "baycom";
 
-static char* apikey = NULL;
+static char* url = NULL;
+static char* sensorId = NULL;
 static int _configured = 0;
 
-static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
+static esp_err_t rest_post(char* uri, oap_measurement_t* meas) {
 	char* payload = malloc(512);
 	if (!payload) return NULL;
-	sprintf(payload, "api_key=%s", apikey);
+	sprintf(payload, "%s?item=%s&type=ota", uri, sensorId);
 
 	if (meas->pm) {
-		sprintf(payload, "%s&field1=%d&field2=%d&field3=%d", payload,
+		sprintf(payload, "%s&pm1_0=%d&pm2_5=%d&pm10=%d", payload,
 			meas->pm->pm1_0,
 			meas->pm->pm2_5,
 			meas->pm->pm10);
 	}
 
 	if (meas->env) {
-		sprintf(payload, "%s&field4=%.2f&field5=%.2f&field6=%.2f", payload,
+		sprintf(payload, "%s&temp=%.1f&pressure=%.1f&humidity=%.0f", payload, 
 			meas->env->temp,
-			meas->env->pressure,
+			meas->env->sealevel,
 			meas->env->humidity);
 	}
+	if (meas->co2) {
+		sprintf(payload, "%s&co2=%d", payload, 
+			meas->co2->co2);
+	}
 
-	//memory metrics
-	sprintf(payload, "%s&field7=%d&field8=%d", payload,
-		avg_free_heap_size(),
-		xPortGetMinimumEverFreeHeapSize());
-
-	return payload;
-}
-
-static esp_err_t rest_post(char* uri, char* payload) {
-	request_t* req = req_new(uri);
+	request_t* req = req_new(payload);
 	if (!req) {
 		return ESP_FAIL;
 	}
 	ESP_LOGD(TAG, "request payload: %s", payload);
-
-	req_setopt(req, REQ_SET_POSTFIELDS, payload);
+	req_setopt(req, REQ_SET_METHOD, "GET");
 	req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONNECTION_CLOSE);
+	req->ca_cert = req_parse_x509_crt((unsigned char*)_root_ca_pem_start, _root_ca_pem_end-_root_ca_pem_start);
 
 	int response_code = req_perform(req);
 	req_clean(req);
+	free(payload);
 	if (response_code == 200) {
 		ESP_LOGI(TAG, "update succeeded");
 		return ESP_OK;
@@ -85,33 +83,38 @@ static esp_err_t rest_post(char* uri, char* payload) {
 
 }
 
-static esp_err_t thing_speak_configure(cJSON* thingspeak) {
+static esp_err_t baycom_configure(cJSON* config) {
 	_configured = 0;
-	if (!thingspeak) {
+	ESP_LOGI(TAG, "baycom_configure");
+	if (!config) {
 		ESP_LOGI(TAG, "config not found");
 		return ESP_FAIL;
 	}
 
 	cJSON* field;
-	if (!(field = cJSON_GetObjectItem(thingspeak, "enabled")) || !field->valueint) {
+	if ((field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"wifi"), "sensorId")) && field->valuestring && strlen(field->valuestring)) {
+		set_config_str_field(&sensorId, field->valuestring);
+	} else {
+		ESP_LOGW(TAG, "sensorId not configured");
+		return ESP_FAIL;
+	}
+	if ((field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"baycom"), "url")) && field->valuestring) {
+		set_config_str_field(&url, field->valuestring);
+	} else {
+		ESP_LOGW(TAG, "url not configured");
+		return ESP_FAIL;
+	}
+	if (!(field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"baycom"), "enabled")) || !field->valueint) {
 		ESP_LOGI(TAG, "client disabled");
 		return ESP_FAIL;
 	}
-
-	if ((field = cJSON_GetObjectItem(thingspeak, "apikey")) && field->valuestring) {
-		set_config_str_field(&apikey, field->valuestring);
-	} else {
-		ESP_LOGW(TAG, "apikey not configured");
-		return ESP_FAIL;
-	}
-
 	_configured = 1;
 	return ESP_OK;
 }
 
-static esp_err_t thing_speak_send(oap_measurement_t* meas, oap_sensor_config_t* oap_sensor_config) {
+static esp_err_t baycom_send(oap_measurement_t* meas, oap_sensor_config_t* oap_sensor_config) {
 	if (!_configured) {
-		ESP_LOGE(TAG, "thingspeak not configured");
+		ESP_LOGE(TAG, "BayCom not configured");
 		return ESP_FAIL;
 	}
 	esp_err_t ret;
@@ -120,18 +123,12 @@ static esp_err_t thing_speak_send(oap_measurement_t* meas, oap_sensor_config_t* 
 		return ret;
 	}
 
-	char* payload = prepare_thingspeak_payload(meas);
-	if (payload) {
-		esp_err_t ret = rest_post(OAP_THING_SPEAK_URI, payload);
-		free(payload);
-		return ret;
-	} else {
-		return ESP_FAIL;
-	}
+	ret = rest_post(url, meas);
+	return ret;
 }
 
-oap_publisher_t thingspeak_publisher = {
-	.name = "ThingSpeak",
-	.configure = thing_speak_configure,
-	.publish = &thing_speak_send
+oap_publisher_t BayCom_publisher = {
+	.name = "BayCom",
+	.configure = baycom_configure,
+	.publish = &baycom_send
 };

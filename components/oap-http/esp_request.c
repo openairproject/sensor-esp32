@@ -26,6 +26,7 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
+#include "mbedtls/base64.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -104,13 +105,26 @@ static int resolve_dns(const char *host, struct sockaddr_in *ip) {
 
 static char *http_auth_basic_encode(const char *username, const char *password)
 {
+    char inputstr[64];
+    char *outstr = NULL;
+    size_t olen;
+    sprintf(inputstr,"%.30s:%.30s", username, password);
+//    ESP_LOGD(TAG, "http_auth_basic_encode: %s", inputstr);
+
+    mbedtls_base64_encode( (unsigned char*)outstr, 0, &olen, (unsigned char*)inputstr, strlen(inputstr));
+    outstr = (char *)malloc(olen+1);
+    if(!mbedtls_base64_encode( (unsigned char*)outstr, olen, &olen, (unsigned char*)inputstr, strlen(inputstr))) {
+//        ESP_LOGD(TAG, "http_auth_basic_encode: %s", outstr);
+        return outstr;
+    }
+    free(outstr);
     return NULL;
 }
 
 
 static int nossl_connect(request_t *req)
 {
-    int socket;
+    int sock;
     struct sockaddr_in remote_ip;
     struct timeval tv;
     req_list_t *host, *port, *timeout;
@@ -125,8 +139,8 @@ static int nossl_connect(request_t *req)
         }
     }
 
-    socket = socket(PF_INET, SOCK_STREAM, 0);
-    REQ_CHECK(socket < 0, "socket failed", return -1);
+    sock = socket(PF_INET, SOCK_STREAM, 0);
+    REQ_CHECK(sock < 0, "socket failed", return -1);
 
     port = req_list_get_key(req->opt, "port");
     if(port == NULL)
@@ -141,16 +155,16 @@ static int nossl_connect(request_t *req)
         tv.tv_sec = atoi(timeout->value);
     }
     tv.tv_usec = 0;
-    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     ESP_LOGD(TAG, "[sock=%d],connecting to server IP:%s,Port:%s...",
-             socket, ipaddr_ntoa((const ip_addr_t*)&remote_ip.sin_addr.s_addr), (char*)port->value);
-    if(connect(socket, (struct sockaddr *)(&remote_ip), sizeof(struct sockaddr)) != 0) {
-        close(socket);
+             sock, ipaddr_ntoa((const ip_addr_t*)&remote_ip.sin_addr.s_addr), (char*)port->value);
+    if(connect(sock, (struct sockaddr *)(&remote_ip), sizeof(struct sockaddr)) != 0) {
+        close(sock);
         return -1;
     }
-    req->socket = socket;
-    return socket;
+    req->socket = sock;
+    return sock;
 }
 
 void req_free_x509_crt(mbedtls_x509_crt* crt) {

@@ -1,7 +1,7 @@
 /*
- * oap_data.h
+ * mhz19.h
  *
- *  Created on: Oct 1, 2017
+ *  Created on: Feb 3, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,34 +20,42 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_
-#define COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_
+#ifndef MAIN_MHZ19_H_
+#define MAIN_MHZ19_H_
 
-#include "oap_data_pm.h"
+#include "oap_common.h"
 #include "oap_data_env.h"
+#include "driver/uart.h"
+
+typedef void(*env_callback)(env_data_t*);
 
 typedef struct {
-	pm_data_t* pm;
-	pm_data_t* pm_aux;
-	env_data_t* env;
-	env_data_t* env_int;
-	env_data_t* co2;
-	long int local_time;
-} oap_measurement_t;
+	uint8_t indoor;
+	uint8_t enabled;		//internal, read-only
+	uint8_t sensor_idx;
+	uint32_t interval;
+	env_callback callback;
+	uart_port_t uart_num;
+	uint8_t uart_txd_pin;
+	uint8_t uart_rxd_pin;
+	uint8_t uart_rts_pin;
+	uint8_t uart_cts_pin;
+} mhz19_config_t;
 
-typedef struct {
-	int led;
-	int heater;
-	int fan;
+/**
+ * pm samples data is send to the queue.
+ */
+esp_err_t mhz19_init(mhz19_config_t* config);
 
-	int indoor;
-	int warm_up_time;
-	int meas_time;
-	int meas_interval;
-	int meas_strategy;	//interval, continuos, etc
-	int test;
-	int height;
-} oap_sensor_config_t;
+/**
+ * enable/disable sensor.
+ */
+esp_err_t mhz19_enable(mhz19_config_t* config, uint8_t enabled);
 
 
-#endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_ */
+/**
+ * fill config based on hardware configuration
+ */
+esp_err_t mhz19_set_hardware_config(mhz19_config_t* config, uint8_t sensor_idx);
+
+#endif /* MAIN_MHZ19_H_ */

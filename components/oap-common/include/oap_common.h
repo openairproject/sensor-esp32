@@ -67,5 +67,6 @@ uint32_t micros();
 uint32_t millis();
 void delay(uint32_t);
 void delayMicroseconds(uint32_t us);
-
+void set_gpio(uint8_t gpio, uint8_t enabled);
+void configure_gpio(uint8_t gpio);
 #endif /* MAIN_COMMON_COMMON_H_ */

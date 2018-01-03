@@ -49,6 +49,7 @@ typedef struct bmx280_config_t {
 	uint8_t sensor_idx;	//sensor number (0 - 1)
 	uint32_t interval;
 	env_callback callback;
+	uint32_t height;
 
 } bmx280_config_t;
 

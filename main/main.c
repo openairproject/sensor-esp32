@@ -34,6 +34,7 @@
 #include <math.h>
 
 #include "thing_speak.h"
+#include "baycom.h"
 #include "meas_intervals.h"
 #include "meas_continuous.h"
 
@@ -42,6 +43,7 @@
 #include "ctrl_btn.h"
 #include "bmx280.h"
 #include "pmsx003.h"
+#include "mhz19.h"
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "oap_debug.h"
@@ -133,24 +135,6 @@ static void pm_meter_output_handler(pm_meter_event_t event, void* data) {
 	}
 }
 
-//TODO share
-static void set_gpio(uint8_t gpio, uint8_t enabled) {
-	if (gpio > 0) {
-		ESP_LOGD(TAG, "set pin %d => %d", gpio, enabled);
-		gpio_set_level(gpio, enabled);
-	}
-}
-
-//TODO share
-static void configure_gpio(uint8_t gpio) {
-	if (gpio > 0) {
-		ESP_LOGD(TAG, "configure pin %d as output", gpio);
-		gpio_pad_select_gpio(gpio);
-		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
-		ESP_ERROR_CHECK(gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY));
-	}
-}
-
 static void pmsx003_enable_0(uint8_t enable) {
 	if (oap_sensor_config.heater) {
 		set_gpio(pm_meter_aux.heater_pin, enable);
@@ -229,10 +213,6 @@ static esp_err_t pm_meter_init() {
 	return ESP_OK;
 }
 
-
-
-
-
 //--------- ENV -----------
 
 typedef struct {
@@ -240,15 +220,22 @@ typedef struct {
 	long timestamp;
 } env_data_record_t;
 
-static env_data_record_t last_env_data[2];
+static env_data_record_t last_env_data[3];
 static bmx280_config_t bmx280_config[2];
+static mhz19_config_t mhz19_cfg;
+static SemaphoreHandle_t envSemaphore = NULL;
 
 static void env_sensor_callback(env_data_t* env_data) {
-	if (env_data->sensor_idx <= 1) {
-		ESP_LOGI(TAG,"env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity);
-		env_data_record_t* r = last_env_data + env_data->sensor_idx;
-		r->timestamp = oap_epoch_sec();
-		memcpy(&last_env_data->env_data, env_data, sizeof(env_data_t));
+	if (env_data->sensor_idx <= 2) {
+	        if( xSemaphoreTakeRecursive( envSemaphore, ( TickType_t ) 100 ) == pdTRUE ) {
+			ESP_LOGI(TAG,"env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%, CO2: %d ppm", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity, env_data->co2);
+			env_data_record_t* r = last_env_data + env_data->sensor_idx;
+			r->timestamp = oap_epoch_sec();
+			memcpy(r, env_data, sizeof(env_data_t));
+			xSemaphoreGiveRecursive(envSemaphore);
+		} else {
+			ESP_LOGW(TAG,"*** env waiting too long for mutex ***");
+		}
 	} else {
 		ESP_LOGE(TAG, "env (%d) - invalid sensor", env_data->sensor_idx);
 	}
@@ -257,10 +244,12 @@ static void env_sensor_callback(env_data_t* env_data) {
 static void env_sensors_init() {
 	memset(&last_env_data, 0, sizeof(env_data_record_t)*2);
 	memset(bmx280_config, 0, sizeof(bmx280_config_t)*2);
+	envSemaphore = xSemaphoreCreateRecursiveMutex();
 
 	if (bmx280_set_hardware_config(&bmx280_config[0], 0) == ESP_OK) {
 		bmx280_config[0].interval = 5000;
 		bmx280_config[0].callback = &env_sensor_callback;
+		bmx280_config[0].height = oap_sensor_config.height;
 
 		if (bmx280_init(&bmx280_config[0]) != ESP_OK) {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 0);
@@ -270,14 +259,19 @@ static void env_sensors_init() {
 	if (bmx280_set_hardware_config(&bmx280_config[1], 1) == ESP_OK) {
 		bmx280_config[1].interval = 5000;
 		bmx280_config[1].callback = &env_sensor_callback;
+		bmx280_config[1].height = oap_sensor_config.height;
 
 		if (bmx280_init(&bmx280_config[1]) != ESP_OK) {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 1);
 		}
 	}
+	if (mhz19_set_hardware_config(&mhz19_cfg, 2) == ESP_OK) {
+		mhz19_cfg.interval = 5000;
+		mhz19_cfg.callback = &env_sensor_callback;
+		mhz19_init(&mhz19_cfg);
+		mhz19_enable(&mhz19_cfg, 1);
+	}
 }
-
-
 
 //--------- MAIN -----------
 
@@ -303,7 +297,7 @@ static void publish_loop() {
 			log_task_stack(TAG);
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
-			ledc_set_color(aqi,(1-aqi), 0);
+//			ledc_set_color(aqi,(1-aqi), 0);
 			ledc_set_mode(LED_SET);
 			ledc_update();
 
@@ -312,6 +306,7 @@ static void publish_loop() {
 				.pm_aux = pm_data_pair.count == 2 ? &pm_data_pair.pm_data[1] : NULL,
 				.env = sysTime - last_env_data[0].timestamp < 60 ? &last_env_data[0].env_data : NULL,
 				.env_int = sysTime - last_env_data[1].timestamp < 60 ? &last_env_data[1].env_data : NULL,
+				.co2 = sysTime - last_env_data[2].timestamp < 60 ? &last_env_data[2].env_data : NULL,
 				.local_time = localTime
 			};
 
@@ -333,6 +328,7 @@ static oap_sensor_config_t sensor_config_from_json(cJSON* sconfig) {
 	if ((field = cJSON_GetObjectItem(sconfig, "measInterval"))) sensor_config.meas_interval = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "measStrategy"))) sensor_config.meas_strategy = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "test"))) sensor_config.test = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "height"))) sensor_config.height = field->valueint;
 	return sensor_config;
 }
 
@@ -343,6 +339,9 @@ void publishers_init() {
 	}
 	if (thingspeak_publisher.configure(storage_get_config("thingspeak")) == ESP_OK) {
 		list_insert(publishers, &thingspeak_publisher);
+	}
+	if (BayCom_publisher.configure(storage_get_config(NULL)) == ESP_OK) {
+		list_insert(publishers, &BayCom_publisher);
 	}
 }
 
@@ -356,6 +355,12 @@ static void btn_handler(btn_action_t action) {
 			break;
 		case TOO_MANY_CLICKS :
 			reset_to_factory_partition();
+			break;
+		case LONG_PRESS :
+			ESP_LOGW(TAG, "config reset!");
+			storage_clean();
+			delay(1000);
+			oap_reboot("reboot due to config reset");
 			break;
 		default:
 			break;
@@ -388,6 +393,7 @@ void app_main() {
 	pm_meter_result_queue = xQueueCreate(1, sizeof(pm_data_pair_t));
 	pm_meter_init();
 	env_sensors_init();
+
 	publishers_init();
 
 	publish_loop();
