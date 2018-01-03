@@ -77,7 +77,7 @@ static esp_err_t read_i2c(i2c_comm_t* comm, uint8_t reg, uint8_t* data, int len)
 		cmd = i2c_cmd_link_create();
 		CONT_IF_I2C_OK("r6", comm, i2c_master_start(cmd));
 		CONT_IF_I2C_OK("r7", comm, i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_READ, 1));
-		CONT_IF_I2C_OK("r8", comm, i2c_master_read(cmd,data+i,1,1)); //ACK is must!
+		CONT_IF_I2C_OK("r8", comm, i2c_master_read_byte(cmd,data+i,1)); //ACK is must!
 		CONT_IF_I2C_OK("r9", comm, i2c_master_stop(cmd));
 		CONT_IF_I2C_OK("r10",comm, i2c_master_cmd_begin(comm->i2c_num, cmd, 2000/portTICK_PERIOD_MS));
 		i2c_cmd_link_delete(cmd);

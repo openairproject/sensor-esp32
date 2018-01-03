@@ -30,6 +30,7 @@
 #include <nvs_flash.h>
 #include "cJSON.h"
 #include <math.h>
+#include "oap_common.h"
 
 extern const uint8_t default_config_json_start[] asm("_binary_default_config_json_start");
 extern const uint8_t default_config_json_end[] asm("_binary_default_config_json_end");
@@ -245,6 +246,14 @@ void storage_set_bigblob(const char* key, void* value, size_t length) {
 
 //----------- config --------------
 
+void set_config_str_field(char** field, char* value) {
+	if (*field) {
+		free(*field);
+	}
+	*field = str_dup(value);
+}
+
+
 cJSON* storage_get_config(const char* module) {
 	if (!_config) {
 		ESP_LOGE(TAG, "call storage_init_config() first!");
@@ -316,6 +325,15 @@ static char* default_config() {
 	return str;
 }
 
+void get_generic_name(char *name) {
+	//generate unique SSID
+	uint8_t mac[6];
+	esp_efuse_mac_get_default(mac);
+	//ESP_LOGD(tag, "MAC= %02X:%02X:%02X:%02X:%02X:%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	//using full MAC would be the best but I'm not sure if it is safe (if someone has wifi with MAC filtering)
+	sprintf(name, "OAP-%02X%02X%02X%02X", mac[0], mac[1], mac[4], mac[5]);
+}
+
 static void storage_init_config() {
 	char* str = NULL;
 	ESP_LOGD(TAG, "get config");
@@ -354,6 +372,12 @@ static void storage_init_config() {
 			ESP_LOGE(TAG,"default config is not a proper json\n%s", str);
 			abort();
 		} else {
+			char id[32];
+			get_generic_name(id);
+			ESP_LOGW(TAG, "sensor id not configured, using %s", id);
+			cJSON_ReplaceItemInObject(cJSON_GetObjectItem(def_config,"wifi"), "sensorId", cJSON_CreateString(id));
+			free(str);
+			str=cJSON_Print(def_config);
 			ESP_LOGD(TAG,"default config\n%s",str);
 		}
 		free(str);

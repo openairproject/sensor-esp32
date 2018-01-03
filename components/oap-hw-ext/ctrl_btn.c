@@ -39,6 +39,7 @@
 
 typedef struct {
 	uint8_t gpio_num;
+	uint8_t gpio_val;
 	uint32_t timestamp;
 } gpio_event_t;
 
@@ -56,7 +57,8 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
 	last_click = t;
     gpio_event_t gpio_evt = {
     	.gpio_num = (uint8_t)(uint32_t)arg,
-		.timestamp = t
+        .gpio_val = !gpio_get_level(CONFIG_OAP_BTN_0_PIN),
+	.timestamp = t
     };
     xQueueSendFromISR(gpio_evt_queue, &gpio_evt, NULL);
 }
@@ -65,17 +67,29 @@ static void gpio_watchdog_task() {
 	gpio_event_t gpio_evt;
 	int count = 0;
 	uint32_t first_click = 0;
+	uint32_t last_down = 0;
 
 	while(1) {
 		if (xQueueReceive(gpio_evt_queue, &gpio_evt, 1000)) {
 			_callback(SINGLE_CLICK);
 			//20 sec to perform the action
-			if (!first_click || gpio_evt.timestamp - first_click > 20000) {
-				first_click = gpio_evt.timestamp;
-				count = 0;
+			if(gpio_evt.gpio_val) {
+				if (!first_click || gpio_evt.timestamp - first_click > 20000) {
+					first_click = gpio_evt.timestamp;
+					count = 0;
+				}
+				count++;
+				last_down = gpio_evt.timestamp;
+				ESP_LOGD(TAG, "click gpio[%d] [%d in sequence]",gpio_evt.gpio_num, count);
+			} else {
+				if (last_down && gpio_evt.timestamp - last_down > 5000) {
+					ESP_LOGD(TAG, "long press gpio[%d] [%d in sequence]",gpio_evt.gpio_num, count);
+					_callback(LONG_PRESS);
+					first_click=0;
+					last_down=0;
+					count=0;
+				}
 			}
-			count++;
-			ESP_LOGD(TAG, "click gpio[%d] [%d in sequence]",gpio_evt.gpio_num, count);
 
 			//due to flickering we cannot precisely count all clicks anyway
 			if (count == 10) {
@@ -95,8 +109,8 @@ esp_err_t btn_configure(btn_callback_f callback) {
 	gpio_evt_queue = xQueueCreate(10, sizeof(gpio_event_t));
 	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
 	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
-	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
-	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_POSEDGE);
+	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLUP_ONLY);
+	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_ANYEDGE);
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	gpio_isr_handler_add(CONFIG_OAP_BTN_0_PIN, gpio_isr_handler, (void*) CONFIG_OAP_BTN_0_PIN);
 	xTaskCreate((TaskFunction_t)gpio_watchdog_task, "gpio_watchdog_task", 1024*2, NULL, DEFAULT_TASK_PRIORITY+2, NULL);
@@ -104,6 +118,6 @@ esp_err_t btn_configure(btn_callback_f callback) {
 }
 
 bool is_ap_mode_pressed() {
-	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
+	return !gpio_get_level(CONFIG_OAP_BTN_0_PIN);
 }
 

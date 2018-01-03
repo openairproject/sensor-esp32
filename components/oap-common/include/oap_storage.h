@@ -26,6 +26,20 @@
 #include <stdlib.h>
 #include "cJSON.h"
 
+/**
+ * @brief    get a mac based system name
+ */
+void get_generic_name(char *name);
+
+/**
+ * @brief    get allocated string from string
+ */
+void set_config_str_field(char** field, char* value);
+
+/**
+ * @brief    initialise config
+ */
+void storage_clean();
 
 /**
  * @brief    initialise storage and config

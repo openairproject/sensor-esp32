@@ -26,6 +26,8 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <math.h>
+
 #include "sdkconfig.h"
 #include "oap_common.h"
 #include "oap_debug.h"
@@ -33,6 +35,13 @@
 #include "i2c_bme280.h"
 
 static char* TAG = "bmx280";
+static float getPressureAtSeaLevel(float height, float pressure)
+{
+    float gradient = 0.0065;
+    float tempAtSea = 15.0;
+    tempAtSea += 273.15;  // °C to K
+    return pressure / pow((1 - gradient * height / tempAtSea), (0.03416 / gradient));
+}
 
 esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 	i2c_comm_t i2c_comm = {
@@ -55,7 +64,8 @@ esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 		while(1) {
 			log_task_stack(TAG);
 			if ((ret = BME280_read(&bmx280_sensor, &result)) == ESP_OK) {
-				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.humidity);
+				result.sealevel = getPressureAtSeaLevel(bmx280_config->height, result.pressure);
+				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.sealevel, bmx280_config->height, result.humidity);
 				if (bmx280_config->callback) {
 					bmx280_config->callback(&result);
 				}
@@ -99,7 +109,7 @@ esp_err_t bmx280_i2c_setup(bmx280_config_t* config) {
 	esp_err_t res;
 	if ((res = i2c_param_config(config->i2c_num, &i2c_conf)) != ESP_OK) return res;
 
-	ESP_LOGD(TAG, "install I2C driver (bus %d)", config->i2c_num);
+	ESP_LOGD(TAG, "install I2C driver (bus %d, sda %d, scl %d)", config->i2c_num, i2c_conf.sda_io_num, i2c_conf.scl_io_num);
 	res = i2c_driver_install(config->i2c_num, I2C_MODE_MASTER, 0, 0, 0);
 	if (res == ESP_OK) {
 		i2c_drivers[config->i2c_num] = 1;

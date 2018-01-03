@@ -1,7 +1,7 @@
 /*
- * oap_data.h
+ * http.h
  *
- *  Created on: Oct 1, 2017
+ *  Created on: Feb 6, 2017
  *      Author: kris
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,34 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_
-#define COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_
+#ifndef COMPONENTS_BAYCOM_H_
+#define COMPONENTS_BAYCOM_H_
 
-#include "oap_data_pm.h"
-#include "oap_data_env.h"
-
-typedef struct {
-	pm_data_t* pm;
-	pm_data_t* pm_aux;
-	env_data_t* env;
-	env_data_t* env_int;
-	env_data_t* co2;
-	long int local_time;
-} oap_measurement_t;
-
-typedef struct {
-	int led;
-	int heater;
-	int fan;
-
-	int indoor;
-	int warm_up_time;
-	int meas_time;
-	int meas_interval;
-	int meas_strategy;	//interval, continuos, etc
-	int test;
-	int height;
-} oap_sensor_config_t;
+#include "esp_err.h"
+#include "oap_publisher.h"
 
 
-#endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_ */
+oap_publisher_t BayCom_publisher;
+
+#endif

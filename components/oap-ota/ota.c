@@ -43,8 +43,10 @@
 #define TAG "ota"
 
 
-extern const uint8_t _root_ca_pem_start[] asm("_binary_comodo_ca_pem_start");
-extern const uint8_t _root_ca_pem_end[]   asm("_binary_comodo_ca_pem_end");
+//extern const uint8_t _root_ca_pem_start[] asm("_binary_comodo_ca_pem_start");
+//extern const uint8_t _root_ca_pem_end[]   asm("_binary_comodo_ca_pem_end");
+extern const uint8_t _root_ca_pem_start[] asm("_binary_lets_encrypt_x3_cross_signed_pem_start");
+extern const uint8_t _root_ca_pem_end[]   asm("_binary_lets_encrypt_x3_cross_signed_pem_end");
 
 void sha_to_hexstr(unsigned char hash[32], unsigned char hex[64]) {
 	for (int i = 0; i < 32; i++) {
