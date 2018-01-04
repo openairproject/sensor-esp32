@@ -91,10 +91,10 @@ static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {
 				if(data[0]==0xff && data[1]==0x86) {
 					int co2val=(data[2]<<8) | data[3];
 					int t=data[4]-40;
-					int s=data[6];
+					int s=data[5];
 					int u=(data[6]<<8) | data[7];
 					ESP_LOGD(TAG, "CO2: %d T:%d S:%d U:%d",co2val, t, s, u);
-					if (config->callback) {
+					if (config->callback && co2val > 410 && co2val < 2000) {
 						env_data_t result = {
 							.sensor_idx = config->sensor_idx,
 							.temp = t,
@@ -133,6 +133,23 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 
 	char task_name[100];
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
+
+	// reset sensor	
+	uint8_t packet_reset[9]={0xff, 0x01, 0x8d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x72};
+	mhz19_check(packet_reset);
+	int len=uart_write_bytes(config->uart_num, (const char *)packet_reset, sizeof(packet_reset));
+	if(len!=9) {
+		ESP_LOGW(TAG, "MH-Z19 reset failed");
+		return ESP_FAIL;
+	}
+	// set range to 2000ppm
+	uint8_t packet_range[9]={ 0xff, 0x01, 0x99, 0x00, 0x00, 0x00, 0x07, 0xd0, 0x8f};
+	mhz19_check(packet_range);
+	len=uart_write_bytes(config->uart_num, (const char *)packet_range, sizeof(packet_range));
+	if(len!=9) {
+		ESP_LOGW(TAG, "MH-Z19 set range failed");
+		return ESP_FAIL;
+	}
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
