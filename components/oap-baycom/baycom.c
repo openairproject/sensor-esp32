@@ -1,8 +1,8 @@
 /*
- * http.c
+ * baycom.de
  *
  *  Created on: Feb 6, 2017
- *      Author: kris
+ *      Author: Deti
  *
  *  This file is part of OpenAirProject-ESP32.
  *
@@ -41,7 +41,7 @@ static int _configured = 0;
 static esp_err_t rest_post(char* uri, oap_measurement_t* meas) {
 	char* payload = malloc(512);
 	if (!payload) return NULL;
-	sprintf(payload, "%s?item=%s&type=ota", uri, sensorId);
+	sprintf(payload, "%s?item=%s&type=oap", uri, sensorId);
 
 	if (meas->pm) {
 		sprintf(payload, "%s&pm1_0=%d&pm2_5=%d&pm10=%d", payload,
