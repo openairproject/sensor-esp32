@@ -134,8 +134,8 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 	char task_name[100];
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
 
-	// reset sensor	
-	uint8_t packet_reset[9]={0xff, 0x01, 0x8d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x72};
+	// set ABC logic on (0xa0) / off (0x00)	
+	uint8_t packet_reset[9]={0xff, 0x01, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	mhz19_check(packet_reset);
 	int len=uart_write_bytes(config->uart_num, (const char *)packet_reset, sizeof(packet_reset));
 	if(len!=9) {
@@ -143,7 +143,8 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 		return ESP_FAIL;
 	}
 	// set range to 2000ppm
-	uint8_t packet_range[9]={ 0xff, 0x01, 0x99, 0x00, 0x00, 0x00, 0x07, 0xd0, 0x8f};
+	int range = 2000;
+	uint8_t packet_range[9]={ 0xff, 0x01, 0x99, range>>8, range&0xff, 0x00, 0x00, 0x00, 0x00};
 	mhz19_check(packet_range);
 	len=uart_write_bytes(config->uart_num, (const char *)packet_range, sizeof(packet_range));
 	if(len!=9) {
