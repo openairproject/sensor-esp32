@@ -49,9 +49,9 @@ typedef struct bmx280_config_t {
 	uint8_t sensor_idx;	//sensor number (0 - 1)
 	uint32_t interval;
 	env_callback callback;
-	uint32_t altitude;
-	uint32_t tempOffset;
-	uint32_t humidityOffset;
+	int32_t altitude;
+	int32_t tempOffset;
+	int32_t humidityOffset;
 } bmx280_config_t;
 
 esp_err_t bmx280_init(bmx280_config_t* config);
