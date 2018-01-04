@@ -35,3 +35,4 @@ size_t avg_free_heap_size();
 void log_task_stack(const char* task);
 void log_heap_size(const char* msg);
 void reduce_heap_size_to(size_t size);
+void hexdump(const unsigned char *data, int len);

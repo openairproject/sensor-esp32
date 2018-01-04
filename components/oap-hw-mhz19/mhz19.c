@@ -90,10 +90,14 @@ static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {
 			if(len == 9 && mhz19_check(data)){
 				if(data[0]==0xff && data[1]==0x86) {
 					int co2val=(data[2]<<8) | data[3];
-					ESP_LOGD(TAG, "CO2: %d",co2val);
+					int t=data[4]-40;
+					int s=data[6];
+					int u=(data[6]<<8) | data[7];
+					ESP_LOGD(TAG, "CO2: %d T:%d S:%d U:%d",co2val, t, s, u);
 					if (config->callback) {
 						env_data_t result = {
 							.sensor_idx = config->sensor_idx,
+							.temp = t,
 							.co2 = co2val
 						};
 						config->callback(&result);
