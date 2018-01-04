@@ -133,7 +133,7 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 
 	char task_name[100];
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
-
+#if 0
 	// set ABC logic on (0xa0) / off (0x00)	
 	uint8_t packet_reset[9]={0xff, 0x01, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	mhz19_check(packet_reset);
@@ -151,7 +151,7 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 		ESP_LOGW(TAG, "MH-Z19 set range failed");
 		return ESP_FAIL;
 	}
-
+#endif
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
