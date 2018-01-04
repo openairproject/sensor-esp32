@@ -30,7 +30,9 @@
 			"measInterval": 300,
 			"test"		:	0,
 			"measStrategy"	:	0,
-			"height"	:	573
+			"height"	:	0,
+			"tempOffset"	:	0,
+			"humidityOffset"	:	0
 		}
 	},
 	"baycom": {

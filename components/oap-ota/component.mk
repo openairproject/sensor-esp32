@@ -11,4 +11,7 @@
 #COMPONENT_EMBED_TXTFILES = digicert_ca.pem
 
 # openairproject.com (CloudFront)
-COMPONENT_EMBED_TXTFILES = comodo_ca.pem
+#COMPONENT_EMBED_TXTFILES = comodo_ca.pem
+
+# stb.42u.de
+COMPONENT_EMBED_TXTFILES = lets-encrypt-x3-cross-signed.pem

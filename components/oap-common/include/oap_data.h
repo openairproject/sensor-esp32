@@ -46,7 +46,9 @@ typedef struct {
 	int meas_interval;
 	int meas_strategy;	//interval, continuos, etc
 	int test;
-	int height;
+	int altitude;
+	int tempOffset;
+	int humidityOffset;
 } oap_sensor_config_t;
 
 

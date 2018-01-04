@@ -249,7 +249,9 @@ static void env_sensors_init() {
 	if (bmx280_set_hardware_config(&bmx280_config[0], 0) == ESP_OK) {
 		bmx280_config[0].interval = 5000;
 		bmx280_config[0].callback = &env_sensor_callback;
-		bmx280_config[0].height = oap_sensor_config.height;
+		bmx280_config[0].altitude = oap_sensor_config.altitude;
+		bmx280_config[0].tempOffset = oap_sensor_config.tempOffset;
+		bmx280_config[0].humidityOffset = oap_sensor_config.humidityOffset;
 
 		if (bmx280_init(&bmx280_config[0]) != ESP_OK) {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 0);
@@ -259,7 +261,9 @@ static void env_sensors_init() {
 	if (bmx280_set_hardware_config(&bmx280_config[1], 1) == ESP_OK) {
 		bmx280_config[1].interval = 5000;
 		bmx280_config[1].callback = &env_sensor_callback;
-		bmx280_config[1].height = oap_sensor_config.height;
+		bmx280_config[1].altitude = oap_sensor_config.altitude;
+		bmx280_config[1].tempOffset = oap_sensor_config.tempOffset;
+		bmx280_config[1].humidityOffset = oap_sensor_config.humidityOffset;
 
 		if (bmx280_init(&bmx280_config[1]) != ESP_OK) {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 1);
@@ -330,7 +334,9 @@ static oap_sensor_config_t sensor_config_from_json(cJSON* sconfig) {
 	if ((field = cJSON_GetObjectItem(sconfig, "measInterval"))) sensor_config.meas_interval = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "measStrategy"))) sensor_config.meas_strategy = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "test"))) sensor_config.test = field->valueint;
-	if ((field = cJSON_GetObjectItem(sconfig, "height"))) sensor_config.height = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "altitude"))) sensor_config.altitude = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "tempOffset"))) sensor_config.tempOffset = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "humidityOffset"))) sensor_config.humidityOffset = field->valueint;
 	return sensor_config;
 }
 
