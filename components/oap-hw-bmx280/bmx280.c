@@ -35,12 +35,12 @@
 #include "i2c_bme280.h"
 
 static char* TAG = "bmx280";
-static float getPressureAtSeaLevel(float height, float pressure)
+static float getPressureAtSeaLevel(float altitude, float pressure)
 {
     float gradient = 0.0065;
     float tempAtSea = 15.0;
     tempAtSea += 273.15;  // °C to K
-    return pressure / pow((1 - gradient * height / tempAtSea), (0.03416 / gradient));
+    return pressure / pow((1 - gradient * altitude / tempAtSea), (0.03416 / gradient));
 }
 
 esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
@@ -64,8 +64,10 @@ esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 		while(1) {
 			log_task_stack(TAG);
 			if ((ret = BME280_read(&bmx280_sensor, &result)) == ESP_OK) {
-				result.sealevel = getPressureAtSeaLevel(bmx280_config->height, result.pressure);
-				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.sealevel, bmx280_config->height, result.humidity);
+				result.sealevel = getPressureAtSeaLevel(bmx280_config->altitude, result.pressure);
+				result.temp += bmx280_config->tempOffset;
+				result.humidity += bmx280_config->humidityOffset;
+				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.sealevel, bmx280_config->altitude, result.humidity);
 				if (bmx280_config->callback) {
 					bmx280_config->callback(&result);
 				}
