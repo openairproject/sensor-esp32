@@ -296,8 +296,10 @@ static void publish_loop() {
 		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000)) {
 			log_task_stack(TAG);
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
+#ifdef CONFIG_OAP_RGB_LED
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
-//			ledc_set_color(aqi,(1-aqi), 0);
+			ledc_set_color(aqi,(1-aqi), 0);
+#endif
 			ledc_set_mode(LED_SET);
 			ledc_update();
 
