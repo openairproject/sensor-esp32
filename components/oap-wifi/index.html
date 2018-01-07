@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    
     <meta charset="UTF-8">
     <title>OAP Sensor</title>
 
@@ -96,7 +98,12 @@
 </head>
 <body>
 <h1 class="header"><div class="logo64-grey"></div><span>OpenAirProject Sensor</span><span id="ver"></span></h1>
+
 <div class="cnt">
+<fieldset>
+    <legend>Current Data</legend>
+    <span id="current"></span>
+</fieldset>
 <form>
         <fieldset>
             <legend>WiFi</legend>
@@ -395,6 +402,26 @@
     //TODO document onload
     oap.load();
 </script>
+<script>
+    function getCurrent() {
+		$.getJSON( "/status", function( json ) {
+		        var status=json.status;
+		        var data=json.data;
+			$("#current").html('Env 0: Temp: '+parseFloat(data.env0.temp).toFixed(2)+
+			                    '°C - Pressure: '+parseFloat(data.env0.pressure).toFixed(2)+
+			                    'hPa - Humidity: '+parseFloat(data.env0.humidity).toFixed(2)+
+			                    '% - Env 2: CO2: '+parseFloat(data.env2.co2).toFixed(2)+
+			                    'ppm - PM0: pm1_0: '+parseInt(data.pm0.pm1_0)+  
+			                    ' - pm2_5: '+parseInt(data.pm0.pm2_5)+
+			                    ' - pm10: '+parseInt(data.pm0.pm10));
+                });
+    }
 
+    $(document).ready(function(){
+	setInterval(getCurrent, 500);
+    });
+    
+
+</script>
 </body>
 </html>
