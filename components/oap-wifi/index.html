@@ -407,7 +407,12 @@
 		$.getJSON( "/status", function( json ) {
 		        var status=json.status;
 		        var data=json.data;
-			$("#current").html('Env 0: Temp: '+parseFloat(data.env0.temp).toFixed(2)+
+			$("#current").html('Version: '+status.version+
+                                            ' - UTC: '+status.utctime+
+			                    ' - Uptime: '+status.uptime+
+			                    ' - Heap: '+status.heap+
+			                    '<p>'+
+			                    'Env 0: Temp: '+parseFloat(data.env0.temp).toFixed(2)+
 			                    '°C - Pressure: '+parseFloat(data.env0.pressure).toFixed(2)+
 			                    'hPa - Humidity: '+parseFloat(data.env0.humidity).toFixed(2)+
 			                    '% - Env 2: CO2: '+parseFloat(data.env2.co2).toFixed(2)+
