@@ -1,8 +1,8 @@
 /*
  * http.h
  *
- *  Created on: Feb 6, 2017
- *      Author: kris
+ *  Created on: Jan 4, 2018
+ *      Author: Deti
  *
  *  This file is part of OpenAirProject-ESP32.
  *

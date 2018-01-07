@@ -37,8 +37,8 @@
 #include "esp_err.h"
 
 #define OAP_VER_MAJOR 1
-#define OAP_VER_MINOR 2
-#define OAP_VER_PATCH 1
+#define OAP_VER_MINOR 3
+#define OAP_VER_PATCH 0
 
 typedef struct {
 	uint8_t major;

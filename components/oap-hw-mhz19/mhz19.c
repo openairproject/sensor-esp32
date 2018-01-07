@@ -1,7 +1,7 @@
 /*
  * mhz19.c
  *
- *  Created on: Feb 3, 2017
+ *  Created on: Jan 4, 2018
  *      Author: Deti
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -121,7 +121,7 @@ static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {
 					int s=data[5];
 					int u=(data[6]<<8) | data[7];
 					ESP_LOGD(TAG, "CO2: %d T:%d S:%d U:%d",co2val, t, s, u);
-					if (config->callback && co2val > 410 && co2val < 2000) {
+					if (config->callback /*&& co2val > 410 && co2val < 2000*/) {
 						env_data_t result = {
 							.sensor_idx = config->sensor_idx,
 							.temp = t,
@@ -162,7 +162,7 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
 
 	// set ABC logic on (0xa0) / off (0x00)	
-	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0x00);
+//	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0x0);
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
