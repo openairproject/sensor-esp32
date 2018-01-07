@@ -35,7 +35,7 @@
 			"humidityOffset"	:	0
 		}
 	},
-	"baycom": {
+	"http_get_publisher": {
 		"enabled": 0,
 		"url": "https://username:password@ota-sensor-server/pushvals.cgi"
 	}

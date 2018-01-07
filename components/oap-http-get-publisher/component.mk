@@ -6,5 +6,4 @@
 # in the build directory. This behaviour is entirely configurable,
 # please read the ESP-IDF documents if you need to do this.
 #
-# stb.42u.de
 COMPONENT_EMBED_TXTFILES = lets-encrypt-x3-cross-signed.pem

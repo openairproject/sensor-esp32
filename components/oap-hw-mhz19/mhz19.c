@@ -79,11 +79,38 @@ static int mhz19_check(uint8_t *packet) {
 	return 1;
 }
 
+typedef enum {
+	MH_Z19_READ_GAS_CONCENTRATION = 0x86,
+	MH_Z19_CALIBRATE_ZERO_POINT   = 0x87,
+	MH_Z19_CALIBRATE_SPAN_POINT   = 0x88,
+	MH_Z19_ABC_LOGIC              = 0x79,
+	MH_Z19_SENSOR_DETECTION_RANGE = 0x99
+} mhz19_cmd_t;
+
+static int mhz19_cmd(mhz19_config_t* config, mhz19_cmd_t cmd, uint32_t val) {
+	uint8_t packet[9] = {0xff, 0x01, cmd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	
+	switch(cmd) {
+		case MH_Z19_SENSOR_DETECTION_RANGE:
+		case MH_Z19_CALIBRATE_SPAN_POINT:
+			packet[3] = val >>8;
+			packet[4] = val & 255;
+			break;
+		case MH_Z19_ABC_LOGIC:
+			packet[3] = val?0xa0:0x00;
+			break;
+		case MH_Z19_CALIBRATE_ZERO_POINT:
+		case MH_Z19_READ_GAS_CONCENTRATION:
+			break;
+	}
+	mhz19_check(packet);
+	
+	return uart_write_bytes(config->uart_num, (const char *)packet, sizeof(packet));;
+}
+
 static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {	
-	if (config->enabled) {	
-		uint8_t packet[9]={0xff, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
-		mhz19_check(packet);
-		int len=uart_write_bytes(config->uart_num, (const char *)packet, sizeof(packet));
+	if (config->enabled) {
+		int len=mhz19_cmd(config, MH_Z19_READ_GAS_CONCENTRATION, 0);
 		if(len == 9){
 			uint8_t data[32];
 			len = uart_read_bytes(config->uart_num, data, sizeof(data), 100 / portTICK_RATE_MS);
@@ -133,25 +160,10 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 
 	char task_name[100];
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
-#if 0
+
 	// set ABC logic on (0xa0) / off (0x00)	
-	uint8_t packet_reset[9]={0xff, 0x01, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	mhz19_check(packet_reset);
-	int len=uart_write_bytes(config->uart_num, (const char *)packet_reset, sizeof(packet_reset));
-	if(len!=9) {
-		ESP_LOGW(TAG, "MH-Z19 reset failed");
-		return ESP_FAIL;
-	}
-	// set range to 2000ppm
-	int range = 2000;
-	uint8_t packet_range[9]={ 0xff, 0x01, 0x99, range>>8, range&0xff, 0x00, 0x00, 0x00, 0x00};
-	mhz19_check(packet_range);
-	len=uart_write_bytes(config->uart_num, (const char *)packet_range, sizeof(packet_range));
-	if(len!=9) {
-		ESP_LOGW(TAG, "MH-Z19 set range failed");
-		return ESP_FAIL;
-	}
-#endif
+	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0x0a0);
+
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo

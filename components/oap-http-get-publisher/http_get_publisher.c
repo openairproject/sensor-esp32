@@ -1,7 +1,7 @@
 /*
  * baycom.de
  *
- *  Created on: Feb 6, 2017
+ *  Created on: Jan 4, 2018
  *      Author: Deti
  *
  *  This file is part of OpenAirProject-ESP32.
@@ -20,7 +20,7 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "baycom.h"
+#include "http_get_publisher.h"
 
 #include "oap_common.h"
 #include "oap_storage.h"
@@ -32,13 +32,13 @@
 extern const uint8_t _root_ca_pem_start[] asm("_binary_lets_encrypt_x3_cross_signed_pem_start");
 extern const uint8_t _root_ca_pem_end[]   asm("_binary_lets_encrypt_x3_cross_signed_pem_end");
 
-static const char *TAG = "baycom";
+static const char *TAG = "http_get_publisher";
 
 static char* url = NULL;
 static char* sensorId = NULL;
 static int _configured = 0;
 
-static esp_err_t rest_post(char* uri, oap_measurement_t* meas) {
+static esp_err_t http_get(char* uri, oap_measurement_t* meas) {
 	char* payload = malloc(512);
 	if (!payload) return NULL;
 	sprintf(payload, "%s?item=%s&type=oap", uri, sensorId);
@@ -83,9 +83,9 @@ static esp_err_t rest_post(char* uri, oap_measurement_t* meas) {
 
 }
 
-static esp_err_t baycom_configure(cJSON* config) {
+static esp_err_t http_get_publisher_configure(cJSON* config) {
 	_configured = 0;
-	ESP_LOGI(TAG, "baycom_configure");
+	ESP_LOGI(TAG, "http_get_publisher_configure");
 	if (!config) {
 		ESP_LOGI(TAG, "config not found");
 		return ESP_FAIL;
@@ -98,13 +98,13 @@ static esp_err_t baycom_configure(cJSON* config) {
 		ESP_LOGW(TAG, "sensorId not configured");
 		return ESP_FAIL;
 	}
-	if ((field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"baycom"), "url")) && field->valuestring) {
+	if ((field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"http_get_publisher"), "url")) && field->valuestring) {
 		set_config_str_field(&url, field->valuestring);
 	} else {
 		ESP_LOGW(TAG, "url not configured");
 		return ESP_FAIL;
 	}
-	if (!(field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"baycom"), "enabled")) || !field->valueint) {
+	if (!(field = cJSON_GetObjectItem(cJSON_GetObjectItem(config,"http_get_publisher"), "enabled")) || !field->valueint) {
 		ESP_LOGI(TAG, "client disabled");
 		return ESP_FAIL;
 	}
@@ -112,9 +112,9 @@ static esp_err_t baycom_configure(cJSON* config) {
 	return ESP_OK;
 }
 
-static esp_err_t baycom_send(oap_measurement_t* meas, oap_sensor_config_t* oap_sensor_config) {
+static esp_err_t http_get_publisher_send(oap_measurement_t* meas, oap_sensor_config_t* oap_sensor_config) {
 	if (!_configured) {
-		ESP_LOGE(TAG, "BayCom not configured");
+		ESP_LOGE(TAG, "http_get_publisher not configured");
 		return ESP_FAIL;
 	}
 	esp_err_t ret;
@@ -123,12 +123,12 @@ static esp_err_t baycom_send(oap_measurement_t* meas, oap_sensor_config_t* oap_s
 		return ret;
 	}
 
-	ret = rest_post(url, meas);
+	ret = http_get(url, meas);
 	return ret;
 }
 
-oap_publisher_t BayCom_publisher = {
-	.name = "BayCom",
-	.configure = baycom_configure,
-	.publish = &baycom_send
+oap_publisher_t http_get_publisher = {
+	.name = "http_get_publisher",
+	.configure = http_get_publisher_configure,
+	.publish = &http_get_publisher_send
 };

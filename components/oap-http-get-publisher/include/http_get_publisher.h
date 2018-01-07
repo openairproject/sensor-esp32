@@ -20,13 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_BAYCOM_H_
-#define COMPONENTS_BAYCOM_H_
+#ifndef COMPONENTS_HTTP_GET_PUBLISHER_H_
+#define COMPONENTS_HTTP_GET_PUBLISHER_H_
 
 #include "esp_err.h"
 #include "oap_publisher.h"
 
 
-oap_publisher_t BayCom_publisher;
+oap_publisher_t http_get_publisher;
 
 #endif

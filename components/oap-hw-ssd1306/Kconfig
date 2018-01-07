@@ -1,0 +1,8 @@
+menu "OAP SDD1306 OLED Display"
+
+config OAP_SDD1306_ENABLED
+    bool "enable SDD1306 OLED Display"
+    default y
+    help
+        todo   
+endmenu

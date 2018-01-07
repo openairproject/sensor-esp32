@@ -1,5 +1,11 @@
 menu "OAP MH-Z19 CO2 Sensor"
 
+config OAP_MH_ENABLED
+    bool "enable MH-Z19 CO2 Sensor"
+    default y
+    help
+        todo   
+
 config OAP_MH_UART_NUM
     hex "uart num"
     default 2
