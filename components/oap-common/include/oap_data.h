@@ -51,5 +51,9 @@ typedef struct {
 	int humidityOffset;
 } oap_sensor_config_t;
 
+typedef struct {
+	env_data_t env_data;
+	long timestamp;
+} env_data_record_t;
 
 #endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_ */
