@@ -6,12 +6,3 @@
 # in the build directory. This behaviour is entirely configurable,
 # please read the ESP-IDF documents if you need to do this.
 #
-
-# GitHub (https://www.digicert.com/CACerts/DigiCertHighAssuranceEVRootCA.crt)
-#COMPONENT_EMBED_TXTFILES = digicert_ca.pem
-
-# openairproject.com (CloudFront)
-COMPONENT_EMBED_TXTFILES = comodo_ca.pem
-
-# lets encrypt signed sites
-# COMPONENT_EMBED_TXTFILES = lets-encrypt-x3-cross-signed.pem

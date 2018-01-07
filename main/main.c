@@ -34,7 +34,7 @@
 #include <math.h>
 
 #include "thing_speak.h"
-#include "baycom.h"
+#include "http_get_publisher.h"
 #include "meas_intervals.h"
 #include "meas_continuous.h"
 
@@ -51,6 +51,7 @@
 #include "ota.h"
 #include "oap_data.h"
 #include "server_cpanel.h"
+#include "ssd1366.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -107,12 +108,14 @@ static void ledc_init() {
 
 static QueueHandle_t pm_meter_result_queue;
 static pmsx003_config_t pms_pair_config[2];
+static pm_data_pair_t pm_data_array;
 extern pm_meter_t pm_meter_intervals;
 extern pm_meter_t pm_meter_continuous;
 
 #define PM_RESULT_SEND_TIMEOUT 100
 
 static void pm_meter_result_handler(pm_data_pair_t* pm_data_pair) {
+	memcpy(&pm_data_array, pm_data_pair, sizeof(pm_data_pair_t));
 	if (!xQueueSend(pm_meter_result_queue, pm_data_pair, PM_RESULT_SEND_TIMEOUT)) {
 		ESP_LOGW(TAG,"pm_meter_result_queue overflow");
 	}
@@ -227,8 +230,8 @@ static SemaphoreHandle_t envSemaphore = NULL;
 
 static void env_sensor_callback(env_data_t* env_data) {
 	if (env_data->sensor_idx <= 2) {
-	        if( xSemaphoreTakeRecursive( envSemaphore, ( TickType_t ) 100 ) == pdTRUE ) {
-			ESP_LOGI(TAG,"env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%, CO2: %d ppm", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity, env_data->co2);
+	        if( xSemaphoreTakeRecursive( envSemaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
+			ESP_LOGI(TAG, "env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%, CO2: %d ppm", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity, env_data->co2);
 			env_data_record_t* r = last_env_data + env_data->sensor_idx;
 			r->timestamp = oap_epoch_sec();
 			memcpy(r, env_data, sizeof(env_data_t));
@@ -269,12 +272,14 @@ static void env_sensors_init() {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 1);
 		}
 	}
+#ifdef CONFIG_OAP_MH_ENABLED
 	if (mhz19_set_hardware_config(&mhz19_cfg, 2) == ESP_OK) {
 		mhz19_cfg.interval = 1000;
 		mhz19_cfg.callback = &env_sensor_callback;
 		mhz19_init(&mhz19_cfg);
 		mhz19_enable(&mhz19_cfg, 1);
 	}
+#endif
 }
 
 //--------- MAIN -----------
@@ -348,8 +353,8 @@ void publishers_init() {
 	if (thingspeak_publisher.configure(storage_get_config("thingspeak")) == ESP_OK) {
 		list_insert(publishers, &thingspeak_publisher);
 	}
-	if (BayCom_publisher.configure(storage_get_config(NULL)) == ESP_OK) {
-		list_insert(publishers, &BayCom_publisher);
+	if (http_get_publisher.configure(storage_get_config(NULL)) == ESP_OK) {
+		list_insert(publishers, &http_get_publisher);
 	}
 }
 
@@ -373,6 +378,36 @@ static void btn_handler(btn_action_t action) {
 		default:
 			break;
 	}
+}
+
+void display_task(void *ptr) {
+	char logstr[80];
+	
+	ssd1306_init();
+	ssd1306_display_clear();
+	sprintf(logstr, "\n\nESP32-Sensor\n\nVersion %s", oap_version_str());	
+	ssd1306_display_text(logstr);
+	char *toggle="";
+	while(1) {
+		delay(5000);
+		ssd1306_display_clear();
+		sprintf(logstr, "%s%.2fC\n\n%.2fhPa\n\n%.2f%% / %dppm\n\nPM: %d / %d / %d",toggle,
+		last_env_data[0].env_data.temp, 
+		last_env_data[0].env_data.pressure, 
+		last_env_data[0].env_data.humidity, 
+		last_env_data[2].env_data.co2,
+		pm_data_array.pm_data[0].pm1_0,
+		pm_data_array.pm_data[0].pm2_5,
+		pm_data_array.pm_data[0].pm10
+		);
+		ssd1306_display_text(logstr);
+		if(!toggle[0]) {
+			toggle="\n";
+		} else {
+			toggle="";
+		}
+	}
+	vTaskDelete(NULL);	
 }
 
 void app_main() {
@@ -401,7 +436,10 @@ void app_main() {
 	pm_meter_result_queue = xQueueCreate(1, sizeof(pm_data_pair_t));
 	pm_meter_init();
 	env_sensors_init();
-
+#ifdef CONFIG_OAP_SDD1306_ENABLED
+	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
+	xTaskCreate((TaskFunction_t)display_task, "display task", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
+#endif
 	publishers_init();
 
 	publish_loop();
