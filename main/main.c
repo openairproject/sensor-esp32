@@ -108,7 +108,7 @@ static void ledc_init() {
 
 static QueueHandle_t pm_meter_result_queue;
 static pmsx003_config_t pms_pair_config[2];
-static pm_data_pair_t pm_data_array;
+pm_data_pair_t pm_data_array;
 extern pm_meter_t pm_meter_intervals;
 extern pm_meter_t pm_meter_continuous;
 
@@ -218,12 +218,8 @@ static esp_err_t pm_meter_init() {
 
 //--------- ENV -----------
 
-typedef struct {
-	env_data_t env_data;
-	long timestamp;
-} env_data_record_t;
 
-static env_data_record_t last_env_data[3];
+env_data_record_t last_env_data[3];
 static bmx280_config_t bmx280_config[2];
 static mhz19_config_t mhz19_cfg;
 static SemaphoreHandle_t envSemaphore = NULL;
