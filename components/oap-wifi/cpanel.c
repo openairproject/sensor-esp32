@@ -93,14 +93,14 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON *envobj0 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "env0", envobj0);
 		cJSON_AddItemToObject(envobj0, "temp", cJSON_CreateNumber(last_env_data[0].env_data.temp));
-		cJSON_AddItemToObject(envobj0, "pressure", cJSON_CreateNumber(last_env_data[0].env_data.pressure));	
+		cJSON_AddItemToObject(envobj0, "pressure", cJSON_CreateNumber(last_env_data[0].env_data.sealevel));	
 		cJSON_AddItemToObject(envobj0, "humidity", cJSON_CreateNumber(last_env_data[0].env_data.humidity));
 	}
 	if(CONFIG_OAP_BMX280_ENABLED_AUX) {
 		cJSON *envobj1 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "env1", envobj1);
 		cJSON_AddItemToObject(envobj1, "temp", cJSON_CreateNumber(last_env_data[1].env_data.temp));
-		cJSON_AddItemToObject(envobj1, "pressure", cJSON_CreateNumber(last_env_data[1].env_data.pressure));	
+		cJSON_AddItemToObject(envobj1, "pressure", cJSON_CreateNumber(last_env_data[1].env_data.sealevel));	
 		cJSON_AddItemToObject(envobj1, "humidity", cJSON_CreateNumber(last_env_data[1].env_data.humidity));
 	}
 	if(CONFIG_OAP_MH_ENABLED) {
@@ -152,6 +152,10 @@ static void handler_set_config(struct mg_connection *nc, struct http_message *me
  * GET /set - Set the connection info (REST request).
  * POST /ssidSelected - Set the connection info (HTML FORM).
  */
+#include "mhz19.h"
+extern mhz19_config_t mhz19_cfg;
+esp_err_t mhz19_calibrate(mhz19_config_t* config);
+
 void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 	ESP_LOGV(tag, "- Event: %d", ev);
 	uint8_t handled = 0;
@@ -191,7 +195,11 @@ void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 					handled = 1;
 				}
 			}
-
+			if(strcmp(uri, "/calibrate") == 0) {
+				mhz19_calibrate(&mhz19_cfg);
+				mg_send(nc,"ok", 2);
+				handled = 1;
+			}
 			if (!handled) {
 				mg_send_head(nc, 404, 0, "Content-Type: text/plain");
 			}
