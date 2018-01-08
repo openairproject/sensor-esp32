@@ -221,7 +221,7 @@ static esp_err_t pm_meter_init() {
 
 env_data_record_t last_env_data[3];
 static bmx280_config_t bmx280_config[2];
-static mhz19_config_t mhz19_cfg;
+mhz19_config_t mhz19_cfg;
 static SemaphoreHandle_t envSemaphore = NULL;
 
 static void env_sensor_callback(env_data_t* env_data) {
@@ -389,7 +389,7 @@ void display_task(void *ptr) {
 		ssd1306_display_clear();
 		sprintf(logstr, "%s%.2fC\n\n%.2fhPa\n\n%.2f%% / %dppm\n\nPM: %d / %d / %d",toggle,
 		last_env_data[0].env_data.temp, 
-		last_env_data[0].env_data.pressure, 
+		last_env_data[0].env_data.sealevel, 
 		last_env_data[0].env_data.humidity, 
 		last_env_data[2].env_data.co2,
 		pm_data_array.pm_data[0].pm1_0,
