@@ -77,8 +77,9 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 	struct tm timeinfo = {0};
 
 	localtime_r(&now, &timeinfo);
+	time_t boot_time = now-(xTaskGetTickCount()/configTICK_RATE_HZ);
+	long sysTime = oap_epoch_sec();
         if(timeinfo.tm_year > (2016 - 1900)) {
-		time_t boot_time = now-(xTaskGetTickCount()/configTICK_RATE_HZ);
 #if 0
                 setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
                 tzset();
@@ -86,39 +87,46 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
                 char strftime_buf[64];
                 strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
                 cJSON_AddItemToObject(status, "utctime", cJSON_CreateString(strftime_buf));
-                cJSON_AddItemToObject(status, "uptime", cJSON_CreateNumber(now - boot_time));
-                cJSON_AddItemToObject(status, "heap", cJSON_CreateNumber(esp_get_free_heap_size()));
 	}
-	if(CONFIG_OAP_BMX280_ENABLED) {
+	cJSON_AddItemToObject(status, "uptime", cJSON_CreateNumber(now - boot_time));
+	cJSON_AddItemToObject(status, "heap", cJSON_CreateNumber(esp_get_free_heap_size()));
+	
+	if(CONFIG_OAP_BMX280_ENABLED && last_env_data[0].timestamp) {
 		cJSON *envobj0 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "env0", envobj0);
 		cJSON_AddItemToObject(envobj0, "temp", cJSON_CreateNumber(last_env_data[0].env_data.temp));
 		cJSON_AddItemToObject(envobj0, "pressure", cJSON_CreateNumber(last_env_data[0].env_data.sealevel));	
 		cJSON_AddItemToObject(envobj0, "humidity", cJSON_CreateNumber(last_env_data[0].env_data.humidity));
+		cJSON_AddItemToObject(envobj0, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[0].timestamp));
 	}
-	if(CONFIG_OAP_BMX280_ENABLED_AUX) {
+	if(CONFIG_OAP_BMX280_ENABLED_AUX && last_env_data[1].timestamp) {
 		cJSON *envobj1 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "env1", envobj1);
 		cJSON_AddItemToObject(envobj1, "temp", cJSON_CreateNumber(last_env_data[1].env_data.temp));
 		cJSON_AddItemToObject(envobj1, "pressure", cJSON_CreateNumber(last_env_data[1].env_data.sealevel));	
 		cJSON_AddItemToObject(envobj1, "humidity", cJSON_CreateNumber(last_env_data[1].env_data.humidity));
+		cJSON_AddItemToObject(envobj1, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[1].timestamp));	
 	}
-	if(CONFIG_OAP_MH_ENABLED) {
+	if(CONFIG_OAP_MH_ENABLED && last_env_data[2].timestamp) {
 		cJSON *envobj2 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "env2", envobj2);
 		cJSON_AddItemToObject(envobj2, "co2", cJSON_CreateNumber(last_env_data[2].env_data.co2));
+		cJSON_AddItemToObject(envobj2, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[2].timestamp));	
 	}
-	cJSON *pmobj0 = cJSON_CreateObject();
-	cJSON_AddItemToObject(data, "pm0", pmobj0);
-	cJSON_AddItemToObject(pmobj0, "pm1_0", cJSON_CreateNumber(pm_data_array.pm_data[0].pm1_0));
-	cJSON_AddItemToObject(pmobj0, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[0].pm2_5));
-	cJSON_AddItemToObject(pmobj0, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[0].pm10));
-	if(CONFIG_OAP_PM_ENABLED_AUX) {
-		cJSON *pmobj1 = cJSON_CreateObject();
-		cJSON_AddItemToObject(data, "pm1", pmobj1);
-		cJSON_AddItemToObject(pmobj1, "pm1_0", cJSON_CreateNumber(pm_data_array.pm_data[1].pm1_0));
-		cJSON_AddItemToObject(pmobj1, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[1].pm2_5));
-		cJSON_AddItemToObject(pmobj1, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[1].pm10));
+	if(pm_data_array.timestamp) {
+		cJSON *pmobj0 = cJSON_CreateObject();
+		cJSON_AddItemToObject(data, "pm0", pmobj0);
+		cJSON_AddItemToObject(pmobj0, "pm1_0", cJSON_CreateNumber(pm_data_array.pm_data[0].pm1_0));
+		cJSON_AddItemToObject(pmobj0, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[0].pm2_5));
+		cJSON_AddItemToObject(pmobj0, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[0].pm10));
+		cJSON_AddItemToObject(pmobj0, "timestamp", cJSON_CreateNumber(sysTime - pm_data_array.timestamp));
+		if(CONFIG_OAP_PM_ENABLED_AUX) {
+			cJSON *pmobj1 = cJSON_CreateObject();
+			cJSON_AddItemToObject(data, "pm1", pmobj1);
+			cJSON_AddItemToObject(pmobj1, "pm1_0", cJSON_CreateNumber(pm_data_array.pm_data[1].pm1_0));
+			cJSON_AddItemToObject(pmobj1, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[1].pm2_5));
+			cJSON_AddItemToObject(pmobj1, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[1].pm10));
+		}
 	}
 	char* json = cJSON_Print(root);
 	mg_send(nc, json, strlen(json));

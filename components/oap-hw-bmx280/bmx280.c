@@ -65,9 +65,9 @@ esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 			log_task_stack(TAG);
 			if ((ret = BME280_read(&bmx280_sensor, &result)) == ESP_OK) {
 				result.sealevel = getPressureAtSeaLevel(bmx280_config->altitude, result.pressure);
+				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.sealevel, bmx280_config->altitude, result.humidity);
 				result.temp += bmx280_config->tempOffset;
 				result.humidity += bmx280_config->humidityOffset;
-				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.sealevel, bmx280_config->altitude, result.humidity);
 				if (bmx280_config->callback) {
 					bmx280_config->callback(&result);
 				}
@@ -106,7 +106,7 @@ esp_err_t bmx280_i2c_setup(bmx280_config_t* config) {
 	i2c_conf.scl_io_num = config->scl_pin;//CONFIG_OAP_BMX280_I2C_SCL_PIN;
 	i2c_conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
 	i2c_conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-	i2c_conf.master.clk_speed = 100000;
+	i2c_conf.master.clk_speed = 1000000;
 
 	esp_err_t res;
 	if ((res = i2c_param_config(config->i2c_num, &i2c_conf)) != ESP_OK) return res;
