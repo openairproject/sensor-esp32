@@ -291,15 +291,19 @@ static void publish_all(oap_measurement_t* meas) {
 }
 
 static void publish_loop() {
+	long last_published = 0;
+	
 	while (1) {
 		long localTime = oap_epoch_sec_valid();
 		long sysTime = oap_epoch_sec();
 		pm_data_pair_t pm_data_pair;
+		memset(&pm_data_pair, 0, sizeof(pm_data_pair));
 
 		log_heap_size("publish_loop");
 
-		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000)) {
+		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000) || (sysTime - last_published) > oap_sensor_config.meas_interval) {
 			log_task_stack(TAG);
+			last_published = sysTime;
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 #ifdef CONFIG_OAP_RGB_LED
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
@@ -309,8 +313,8 @@ static void publish_loop() {
 			ledc_update();
 
 			oap_measurement_t meas = {
-				.pm = &pm_data_pair.pm_data[0],
-				.pm_aux = pm_data_pair.count == 2 ? &pm_data_pair.pm_data[1] : NULL,
+				.pm = sysTime - pm_data_pair.timestamp < (oap_sensor_config.meas_interval*2) ? &pm_data_pair.pm_data[0]:NULL,
+				.pm_aux = pm_data_pair.timestamp < (oap_sensor_config.meas_interval*2) ? (pm_data_pair.count == 2 ? &pm_data_pair.pm_data[1] : NULL):NULL,
 				.env = sysTime - last_env_data[0].timestamp < 60 ? &last_env_data[0].env_data : NULL,
 				.env_int = sysTime - last_env_data[1].timestamp < 60 ? &last_env_data[1].env_data : NULL,
 				.co2 = sysTime - last_env_data[2].timestamp < 60 ? &last_env_data[2].env_data : NULL,
