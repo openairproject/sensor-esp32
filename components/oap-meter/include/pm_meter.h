@@ -36,6 +36,7 @@ pm_meter_aux_t pm_meter_aux;
 typedef struct {
   uint8_t count;
   pm_data_t pm_data[2];
+  long timestamp;
 } pm_data_pair_t;
 
 typedef enum {
