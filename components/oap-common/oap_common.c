@@ -121,3 +121,9 @@ void configure_gpio(uint8_t gpio) {
 		ESP_ERROR_CHECK(gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY));
 	}
 }
+
+void req_set_user_agent(request_t* req) {
+    char agent[80];
+    sprintf(agent, "User-Agent: OTA-ESP32/%s", oap_version_str());
+    req_setopt(req, REQ_SET_HEADER, agent);
+}

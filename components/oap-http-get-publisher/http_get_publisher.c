@@ -68,6 +68,8 @@ static esp_err_t http_get(char* uri, oap_measurement_t* meas) {
 	ESP_LOGD(TAG, "request payload: %s", payload);
 	req_setopt(req, REQ_SET_METHOD, "GET");
 	req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONNECTION_CLOSE);
+	req_set_user_agent(req);
+	
 	req->ca_cert = req_parse_x509_crt((unsigned char*)_root_ca_pem_start, _root_ca_pem_end-_root_ca_pem_start);
 
 	int response_code = req_perform(req);
