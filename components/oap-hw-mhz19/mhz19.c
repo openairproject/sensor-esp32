@@ -121,7 +121,7 @@ static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {
 					int s=data[5];
 					int u=(data[6]<<8) | data[7];
 					ESP_LOGD(TAG, "CO2: %d T:%d S:%d U:%d",co2val, t, s, u);
-					if (config->callback /*&& co2val > 410 && co2val < 2000*/) {
+					if (config->callback && co2val > 410 && co2val < 3000) {
 						env_data_t result = {
 							.sensor_idx = config->sensor_idx,
 							.temp = t,
@@ -154,6 +154,11 @@ esp_err_t mhz19_enable(mhz19_config_t* config, uint8_t enabled) {
 	return ESP_OK; //todo
 }
 
+esp_err_t mhz19_calibrate(mhz19_config_t* config) {
+	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0x0);
+	return mhz19_cmd(config, MH_Z19_CALIBRATE_ZERO_POINT, 0)==9?ESP_OK:ESP_FAIL;
+}
+
 esp_err_t mhz19_init(mhz19_config_t* config) {
 	mhz19_enable(config, 0);
 	mhz19_init_uart(config);
@@ -162,8 +167,9 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
 
 	// set ABC logic on (0xa0) / off (0x00)	
-//	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0x0);
-
+	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0xa0);
+	mhz19_cmd(config, MH_Z19_SENSOR_DETECTION_RANGE, 2000);
+	
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo

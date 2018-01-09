@@ -34,6 +34,8 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
+#include "esp_request.h"
+
 //to silence eclipse errors
 typedef unsigned short uint16_t;
 
@@ -69,4 +71,5 @@ void delay(uint32_t);
 void delayMicroseconds(uint32_t us);
 void set_gpio(uint8_t gpio, uint8_t enabled);
 void configure_gpio(uint8_t gpio);
+void req_set_user_agent(request_t* req);
 #endif /* MAIN_COMMON_COMMON_H_ */
