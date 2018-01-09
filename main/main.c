@@ -372,6 +372,8 @@ static void btn_handler(btn_action_t action) {
 		case LONG_PRESS :
 			ESP_LOGW(TAG, "config reset!");
 			storage_clean();
+			ledc_set_mode(LED_BLINK);
+			ledc_update();
 			delay(1000);
 			oap_reboot("reboot due to config reset");
 			break;
