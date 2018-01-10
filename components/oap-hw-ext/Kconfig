@@ -23,5 +23,11 @@ config OAP_BTN_0_PIN
     default 35
     help
         ESP32 gpio
+
+config OAP_BTN_0_ACTIVE_LOW
+    bool "Active low"
+    default n
+    help
+        ESP32 gpio
         
 endmenu
