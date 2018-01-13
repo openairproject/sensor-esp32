@@ -42,6 +42,7 @@ typedef struct {
 	uint8_t trigger_pin;
 	uint8_t echo_pin;
 	hcsr04_state_t state;
+	QueueHandle_t hcsr04_evt_queue;
 } hcsr04_config_t;
 
 /**

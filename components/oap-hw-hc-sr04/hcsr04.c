@@ -35,7 +35,6 @@
 #define ESP_INTR_FLAG_DEFAULT 0
 
 static const char* TAG = "hcsr04";
-static QueueHandle_t hcsr04_evt_queue;
 
 typedef struct {
 	uint8_t gpio_num;
@@ -63,7 +62,7 @@ static void IRAM_ATTR hcsr04_isr_handler(void* arg)
         .gpio_val = gpio_get_level(config->echo_pin),
 	.timestamp = system_get_time()
     };
-    xQueueSendFromISR(hcsr04_evt_queue, &hcsr04_evt, NULL);
+    xQueueSendFromISR(config->hcsr04_evt_queue, &hcsr04_evt, NULL);
 }
 
 static void hcsr04_task(hcsr04_config_t* config) {
@@ -73,7 +72,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 //    send_trigger(config);
     while(1) {
 	if(config->enabled) {
-		if (xQueueReceive(hcsr04_evt_queue, &gpio_evt, 	100)) {
+		if (xQueueReceive(config->hcsr04_evt_queue, &gpio_evt, 	100)) {
 //		ESP_LOGD(TAG, "%d:%d:%d", config->state, gpio_evt.gpio_val, gpio_evt.timestamp);
 			switch(config->state) {
 				case WAITFORECHO:
@@ -86,7 +85,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 					if(!gpio_evt.gpio_val) {
 						endpulse=gpio_evt.timestamp;
 						double distance = calc_dist(endpulse-startpulse);
-						ESP_LOGD(TAG, "difference: %d distance: %.2f", endpulse-startpulse, distance);
+						ESP_LOGD(TAG, "sensor: %d difference: %d distance: %.2f", config->sensor_idx, endpulse-startpulse, distance);
 						if (config->callback) {
 							env_data_t result = {
 								.sensor_idx = config->sensor_idx,
@@ -102,6 +101,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 				
 			}
 		} else {
+			ESP_LOGD(TAG, "ping");
 			send_trigger(config);
 		}
 	}
@@ -126,7 +126,7 @@ esp_err_t hcsr04_init(hcsr04_config_t* config) {
 
 	char task_name[100];
 	sprintf(task_name, "hcsr04_sensor_%d", config->sensor_idx);
-	hcsr04_evt_queue = xQueueCreate(10, sizeof(hcsr04_event_t));
+	config->hcsr04_evt_queue = xQueueCreate(10, sizeof(hcsr04_event_t));
 
 	gpio_pad_select_gpio(config->echo_pin);
 	gpio_set_direction(config->echo_pin, GPIO_MODE_INPUT);
@@ -139,7 +139,7 @@ esp_err_t hcsr04_init(hcsr04_config_t* config) {
 
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	config->state = IDLE;
-
+	ESP_LOGD(TAG, "init Trigger: %d Echo: %d", config->trigger_pin, config->echo_pin);
 	gpio_isr_handler_add(config->echo_pin, hcsr04_isr_handler, config);
 
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
@@ -151,12 +151,16 @@ esp_err_t hcsr04_set_hardware_config(hcsr04_config_t* config, uint8_t sensor_idx
 	config->sensor_idx = sensor_idx;
 	switch(sensor_idx) {
 		case 3:
+#if CONFIG_OAP_HCSR04_0_ENABLED
 			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER0;
 			config->echo_pin = CONFIG_OAP_HCSR04_ECHO0;
+#endif
 			break;
 		case 4:
+#if CONFIG_OAP_HCSR04_1_ENABLED
 			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER1;
 			config->echo_pin = CONFIG_OAP_HCSR04_ECHO1;
+#endif
 			break;
 	}
 	return ESP_OK;

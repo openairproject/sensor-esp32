@@ -219,7 +219,7 @@ static esp_err_t pm_meter_init() {
 
 //--------- ENV -----------
 
-static hcsr04_config_t hcsr04_cfg;
+static hcsr04_config_t hcsr04_cfg[2];
 env_data_record_t last_env_data[5];
 static bmx280_config_t bmx280_config[2];
 mhz19_config_t mhz19_cfg;
@@ -269,7 +269,7 @@ static void env_sensors_init() {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 1);
 		}
 	}
-#ifdef CONFIG_OAP_MH_ENABLED
+#if CONFIG_OAP_MH_ENABLED
 	if (mhz19_set_hardware_config(&mhz19_cfg, 2) == ESP_OK) {
 		mhz19_cfg.interval = 1000;
 		mhz19_cfg.callback = &env_sensor_callback;
@@ -277,20 +277,20 @@ static void env_sensors_init() {
 		mhz19_enable(&mhz19_cfg, 1);
 	}
 #endif
-#ifdef CONFIG_OAP_HCSR04_0_ENABLED
- 	if(hcsr04_set_hardware_config(&hcsr04_cfg, 3) == ESP_OK) {
- 		hcsr04_cfg.interval = 1000;
-		hcsr04_cfg.callback = &env_sensor_callback;
-		hcsr04_init(&hcsr04_cfg);
-		hcsr04_enable(&hcsr04_cfg, 1);
+#if CONFIG_OAP_HCSR04_0_ENABLED
+	if(hcsr04_set_hardware_config(&hcsr04_cfg[0], 3) == ESP_OK) {
+		hcsr04_cfg[0].interval = 1000;
+		hcsr04_cfg[0].callback = &env_sensor_callback;
+		hcsr04_init(&hcsr04_cfg[0]);
+		hcsr04_enable(&hcsr04_cfg[0], 1);
  	}
 #endif
-#ifdef CONFIG_OAP_HCSR04_1_ENABLED
- 	if(hcsr04_set_hardware_config(&hcsr04_cfg, 4) == ESP_OK) {
- 		hcsr04_cfg.interval = 1000;
-		hcsr04_cfg.callback = &env_sensor_callback;
-		hcsr04_init(&hcsr04_cfg);
-		hcsr04_enable(&hcsr04_cfg, 1);
+#if CONFIG_OAP_HCSR04_1_ENABLED
+	if(hcsr04_set_hardware_config(&hcsr04_cfg[1], 4) == ESP_OK) {
+		hcsr04_cfg[1].interval = 1000;
+		hcsr04_cfg[1].callback = &env_sensor_callback;
+		hcsr04_init(&hcsr04_cfg[1]);
+		hcsr04_enable(&hcsr04_cfg[1], 1);
  	}
 #endif
 }
@@ -322,7 +322,7 @@ static void publish_loop() {
 			log_task_stack(TAG);
 			last_published = sysTime;
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
-#ifdef CONFIG_OAP_RGB_LED
+#if CONFIG_OAP_RGB_LED
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
 			ledc_set_color(aqi,(1-aqi), 0);
 #endif
@@ -454,10 +454,12 @@ void app_main() {
 	start_ota_task(storage_get_config("ota"));
 
 	ledc_init();
+#if CONFIG_OAP_PM_UART_ENABLE || CONFIG_OAP_PM_UART_AUX_ENABLE
 	pm_meter_result_queue = xQueueCreate(1, sizeof(pm_data_pair_t));
 	pm_meter_init();
+#endif
 	env_sensors_init();
-#ifdef CONFIG_OAP_SDD1306_ENABLED
+#if CONFIG_OAP_SDD1306_ENABLED
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)display_task, "display task", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
 #endif
