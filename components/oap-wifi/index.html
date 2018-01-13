@@ -424,6 +424,12 @@
                         if(data.env2) {
                             str += '<p>Env2: CO2: '+parseFloat(data.env2.co2).toFixed(2)+'ppm';
                         }
+                        if(data.env3) {
+                            str += '<p>Env3: Distance: '+parseFloat(data.env3.distance).toFixed(0)+'cm';
+                        }
+                        if(data.env4) {
+                            str += '<p>Env4: Distance: '+parseFloat(data.env4.distance).toFixed(0)+'cm';
+                        }
                         if(data.pm0) {
                             str += '<p>PM0: pm1_0: '+parseInt(data.pm0.pm1_0)+  
                                     ' - pm2_5: '+parseInt(data.pm0.pm2_5)+
