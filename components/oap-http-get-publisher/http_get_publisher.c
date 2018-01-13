@@ -60,6 +60,14 @@ static esp_err_t http_get(char* uri, oap_measurement_t* meas) {
 		sprintf(payload, "%s&co2=%d", payload, 
 			meas->co2->co2);
 	}
+	if (meas->distance1) {
+		sprintf(payload, "%s&distance1=%d", payload, 
+			meas->distance1->distance);
+	}
+	if (meas->distance2) {
+		sprintf(payload, "%s&distance2=%d", payload, 
+			meas->distance2->distance);
+	}
 
 	request_t* req = req_new(payload);
 	if (!req) {

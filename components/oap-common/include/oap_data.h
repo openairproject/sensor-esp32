@@ -26,6 +26,8 @@
 #include "oap_data_pm.h"
 #include "oap_data_env.h"
 
+
+// FIXME this stuff has to be generalized
 typedef struct {
 	pm_data_t* pm;
 	pm_data_t* pm_aux;

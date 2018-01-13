@@ -40,6 +40,7 @@ typedef struct {
 	uint8_t gpio_num;
 	uint8_t gpio_val;
 	uint32_t timestamp;
+	int sensor_idx;
 } hcsr04_event_t;
 
 static double calc_dist(int time_diff) {
@@ -60,7 +61,8 @@ static void IRAM_ATTR hcsr04_isr_handler(void* arg)
 	hcsr04_event_t hcsr04_evt = {
     	.gpio_num = config->echo_pin,
         .gpio_val = gpio_get_level(config->echo_pin),
-	.timestamp = system_get_time()
+	.timestamp = system_get_time(),
+	.sensor_idx = config->sensor_idx
     };
     xQueueSendFromISR(config->hcsr04_evt_queue, &hcsr04_evt, NULL);
 }
@@ -73,12 +75,15 @@ static void hcsr04_task(hcsr04_config_t* config) {
     while(1) {
 	if(config->enabled) {
 		if (xQueueReceive(config->hcsr04_evt_queue, &gpio_evt, 	100)) {
-//		ESP_LOGD(TAG, "%d:%d:%d", config->state, gpio_evt.gpio_val, gpio_evt.timestamp);
+		ESP_LOGD(TAG, "%d/%d s:%d v:%d t:%d", config->sensor_idx, gpio_evt.sensor_idx, config->state, gpio_evt.gpio_val, gpio_evt.timestamp);
 			switch(config->state) {
 				case WAITFORECHO:
 					if(gpio_evt.gpio_val) {
 						startpulse=gpio_evt.timestamp;
 						config->state = RECEIVE;
+						ESP_LOGD(TAG, "sensor: %d state: %d start pulse", config->sensor_idx, config->state);
+					} else {
+						ESP_LOGD(TAG, "sensor: %d state: %d invalid val: %d", config->sensor_idx, config->state, gpio_evt.gpio_val);
 					}
 					break;
 				case RECEIVE:
@@ -86,7 +91,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 						endpulse=gpio_evt.timestamp;
 						double distance = calc_dist(endpulse-startpulse);
 						ESP_LOGD(TAG, "sensor: %d difference: %d distance: %.2f", config->sensor_idx, endpulse-startpulse, distance);
-						if (config->callback) {
+						if (distance < 1000 && config->callback) {
 							env_data_t result = {
 								.sensor_idx = config->sensor_idx,
 								.distance = distance
@@ -94,6 +99,8 @@ static void hcsr04_task(hcsr04_config_t* config) {
 							config->callback(&result);
 						}
 						config->state = IDLE;
+					} else {
+						ESP_LOGD(TAG, "sensor: %d state: %d invalid val: %d", config->sensor_idx, config->state, gpio_evt.gpio_val);
 					}
 					break;
 				case IDLE:
@@ -101,7 +108,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 				
 			}
 		} else {
-			ESP_LOGD(TAG, "ping");
+			ESP_LOGD(TAG, "sensor: %d ping", config->sensor_idx);
 			send_trigger(config);
 		}
 	}

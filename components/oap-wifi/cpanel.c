@@ -113,6 +113,18 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj2, "co2", cJSON_CreateNumber(last_env_data[2].env_data.co2));
 		cJSON_AddItemToObject(envobj2, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[2].timestamp));	
 	}
+	if(CONFIG_OAP_MH_ENABLED && last_env_data[3].timestamp) {
+		cJSON *envobj3 = cJSON_CreateObject();
+		cJSON_AddItemToObject(data, "env3", envobj3);
+		cJSON_AddItemToObject(envobj3, "distance", cJSON_CreateNumber(last_env_data[3].env_data.distance));
+		cJSON_AddItemToObject(envobj3, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[3].timestamp));	
+	}
+	if(CONFIG_OAP_MH_ENABLED && last_env_data[4].timestamp) {
+		cJSON *envobj4 = cJSON_CreateObject();
+		cJSON_AddItemToObject(data, "env4", envobj4);
+		cJSON_AddItemToObject(envobj4, "distance", cJSON_CreateNumber(last_env_data[4].env_data.distance));
+		cJSON_AddItemToObject(envobj4, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[4].timestamp));	
+	}
 	if(pm_data_array.timestamp) {
 		cJSON *pmobj0 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "pm0", pmobj0);
