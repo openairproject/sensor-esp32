@@ -110,13 +110,12 @@ esp_err_t btn_configure(btn_callback_f callback) {
 	gpio_pad_select_gpio(CONFIG_OAP_BTN_0_PIN);
 
 	gpio_set_direction(CONFIG_OAP_BTN_0_PIN, GPIO_MODE_INPUT);
-#ifdef CONFIG_OAP_BTN_0_ACTIVE_LOW
+#if CONFIG_OAP_BTN_0_ACTIVE_LOW
 	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLUP_ONLY);
-	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_ANYEDGE);
 #else
 	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
-	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_ANYEDGE);
 #endif
+	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_ANYEDGE);
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	gpio_isr_handler_add(CONFIG_OAP_BTN_0_PIN, gpio_isr_handler, (void*) CONFIG_OAP_BTN_0_PIN);
 	xTaskCreate((TaskFunction_t)gpio_watchdog_task, "gpio_watchdog_task", 1024*2, NULL, DEFAULT_TASK_PRIORITY+2, NULL);
@@ -124,7 +123,7 @@ esp_err_t btn_configure(btn_callback_f callback) {
 }
 
 bool is_ap_mode_pressed() {
-#ifdef CONFIG_OAP_BTN_0_ACTIVE_LOW
+#if CONFIG_OAP_BTN_0_ACTIVE_LOW
 	return !gpio_get_level(CONFIG_OAP_BTN_0_PIN);
 #else
 	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
