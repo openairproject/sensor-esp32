@@ -33,11 +33,7 @@
 #include "oap_debug.h"
 #include "oap_data_env.h"
 
-/*
- * Driver for Plantower PMS3003 / PMS5003 / PMS7003 dust sensors.
- * PMS sensors return two values for different environment of measurement.
- */
-#define OAP_PM_UART_BUF_SIZE (128)
+#define OAP_MHZ_UART_BUF_SIZE (128)
 
 static const char* TAG = "mhz19";
 
@@ -61,7 +57,7 @@ esp_err_t mhz19_init_uart(mhz19_config_t* config) {
     }
     //Install UART driver( We don't need an event queue here)
 
-    ret = uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
+    ret = uart_driver_install(config->uart_num, OAP_MHZ_UART_BUF_SIZE * 2, 0, 0, NULL,0);
     return ret;
 }
 

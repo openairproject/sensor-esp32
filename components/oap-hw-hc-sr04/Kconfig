@@ -1,0 +1,39 @@
+menu "OAP HC-SR04"
+
+config OAP_HCSR04_0_ENABLED
+    bool "enable ultrasonic range sensor #0 SR-HC04"
+    default y
+    help
+        todo   
+
+config OAP_HCSR04_TRIGGER0
+    int "Trigger 0 output PIN"
+    default 13
+    help
+        todo
+
+config OAP_HCSR04_ECHO0
+    int "Echo 0 input PIN"
+    default 12
+    help
+        todo
+
+config OAP_HCSR04_1_ENABLED
+    bool "enable ultrasonic range sensor #1 SR-HC04"
+    default y
+    help
+        todo   
+
+config OAP_HCSR04_TRIGGER1
+    int "Trigger 1 output PIN"
+    default 14
+    help
+        todo
+
+config OAP_HCSR04_ECHO1
+    int "Echo 1 input PIN"
+    default 27
+    help
+        todo
+
+endmenu
