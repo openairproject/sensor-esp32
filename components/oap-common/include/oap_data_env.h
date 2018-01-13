@@ -28,6 +28,7 @@ typedef struct {
 	double pressure;
 	double sealevel;
 	double humidity;
+	uint32_t distance;
 	uint32_t co2;
 	uint32_t altitude;
 	uint8_t sensor_idx;

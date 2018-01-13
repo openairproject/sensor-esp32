@@ -52,6 +52,7 @@
 #include "oap_data.h"
 #include "server_cpanel.h"
 #include "ssd1366.h"
+#include "hcsr04.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -218,16 +219,16 @@ static esp_err_t pm_meter_init() {
 
 //--------- ENV -----------
 
-
-env_data_record_t last_env_data[3];
+static hcsr04_config_t hcsr04_cfg;
+env_data_record_t last_env_data[5];
 static bmx280_config_t bmx280_config[2];
 mhz19_config_t mhz19_cfg;
 static SemaphoreHandle_t envSemaphore = NULL;
 
 static void env_sensor_callback(env_data_t* env_data) {
-	if (env_data->sensor_idx <= 2) {
+	if (env_data->sensor_idx < (sizeof(last_env_data)/sizeof(env_data_record_t))) {
 	        if( xSemaphoreTakeRecursive( envSemaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
-			ESP_LOGI(TAG, "env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%, CO2: %d ppm", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity, env_data->co2);
+			ESP_LOGI(TAG, "env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%, CO2: %d ppm, dist: %dcm", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity, env_data->co2, env_data->distance);
 			env_data_record_t* r = last_env_data + env_data->sensor_idx;
 			r->timestamp = oap_epoch_sec();
 			memcpy(r, env_data, sizeof(env_data_t));
@@ -276,6 +277,22 @@ static void env_sensors_init() {
 		mhz19_enable(&mhz19_cfg, 1);
 	}
 #endif
+#ifdef CONFIG_OAP_HCSR04_0_ENABLED
+ 	if(hcsr04_set_hardware_config(&hcsr04_cfg, 3) == ESP_OK) {
+ 		hcsr04_cfg.interval = 1000;
+		hcsr04_cfg.callback = &env_sensor_callback;
+		hcsr04_init(&hcsr04_cfg);
+		hcsr04_enable(&hcsr04_cfg, 1);
+ 	}
+#endif
+#ifdef CONFIG_OAP_HCSR04_1_ENABLED
+ 	if(hcsr04_set_hardware_config(&hcsr04_cfg, 4) == ESP_OK) {
+ 		hcsr04_cfg.interval = 1000;
+		hcsr04_cfg.callback = &env_sensor_callback;
+		hcsr04_init(&hcsr04_cfg);
+		hcsr04_enable(&hcsr04_cfg, 1);
+ 	}
+#endif
 }
 
 //--------- MAIN -----------
@@ -318,6 +335,8 @@ static void publish_loop() {
 				.env = sysTime - last_env_data[0].timestamp < 60 ? &last_env_data[0].env_data : NULL,
 				.env_int = sysTime - last_env_data[1].timestamp < 60 ? &last_env_data[1].env_data : NULL,
 				.co2 = sysTime - last_env_data[2].timestamp < 60 ? &last_env_data[2].env_data : NULL,
+				.distance1 =  sysTime - last_env_data[3].timestamp < 60 ? &last_env_data[3].env_data : NULL,
+				.distance2 =  sysTime - last_env_data[4].timestamp < 60 ? &last_env_data[4].env_data : NULL,
 				.local_time = localTime
 			};
 

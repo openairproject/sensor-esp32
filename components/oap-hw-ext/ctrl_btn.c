@@ -115,7 +115,7 @@ esp_err_t btn_configure(btn_callback_f callback) {
 	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_ANYEDGE);
 #else
 	gpio_set_pull_mode(CONFIG_OAP_BTN_0_PIN, GPIO_PULLDOWN_ONLY);
-	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_POSEDGE);
+	gpio_set_intr_type(CONFIG_OAP_BTN_0_PIN, GPIO_INTR_ANYEDGE);
 #endif
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	gpio_isr_handler_add(CONFIG_OAP_BTN_0_PIN, gpio_isr_handler, (void*) CONFIG_OAP_BTN_0_PIN);
@@ -124,6 +124,9 @@ esp_err_t btn_configure(btn_callback_f callback) {
 }
 
 bool is_ap_mode_pressed() {
+#ifdef CONFIG_OAP_BTN_0_ACTIVE_LOW
 	return !gpio_get_level(CONFIG_OAP_BTN_0_PIN);
+#else
+	return gpio_get_level(CONFIG_OAP_BTN_0_PIN);
+#endif
 }
-
