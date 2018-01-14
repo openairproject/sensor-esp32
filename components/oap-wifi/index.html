@@ -414,31 +414,31 @@
                         if(data.env0) {
                             str += '<p>Env0: Temp: '+parseFloat(data.env0.temp).toFixed(2)+
                                     '°C - Pressure: '+parseFloat(data.env0.pressure).toFixed(2)+
-                                    'hPa - Humidity: '+parseFloat(data.env0.humidity).toFixed(2)+'%';
+                                    'hPa - Humidity: '+parseFloat(data.env0.humidity).toFixed(2)+'% ('+data.env0.timestamp+'s ago)';
                         }
                         if(data.env1) {
                             str += '<p>Env1: Temp: '+parseFloat(data.env1.temp).toFixed(2)+
                                     '°C - Pressure: '+parseFloat(data.env1.pressure).toFixed(2)+
-                                    'hPa - Humidity: '+parseFloat(data.env1.humidity).toFixed(2)+'%';
+                                    'hPa - Humidity: '+parseFloat(data.env1.humidity).toFixed(2)+'% ('+data.env1.timestamp+'s ago)';
                         }
                         if(data.env2) {
-                            str += '<p>Env2: CO2: '+parseFloat(data.env2.co2).toFixed(2)+'ppm';
+                            str += '<p>Env2: CO2: '+parseFloat(data.env2.co2).toFixed(2)+'ppm ('+data.env2.timestamp+'s ago)';
                         }
                         if(data.env3) {
-                            str += '<p>Env3: Distance: '+parseFloat(data.env3.distance).toFixed(0)+'cm';
+                            str += '<p>Env3: Distance: '+parseFloat(data.env3.distance).toFixed(0)+'cm ('+data.env3.timestamp+'s ago)';;
                         }
                         if(data.env4) {
-                            str += '<p>Env4: Distance: '+parseFloat(data.env4.distance).toFixed(0)+'cm';
+                            str += '<p>Env4: Distance: '+parseFloat(data.env4.distance).toFixed(0)+'cm ('+data.env4.timestamp+'s ago)';
                         }
                         if(data.pm0) {
                             str += '<p>PM0: pm1_0: '+parseInt(data.pm0.pm1_0)+  
                                     ' - pm2_5: '+parseInt(data.pm0.pm2_5)+
-                                    ' - pm10: '+parseInt(data.pm0.pm10);
+                                    ' - pm10: '+parseInt(data.pm0.pm10)+' ('+data.pm0.timestamp+'s ago)';
                         }
                         if(data.pm1) {
                             str += '<p>PM1: pm1_0: '+parseInt(data.pm1.pm1_0)+  
                                     ' - pm2_5: '+parseInt(data.pm1.pm2_5)+
-                                    ' - pm10: '+parseInt(data.pm1.pm10);
+                                    ' - pm10: '+parseInt(data.pm1.pm10)+' ('+data.pm1.timestamp+'s ago)';
                         }
                         $("#current").html(str);
                 });

@@ -91,7 +91,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 						endpulse=gpio_evt.timestamp;
 						double distance = calc_dist(endpulse-startpulse);
 						ESP_LOGD(TAG, "sensor: %d difference: %d distance: %.2f", config->sensor_idx, endpulse-startpulse, distance);
-						if (distance < 1000 && config->callback) {
+						if (distance <= 400 && config->callback) {
 							env_data_t result = {
 								.sensor_idx = config->sensor_idx,
 								.distance = distance
