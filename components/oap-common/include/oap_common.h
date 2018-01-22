@@ -49,6 +49,14 @@ void oap_reboot(char* cause);
 long oap_epoch_sec();
 long oap_epoch_sec_valid();
 
+typedef struct {
+	double *data;
+	size_t size;
+	int lastpos;
+	double sum;
+} sma_data_t;
+
+
 //from esp-arduino
 
 /**
@@ -72,4 +80,5 @@ void delayMicroseconds(uint32_t us);
 void set_gpio(uint8_t gpio, uint8_t enabled);
 void configure_gpio(uint8_t gpio);
 void req_set_user_agent(request_t* req);
+double sma_generator (sma_data_t *sma, double value);
 #endif /* MAIN_COMMON_COMMON_H_ */
