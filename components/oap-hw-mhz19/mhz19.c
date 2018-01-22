@@ -121,7 +121,7 @@ static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {
 						env_data_t result = {
 							.sensor_idx = config->sensor_idx,
 							.temp = t,
-							.co2 = co2val
+							.co2 = sma_generator(&config->sma, co2val)
 						};
 						config->callback(&result);
 					}
@@ -164,13 +164,12 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 
 	// set ABC logic on (0xa0) / off (0x00)	
 	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0xa0);
-	mhz19_cmd(config, MH_Z19_SENSOR_DETECTION_RANGE, 2000);
 	
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
 }
-
+#define SMA_SIZE 30
 esp_err_t mhz19_set_hardware_config(mhz19_config_t* config, uint8_t sensor_idx) {
 	config->sensor_idx = sensor_idx;
 	config->uart_num = CONFIG_OAP_MH_UART_NUM;
@@ -178,5 +177,9 @@ esp_err_t mhz19_set_hardware_config(mhz19_config_t* config, uint8_t sensor_idx) 
 	config->uart_rxd_pin = CONFIG_OAP_MH_UART_RXD_PIN;
 	config->uart_rts_pin = CONFIG_OAP_MH_UART_RTS_PIN;
 	config->uart_cts_pin = CONFIG_OAP_MH_UART_CTS_PIN;
+	memset(&config->sma, 0, sizeof(sma_data_t));
+	config->sma.data = (double *)malloc(SMA_SIZE*sizeof(double));
+	memset((void*)config->sma.data, 0, SMA_SIZE*sizeof(double));
+	config->sma.size=(size_t)SMA_SIZE;
 	return ESP_OK;
 }

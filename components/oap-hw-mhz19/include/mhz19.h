@@ -40,6 +40,7 @@ typedef struct {
 	uint8_t uart_rxd_pin;
 	uint8_t uart_rts_pin;
 	uint8_t uart_cts_pin;
+	sma_data_t sma;
 } mhz19_config_t;
 
 /**

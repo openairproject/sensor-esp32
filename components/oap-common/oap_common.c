@@ -127,3 +127,13 @@ void req_set_user_agent(request_t* req) {
     sprintf(agent, "User-Agent: OTA-ESP32/%s", oap_version_str());
     req_setopt(req, REQ_SET_HEADER, agent);
 }
+
+double sma_generator (sma_data_t *sma, double value) {
+	sma->sum += value;
+	sma->data[sma->lastpos%sma->size] = value;
+	sma->lastpos++;
+	if(sma->lastpos > sma->size) {
+		sma->sum -= sma->data[(sma->lastpos+1)%sma->size];
+	}
+	return sma->sum/sma->size;
+}
