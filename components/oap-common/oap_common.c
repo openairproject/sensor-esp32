@@ -132,9 +132,12 @@ double sma_generator (sma_data_t *sma, double value) {
 	sma->sum += value;
 	sma->data[sma->lastpos%sma->size] = value;
 	sma->lastpos++;
+	unsigned int size=sma->size;
 	if(sma->lastpos >= sma->size) {
 		sma->sum -= sma->data[sma->lastpos%sma->size];
+	} else {
+		size=sma->lastpos;
 	}
-	return sma->sum/sma->size;
+	return sma->sum/size;
 }
 

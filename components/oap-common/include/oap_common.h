@@ -52,7 +52,7 @@ long oap_epoch_sec_valid();
 typedef struct {
 	double *data;
 	size_t size;
-	int lastpos;
+	unsigned int lastpos;
 	double sum;
 } sma_data_t;
 

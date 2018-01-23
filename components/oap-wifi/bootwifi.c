@@ -180,6 +180,10 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 		}
 
 		//WARNING - we cannot rely on this event, sometimes it doesn't got triggered
+		case SYSTEM_EVENT_STA_START: {
+			esp_wifi_connect();
+			break;
+		}
 		case SYSTEM_EVENT_STA_DISCONNECTED: {
 			wifi_state_change(false, false);
 			/*
@@ -194,7 +198,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			 */
 			if (!oap_wifi_config.ap_mode) {
 				ESP_LOGI(tag, "reconnect");
-				restore_wifi_setup();
+				 esp_wifi_connect();
 			}
 			break;
 		}
@@ -306,8 +310,6 @@ static void become_station() {
 	if (err){
 		ESP_LOGI(tag, "tcpip_adapter_set_hostname failed, rc=%d", err);
 	}
-
-  ESP_ERROR_CHECK(esp_wifi_connect());//FIXERR 0x3006 : ESP_ERR_WIFI_CONN (happens after reboot via control panel)
 }
 
 static void become_access_point() {
@@ -334,6 +336,7 @@ static void init_wifi() {
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+	restore_wifi_setup();
 }
 
 void wifi_boot() {
