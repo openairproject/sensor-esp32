@@ -169,7 +169,7 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
 	return ESP_OK;	//todo
 }
-#define SMA_SIZE 30
+#define SMA_SIZE 60
 esp_err_t mhz19_set_hardware_config(mhz19_config_t* config, uint8_t sensor_idx) {
 	config->sensor_idx = sensor_idx;
 	config->uart_num = CONFIG_OAP_MH_UART_NUM;
