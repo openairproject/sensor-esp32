@@ -271,7 +271,7 @@ static void env_sensors_init() {
 	}
 #if CONFIG_OAP_MH_ENABLED
 	if (mhz19_set_hardware_config(&mhz19_cfg, 2) == ESP_OK) {
-		mhz19_cfg.interval = 1000;
+		mhz19_cfg.interval = 5000;
 		mhz19_cfg.callback = &env_sensor_callback;
 		mhz19_init(&mhz19_cfg);
 		mhz19_enable(&mhz19_cfg, 1);
