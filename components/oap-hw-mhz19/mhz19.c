@@ -163,7 +163,7 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 	sprintf(task_name, "mhz19_sensor_%d", config->sensor_idx);
 
 	// set ABC logic on (0xa0) / off (0x00)	
-	mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0xa0);
+	//mhz19_cmd(config, MH_Z19_ABC_LOGIC, 0xa0);
 	
 	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
 	xTaskCreate((TaskFunction_t)mhz19_task, task_name, 1024*3, config, DEFAULT_TASK_PRIORITY, NULL);
