@@ -112,8 +112,10 @@ static char *http_auth_basic_encode(const char *username, const char *password)
 //    ESP_LOGD(TAG, "http_auth_basic_encode: %s", inputstr);
 
     mbedtls_base64_encode( (unsigned char*)outstr, 0, &olen, (unsigned char*)inputstr, strlen(inputstr));
-    outstr = (char *)malloc(olen+1);
-    if(!mbedtls_base64_encode( (unsigned char*)outstr, olen, &olen, (unsigned char*)inputstr, strlen(inputstr))) {
+    outstr = (char *)malloc(olen+1+22);
+    sprintf(outstr, "Authorization: Basic ");
+    
+    if(!mbedtls_base64_encode( (unsigned char*)outstr+21, olen, &olen, (unsigned char*)inputstr, strlen(inputstr))) {
 //        ESP_LOGD(TAG, "http_auth_basic_encode: %s", outstr);
         return outstr;
     }
