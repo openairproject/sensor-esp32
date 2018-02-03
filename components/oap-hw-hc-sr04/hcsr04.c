@@ -94,7 +94,7 @@ static void hcsr04_task(hcsr04_config_t* config) {
 						if (distance <= 400 && config->callback) {
 							env_data_t result = {
 								.sensor_idx = config->sensor_idx,
-								.distance = distance
+								.distance = sma_generator(&config->sma, distance)
 							};
 							config->callback(&result);
 						}
@@ -154,6 +154,7 @@ esp_err_t hcsr04_init(hcsr04_config_t* config) {
 	return ESP_OK;	//todo
 }
 
+#define SMA_SIZE 5
 esp_err_t hcsr04_set_hardware_config(hcsr04_config_t* config, uint8_t sensor_idx) {
 	config->sensor_idx = sensor_idx;
 	switch(sensor_idx) {
@@ -170,5 +171,9 @@ esp_err_t hcsr04_set_hardware_config(hcsr04_config_t* config, uint8_t sensor_idx
 #endif
 			break;
 	}
+	memset(&config->sma, 0, sizeof(sma_data_t));
+	config->sma.data = (double *)malloc(SMA_SIZE*sizeof(double));
+	memset((void*)config->sma.data, 0, SMA_SIZE*sizeof(double));
+	config->sma.size=(size_t)SMA_SIZE;
 	return ESP_OK;
 }
