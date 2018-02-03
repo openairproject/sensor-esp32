@@ -124,7 +124,7 @@ void configure_gpio(uint8_t gpio) {
 
 void req_set_user_agent(request_t* req) {
     char agent[80];
-    sprintf(agent, "User-Agent: OTA-ESP32/%s", oap_version_str());
+    sprintf(agent, "User-Agent: OAP-ESP32/%s", oap_version_str());
     req_setopt(req, REQ_SET_HEADER, agent);
 }
 

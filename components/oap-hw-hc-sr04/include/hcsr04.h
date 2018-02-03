@@ -43,6 +43,7 @@ typedef struct {
 	uint8_t echo_pin;
 	hcsr04_state_t state;
 	QueueHandle_t hcsr04_evt_queue;
+	sma_data_t sma;
 } hcsr04_config_t;
 
 /**
