@@ -103,9 +103,9 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	if (meas->env) {
 		cJSON* weather = cJSON_CreateObject();
 		cJSON_AddItemToObject(results, "weather", weather);
-		cJSON_AddNumberToObject(weather, "temp", meas->env->temp);
-		cJSON_AddNumberToObject(weather, "pressure", meas->env->pressure);
-		cJSON_AddNumberToObject(weather, "humidity", meas->env->humidity);
+		cJSON_AddNumberToObject(weather, "temp", meas->env->bmx280.temp);
+		cJSON_AddNumberToObject(weather, "pressure", meas->env->bmx280.pressure);
+		cJSON_AddNumberToObject(weather, "humidity", meas->env->bmx280.humidity);
 		cJSON_AddNumberToObject(weather, "sensor", meas->env->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "weather");
@@ -114,9 +114,9 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	if (meas->env_int) {
 		cJSON* internal = cJSON_CreateObject();
 		cJSON_AddItemToObject(results, "internal", internal);
-		cJSON_AddNumberToObject(internal, "temp", meas->env_int->temp);
-		cJSON_AddNumberToObject(internal, "pressure", meas->env_int->pressure);
-		cJSON_AddNumberToObject(internal, "humidity", meas->env_int->humidity);
+		cJSON_AddNumberToObject(internal, "temp", meas->env_int->bmx280.temp);
+		cJSON_AddNumberToObject(internal, "pressure", meas->env_int->bmx280.pressure);
+		cJSON_AddNumberToObject(internal, "humidity", meas->env_int->bmx280.humidity);
 		cJSON_AddNumberToObject(internal, "sensor", meas->env_int->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "internal");

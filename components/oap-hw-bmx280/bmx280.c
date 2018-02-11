@@ -71,7 +71,8 @@ esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 	};
 
 	env_data_t result = {
-		.sensor_idx = bmx280_config->sensor_idx
+		.sensor_idx = bmx280_config->sensor_idx,
+		.sensor_type = sensor_bmx280
 	};
 
 	// TODO strangely, if this is executed inside main task, LEDC fails to initialise properly PWM (and blinks in funny ways)... easy to reproduce.
@@ -80,11 +81,11 @@ esp_err_t bmx280_measurement_loop(bmx280_config_t* bmx280_config) {
 		while(1) {
 			log_task_stack(TAG);
 			if ((ret = BME280_read(&bmx280_sensor, &result)) == ESP_OK) {
-				result.sealevel = getPressureAtSeaLevel(bmx280_config->altitude, result.pressure);
-				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.temp, result.pressure, result.sealevel, bmx280_config->altitude, result.humidity);
-				result.humidity = getHumidityForTemp(result.humidity, result.temp, result.temp + bmx280_config->tempOffset);
-				result.temp += bmx280_config->tempOffset;
-				result.humidity += bmx280_config->humidityOffset;
+				result.bmx280.sealevel = getPressureAtSeaLevel(bmx280_config->altitude, result.bmx280.pressure);
+				ESP_LOGD(TAG,"sensor (%d) => Temperature : %.2f C, Pressure: %.2f hPa, Pressure: %.2f hPa @ %dm,Humidity %.2f", result.sensor_idx, result.bmx280.temp, result.bmx280.pressure, result.bmx280.sealevel, bmx280_config->altitude, result.bmx280.humidity);
+				result.bmx280.humidity = getHumidityForTemp(result.bmx280.humidity, result.bmx280.temp, result.bmx280.temp + bmx280_config->tempOffset);
+				result.bmx280.temp += bmx280_config->tempOffset;
+				result.bmx280.humidity += bmx280_config->humidityOffset;
 				if (bmx280_config->callback) {
 					bmx280_config->callback(&result);
 				}

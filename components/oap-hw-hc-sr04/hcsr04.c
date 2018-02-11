@@ -94,7 +94,8 @@ static void hcsr04_task(hcsr04_config_t* config) {
 						if (distance <= 400 && config->callback) {
 							env_data_t result = {
 								.sensor_idx = config->sensor_idx,
-								.distance = sma_generator(&config->sma, distance)
+								.sensor_type = sensor_hcsr04,
+								.hcsr04.distance = sma_generator(&config->sma, distance)
 							};
 							config->callback(&result);
 						}
@@ -160,14 +161,14 @@ esp_err_t hcsr04_set_hardware_config(hcsr04_config_t* config, uint8_t sensor_idx
 	switch(sensor_idx) {
 		case 3:
 #if CONFIG_OAP_HCSR04_0_ENABLED
-			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER0;
-			config->echo_pin = CONFIG_OAP_HCSR04_ECHO0;
+			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER0_PIN;
+			config->echo_pin = CONFIG_OAP_HCSR04_ECHO0_PIN;
 #endif
 			break;
 		case 4:
 #if CONFIG_OAP_HCSR04_1_ENABLED
-			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER1;
-			config->echo_pin = CONFIG_OAP_HCSR04_ECHO1;
+			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER1_PIN;
+			config->echo_pin = CONFIG_OAP_HCSR04_ECHO1_PIN;
 #endif
 			break;
 	}

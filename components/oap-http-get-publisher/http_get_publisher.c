@@ -52,21 +52,21 @@ static esp_err_t http_get(char* uri, oap_measurement_t* meas) {
 
 	if (meas->env) {
 		sprintf(payload, "%s&temp=%.1f&pressure=%.1f&humidity=%.0f", payload, 
-			meas->env->temp,
-			meas->env->sealevel,
-			meas->env->humidity);
+			meas->env->bmx280.temp,
+			meas->env->bmx280.sealevel,
+			meas->env->bmx280.humidity);
 	}
 	if (meas->co2) {
 		sprintf(payload, "%s&co2=%d", payload, 
-			meas->co2->co2);
+			meas->co2->mhz19.co2);
 	}
 	if (meas->distance1) {
 		sprintf(payload, "%s&distance1=%d", payload, 
-			meas->distance1->distance);
+			meas->distance1->hcsr04.distance);
 	}
 	if (meas->distance2) {
 		sprintf(payload, "%s&distance2=%d", payload, 
-			meas->distance2->distance);
+			meas->distance2->hcsr04.distance);
 	}
 
 	request_t* req = req_new(payload);

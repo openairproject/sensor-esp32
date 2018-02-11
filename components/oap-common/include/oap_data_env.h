@@ -23,15 +23,39 @@
 #ifndef COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_ENV_H_
 #define COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_ENV_H_
 
+typedef enum {
+	sensor_bmx280 = 0,
+	sensor_mhz19,
+	sensor_hcsr04,
+	sensor_gpio
+} sensor_type_t;
+
 typedef struct {
-	double temp;
-	double pressure;
-	double sealevel;
-	double humidity;
-	uint32_t distance;
-	uint32_t co2;
-	uint32_t altitude;
 	uint8_t sensor_idx;
+	sensor_type_t sensor_type;
+	
+	union {
+		struct {
+			double temp;
+			double pressure;
+			double sealevel;
+			double humidity;
+			uint32_t altitude;
+		} bmx280;
+		struct {
+			double temp;
+			uint32_t co2;
+		} mhz19;
+		struct {
+			uint32_t distance;
+		} hcsr04;
+		struct {
+			int val;
+			time_t GPIlastLow;
+			time_t GPIlastHigh;
+			time_t GPOlastOut;
+		} gpio;
+	};
 } env_data_t;
 
 #endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_ENV_H_ */

@@ -1,0 +1,43 @@
+menu "OAP Generic GPIO"
+
+config OAP_GPIO_0_ENABLED
+    bool "enable GPIO #0"
+    default y
+    help
+        todo   
+
+config OAP_GPIO_OUTPUT0_PIN
+    int "GPIO #0 output PIN"
+    depends on OAP_GPIO_0_ENABLED
+    default 21
+    help
+        todo
+
+config OAP_GPIO_INPUT0_PIN
+    int "GPIO #0 input PIN"
+    depends on OAP_GPIO_0_ENABLED
+    default 36
+    help
+        todo
+
+config OAP_GPIO_1_ENABLED
+    bool "enable GPIO #1"
+    default n
+    help
+        todo   
+
+config OAP_GPIO_OUTPUT1_PIN
+    int "GPIO #1 output PIN"
+    depends on OAP_GPIO_1_ENABLED
+    default 22
+    help
+        todo
+
+config OAP_GPIO_INPUT1_PIN
+    int "GPIO #1 input PIN"
+    depends on OAP_GPIO_1_ENABLED
+    default 39
+    help
+        todo
+
+endmenu
