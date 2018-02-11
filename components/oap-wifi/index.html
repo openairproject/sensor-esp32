@@ -430,6 +430,12 @@
                         if(data.env4) {
                             str += '<p>Env4: Distance: '+parseFloat(data.env4.distance).toFixed(0)+'cm ('+data.env4.timestamp+'s ago)';
                         }
+                        if(data.env5) {
+                            str += '<p>Env5: GPIlastLow: '+parseFloat(data.env5.GPIlastLow).toFixed(0)+' GPIlastHigh: '+parseFloat(data.env5.GPIlastHigh).toFixed(0)+' GPOlastOut: '+parseFloat(data.env5.GPOlastOut).toFixed(0)+' ('+data.env5.timestamp+'s ago)';;
+                        }
+                        if(data.env6) {
+                            str += '<p>Env5: GPIlastLow: '+parseFloat(data.env6.GPIlastLow).toFixed(0)+' GPIlastHigh: '+parseFloat(data.env6.GPIlastHigh).toFixed(0)+' GPOlastOut: '+parseFloat(data.env6.GPOlastOut).toFixed(0)+' ('+data.env6.timestamp+'s ago)';;
+                        }
                         if(data.pm0) {
                             str += '<p>PM0: pm1_0: '+parseInt(data.pm0.pm1_0)+  
                                     ' - pm2_5: '+parseInt(data.pm0.pm2_5)+

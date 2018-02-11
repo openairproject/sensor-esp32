@@ -53,6 +53,7 @@
 #include "server_cpanel.h"
 #include "ssd1366.h"
 #include "hcsr04.h"
+#include "hw_gpio.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -220,7 +221,8 @@ static esp_err_t pm_meter_init() {
 //--------- ENV -----------
 
 static hcsr04_config_t hcsr04_cfg[2];
-env_data_record_t last_env_data[5];
+hw_gpio_config_t hw_gpio_cfg[2];
+env_data_record_t last_env_data[7];
 static bmx280_config_t bmx280_config[2];
 mhz19_config_t mhz19_cfg;
 static SemaphoreHandle_t envSemaphore = NULL;
@@ -228,7 +230,16 @@ static SemaphoreHandle_t envSemaphore = NULL;
 static void env_sensor_callback(env_data_t* env_data) {
 	if (env_data->sensor_idx < (sizeof(last_env_data)/sizeof(env_data_record_t))) {
 	        if( xSemaphoreTakeRecursive( envSemaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
-			ESP_LOGI(TAG, "env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%, CO2: %d ppm, dist: %dcm", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity, env_data->co2, env_data->distance);
+	        	switch(env_data->sensor_type) {
+	        		case sensor_bmx280:
+					ESP_LOGI(TAG, "env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%", env_data->sensor_idx, env_data->bmx280.temp, env_data->bmx280.pressure, env_data->bmx280.humidity);break;
+	        		case sensor_mhz19:
+					ESP_LOGI(TAG, "env (%d): temp : %.2f C, CO2: %d ppm", env_data->sensor_idx, env_data->mhz19.temp, env_data->mhz19.co2);break;
+	        		case sensor_hcsr04:
+					ESP_LOGI(TAG, "env (%d): dist: %dcm", env_data->sensor_idx, env_data->hcsr04.distance);break;
+	        		case sensor_gpio:
+					ESP_LOGI(TAG, "env (%d): GPIlastLow: %d, GPIlastHigh: %d, GPOlastOut: %d", env_data->sensor_idx, (int)env_data->gpio.GPIlastLow, (int)env_data->gpio.GPIlastHigh, (int)env_data->gpio.GPOlastOut);break;
+			}
 			env_data_record_t* r = last_env_data + env_data->sensor_idx;
 			r->timestamp = oap_epoch_sec();
 			memcpy(r, env_data, sizeof(env_data_t));
@@ -291,6 +302,22 @@ static void env_sensors_init() {
 		hcsr04_cfg[1].callback = &env_sensor_callback;
 		hcsr04_init(&hcsr04_cfg[1]);
 		hcsr04_enable(&hcsr04_cfg[1], 1);
+ 	}
+#endif
+#if CONFIG_OAP_GPIO_0_ENABLED
+	if(hw_gpio_set_hardware_config(&hw_gpio_cfg[0], 5) == ESP_OK) {
+		hw_gpio_cfg[0].interval = 1000;
+		hw_gpio_cfg[0].callback = &env_sensor_callback;
+		hw_gpio_init(&hw_gpio_cfg[0]);
+		hw_gpio_enable(&hw_gpio_cfg[0], 1);
+ 	}
+#endif
+#if CONFIG_OAP_GPIO_1_ENABLED
+	if(hw_gpio_set_hardware_config(&hw_gpio_cfg[1], 6) == ESP_OK) {
+		hw_gpio_cfg[1].interval = 1000;
+		hw_gpio_cfg[1].callback = &env_sensor_callback;
+		hw_gpio_init(&hw_gpio_cfg[1]);
+		hw_gpio_enable(&hw_gpio_cfg[1], 1);
  	}
 #endif
 }
@@ -413,10 +440,10 @@ void display_task(void *ptr) {
 		delay(5000);
 		ssd1306_display_clear();
 		sprintf(logstr, "%s%.2fC\n\n%.2fhPa\n\n%.2f%% / %dppm\n\nPM: %d / %d / %d",toggle,
-		last_env_data[0].env_data.temp, 
-		last_env_data[0].env_data.sealevel, 
-		last_env_data[0].env_data.humidity, 
-		last_env_data[2].env_data.co2,
+		last_env_data[0].env_data.bmx280.temp, 
+		last_env_data[0].env_data.bmx280.sealevel, 
+		last_env_data[0].env_data.bmx280.humidity, 
+		last_env_data[2].env_data.mhz19.co2,
 		pm_data_array.pm_data[0].pm1_0,
 		pm_data_array.pm_data[0].pm2_5,
 		pm_data_array.pm_data[0].pm10

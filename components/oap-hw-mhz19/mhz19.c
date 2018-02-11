@@ -120,8 +120,9 @@ static esp_err_t mhz19_cmd_gc(mhz19_config_t* config) {
 					if (config->callback && co2val > 410 && co2val < 3000) {
 						env_data_t result = {
 							.sensor_idx = config->sensor_idx,
-							.temp = t,
-							.co2 = sma_generator(&config->sma, co2val)
+							.sensor_type = sensor_mhz19,
+							.mhz19.temp = t,
+							.mhz19.co2 = sma_generator(&config->sma, co2val)
 						};
 						config->callback(&result);
 					}

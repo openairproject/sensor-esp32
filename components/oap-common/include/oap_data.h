@@ -36,6 +36,7 @@ typedef struct {
 	env_data_t* co2;
 	env_data_t* distance1;
 	env_data_t* distance2;
+	env_data_t* gpio;
 	long int local_time;
 } oap_measurement_t;
 

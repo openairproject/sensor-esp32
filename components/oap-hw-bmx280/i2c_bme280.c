@@ -225,12 +225,12 @@ esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data_t* result){
 
 
     temp_reading_t temp_reading = BME280_compensate_T_double(&bme280_sensor->calib, temp_raw);
-    result->temp =  temp_reading.temp;//Celsius
-    result->pressure = BME280_compensate_P_double(&bme280_sensor->calib, temp_reading.t_fine, pres_raw) / 100.0;  //hPA
+    result->bmx280.temp =  temp_reading.temp;//Celsius
+    result->bmx280.pressure = BME280_compensate_P_double(&bme280_sensor->calib, temp_reading.t_fine, pres_raw) / 100.0;  //hPA
     if (bme280_sensor->chip_type == CHIP_TYPE_BME) {
-    	result->humidity = BME280_compensate_H_double(&bme280_sensor->calib, temp_reading.t_fine, hum_raw);// pct
+    	result->bmx280.humidity = BME280_compensate_H_double(&bme280_sensor->calib, temp_reading.t_fine, hum_raw);// pct
     } else {
-    	result->humidity = HUMIDITY_MEAS_UNSUPPORTED;
+    	result->bmx280.humidity = HUMIDITY_MEAS_UNSUPPORTED;
     }
 
     return ESP_OK;

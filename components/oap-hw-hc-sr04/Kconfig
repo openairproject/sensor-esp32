@@ -6,14 +6,14 @@ config OAP_HCSR04_0_ENABLED
     help
         todo   
 
-config OAP_HCSR04_TRIGGER0
+config OAP_HCSR04_TRIGGER0_PIN
     int "Trigger 0 output PIN"
     depends on OAP_HCSR04_0_ENABLED
     default 32
     help
         todo
 
-config OAP_HCSR04_ECHO0
+config OAP_HCSR04_ECHO0_PIN
     int "Echo 0 input PIN"
     depends on OAP_HCSR04_0_ENABLED
     default 34
@@ -26,14 +26,14 @@ config OAP_HCSR04_1_ENABLED
     help
         todo   
 
-config OAP_HCSR04_TRIGGER1
+config OAP_HCSR04_TRIGGER1_PIN
     int "Trigger 1 output PIN"
     depends on OAP_HCSR04_1_ENABLED
     default 33
     help
         todo
 
-config OAP_HCSR04_ECHO1
+config OAP_HCSR04_ECHO1_PIN
     int "Echo 1 input PIN"
     depends on OAP_HCSR04_1_ENABLED
     default 35
