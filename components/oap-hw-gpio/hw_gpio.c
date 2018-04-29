@@ -39,7 +39,7 @@ static const char* TAG = "hw_gpio";
 typedef struct {
 	uint8_t gpio_num;
 	uint8_t gpio_val;
-	uint32_t timestamp;
+	int64_t timestamp;
 	int sensor_idx;
 } gpio_event_t;
 
@@ -61,7 +61,7 @@ esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay) {
 	gpio_set_level(config->output_pin, value);
 	config->GPOtriggerLength=delay;
 	config->GPOlastval=value;
-	config->GPOlastOut=esp_log_timestamp();
+	config->GPOlastOut=get_time_millis();
 	publish(config);
 	return ESP_OK;
 }
@@ -73,7 +73,7 @@ static void IRAM_ATTR hw_gpio_isr_handler(void* arg)
 	gpio_event_t hw_gpio_evt = {
     	.gpio_num = config->input_pin,
         .gpio_val = gpio_get_level(config->input_pin),
-	.timestamp = esp_log_timestamp(),
+	.timestamp = get_time_millis(),
 	.sensor_idx = config->sensor_idx
     };
     xQueueSendFromISR(config->gpio_evt_queue, &hw_gpio_evt, NULL);
@@ -87,17 +87,17 @@ static void hw_gpio_task(hw_gpio_config_t* config) {
 //			ESP_LOGD(TAG, "%d/%d v:%d t:%d", config->sensor_idx, hw_gpio_evt.sensor_idx, hw_gpio_evt.gpio_val, hw_gpio_evt.timestamp);
 			if (config->callback) {
 				if(hw_gpio_evt.gpio_val) {
-					config->GPIlastHigh=esp_log_timestamp();
+					config->GPIlastHigh=get_time_millis();
 					config->GPICounter++;
 				} else {
-					config->GPIlastLow=esp_log_timestamp();
+					config->GPIlastLow=get_time_millis();
 				}
 				publish(config);
 			}
 		}
 //		if(config->sensor_idx==5)
-//			ESP_LOGD(TAG, "%d dings %d %d-%d>%d", config->sensor_idx, config->GPOtriggerLength, esp_log_timestamp(), config->GPOlastOut, config->GPOtriggerLength);
-		if(config->GPOtriggerLength && (esp_log_timestamp()-config->GPOlastOut) >= config->GPOtriggerLength) {
+//			ESP_LOGD(TAG, "%d dings %d %d-%d>%d", config->sensor_idx, config->GPOtriggerLength, get_time_millis(), config->GPOlastOut, config->GPOtriggerLength);
+		if(config->GPOtriggerLength && (get_time_millis()-config->GPOlastOut) >= config->GPOtriggerLength) {
 			gpio_set_level(config->output_pin, !config->GPOlastval);
 			config->GPOtriggerLength=0;
 		}
