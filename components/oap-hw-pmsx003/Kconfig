@@ -34,30 +34,9 @@ config OAP_PM_UART_TXD_PIN
     help
         Any gpio pin (no need to connect this line)
         
-config OAP_PM_UART_RTS_PIN
-    int "RTS gpio"
-    depends on OAP_PM_UART_ENABLE
-    default 18
-    help
-        Any gpio pin (no need to connect this line)
-
-config OAP_PM_UART_CTS_PIN
-    int "CTS gpio"
-    depends on OAP_PM_UART_ENABLE
-    default 19
-    help
-        Any gpio pin (no need to connect this line)
-
 config OAP_PM_UART_AUX_ENABLE
     bool "PM1 enable"
-    default y
-    help
-        todo
-
-config OAP_PM_ENABLED_AUX
-    int "enable secondary PM sensor"
-    depends on OAP_PM_UART_AUX_ENABLE
-    default 0
+    default n
     help
         todo
 
@@ -89,18 +68,4 @@ config OAP_PM_UART_TXD_PIN_AUX
     help
         Any gpio pin (no need to connect this line)
         
-config OAP_PM_UART_RTS_PIN_AUX
-    int "AUX RTS gpio"
-    depends on OAP_PM_UART_AUX_ENABLE
-    default 18
-    help
-        Any gpio pin (no need to connect this line)
-
-config OAP_PM_UART_CTS_PIN_AUX
-    int "AUX CTS gpio"
-    depends on OAP_PM_UART_AUX_ENABLE
-    default 19
-    help
-        Any gpio pin (no need to connect this line)
-
 endmenu

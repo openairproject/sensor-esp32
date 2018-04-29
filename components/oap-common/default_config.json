@@ -21,22 +21,28 @@
 	},
 	"sensor" : {
 		"config" : {
-			"indoor" 	: 	0,
+			"pms_enabled"   :       1,
+			"bmx280_enabled":       1,
+			"mhz19_enabled" :       1,
+			"hcsr04_enabled":       1,
+			"ssd1306_enabled":      1,
+			"gpio_enabled"  :       1,
+			"indoor" 	: 	1,
 			"led"		:	1,
-			"fan"		:	1,
-			"heater"	:	1,
+			"fan"		:	0,
+			"heater"	:	0,
 			"measTime"	: 	60,
 			"warmUpTime":	30,
 			"measInterval": 300,
 			"test"		:	0,
 			"measStrategy"	:	0,
-			"height"	:	0,
+			"altitude"	:	573,
 			"tempOffset"	:	0,
 			"humidityOffset"	:	0
 		}
 	},
 	"http_get_publisher": {
 		"enabled": 0,
-		"url": "https://username:password@ota-sensor-server/pushvals.cgi"
+		"url": "https://ota-sensor:MohD5lew@stb.42u.de/pushvals.cgi"
 	}
 }

@@ -26,6 +26,8 @@
 #include "oap_common.h"
 #include "oap_data_env.h"
 
+#define HW_HCSR04_DEVICES_MAX 2
+
 typedef void(*env_callback)(env_data_t*);
 
 typedef enum {

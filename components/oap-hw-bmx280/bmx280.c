@@ -150,23 +150,25 @@ esp_err_t bmx280_init(bmx280_config_t* bmx280_config) {
 esp_err_t bmx280_set_hardware_config(bmx280_config_t* bmx280_config, uint8_t sensor_idx) {
 	switch (sensor_idx) {
 	case 0:
-		if (!CONFIG_OAP_BMX280_ENABLED) return ESP_FAIL;
-#if CONFIG_OAP_BMX280_ENABLED
+#ifdef CONFIG_OAP_BMX280_ENABLED
 		bmx280_config->sensor_idx = 0;
 		bmx280_config->i2c_num = CONFIG_OAP_BMX280_I2C_NUM;
 		bmx280_config->device_addr = CONFIG_OAP_BMX280_ADDRESS;
 		bmx280_config->sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN;
 		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN;
+#else
+		return ESP_FAIL;
 #endif
 		return ESP_OK;
 	case 1:
-		if (!CONFIG_OAP_BMX280_ENABLED_AUX) return ESP_FAIL;
-#if CONFIG_OAP_BMX280_ENABLED_AUX 
+#ifdef CONFIG_OAP_BMX280_ENABLED_AUX 
 		bmx280_config->sensor_idx = 1;
 		bmx280_config->i2c_num = CONFIG_OAP_BMX280_I2C_NUM_AUX;
 		bmx280_config->device_addr = CONFIG_OAP_BMX280_ADDRESS_AUX;
 		bmx280_config->sda_pin = CONFIG_OAP_BMX280_I2C_SDA_PIN_AUX;
 		bmx280_config->scl_pin = CONFIG_OAP_BMX280_I2C_SCL_PIN_AUX;
+#else
+		return ESP_FAIL;
 #endif
 		return ESP_OK;
 	default:

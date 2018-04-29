@@ -52,7 +52,7 @@ esp_err_t mhz19_init_uart(mhz19_config_t* config) {
     	return ret;
     }
 
-    if ((ret = uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, config->uart_rts_pin, config->uart_cts_pin)) != ESP_OK) {
+    if ((ret = uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)) != ESP_OK) {
     	return ret;
     }
     //Install UART driver( We don't need an event queue here)
@@ -172,15 +172,17 @@ esp_err_t mhz19_init(mhz19_config_t* config) {
 }
 #define SMA_SIZE 60
 esp_err_t mhz19_set_hardware_config(mhz19_config_t* config, uint8_t sensor_idx) {
+#ifdef CONFIG_OAP_MH_ENABLED
 	config->sensor_idx = sensor_idx;
 	config->uart_num = CONFIG_OAP_MH_UART_NUM;
 	config->uart_txd_pin = CONFIG_OAP_MH_UART_TXD_PIN;
 	config->uart_rxd_pin = CONFIG_OAP_MH_UART_RXD_PIN;
-	config->uart_rts_pin = CONFIG_OAP_MH_UART_RTS_PIN;
-	config->uart_cts_pin = CONFIG_OAP_MH_UART_CTS_PIN;
 	memset(&config->sma, 0, sizeof(sma_data_t));
 	config->sma.data = (double *)malloc(SMA_SIZE*sizeof(double));
 	memset((void*)config->sma.data, 0, SMA_SIZE*sizeof(double));
 	config->sma.size=(size_t)SMA_SIZE;
 	return ESP_OK;
+#else
+	return ESP_FAIL;
+#endif
 }

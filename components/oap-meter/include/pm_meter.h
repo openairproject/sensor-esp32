@@ -75,6 +75,6 @@ typedef struct {
 	pm_meter_stop_f stop;
 } pm_meter_t;
 
-
+extern pm_data_pair_t pm_data_array;
 
 #endif /* MAIN_MEAS_H_ */

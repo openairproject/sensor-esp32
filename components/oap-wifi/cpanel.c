@@ -33,9 +33,6 @@
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
-extern pm_data_pair_t pm_data_array;
-extern env_data_record_t last_env_data[3];
-
 inline int ishex(int x) {
 	return	(x >= '0' && x <= '9')	||
 		(x >= 'a' && x <= 'f')	||
@@ -67,21 +64,30 @@ static int parse_query(char *str, char *key, char *val, size_t szval) {
 	
 	char *ptr1;
 	char *ptr2;
-	ptr1 = strtok(str, delimiter1);
-	ESP_LOGI(tag, "parse_query: str:%s key:%s", str, key);
+	char *saveptr1;
+	char *saveptr2;
+	ptr1 = strtok_r(str, delimiter1, &saveptr1);
+//	ESP_LOGD(tag, "-->parse_query: str:%s key:%s ptr1:%s", str, key, ptr1);
 	while(ptr1 != NULL) {
-		ptr2 = strtok(ptr1, delimiter2);
+		ptr2 = strtok_r(ptr1, delimiter2, &saveptr2);
+		if(ptr1 && ptr2) {
+//			ESP_LOGD(tag, "ptr1: %s ptr2: %s", ptr1, ptr2);
+		}
 		while(ptr2 != NULL) {
 			char *tmp=ptr2;
-			ptr2=strtok(NULL, delimiter2);
+			ptr2=strtok_r(NULL, delimiter2, &saveptr2);
+			if(ptr2) {
+//				ESP_LOGD(tag, "ptr2: %s", ptr2);
+			}
 			if(!strcmp(tmp, key)) {
+//				ESP_LOGD(tag, "parse_query: %s == %s", tmp, key);
 				memset(val, 0, szval);
 				decode(ptr2, val);
-				ESP_LOGI(tag, "parse_query: val:%s", val);				
+//				ESP_LOGD(tag, "parse_query: val:%s", val);				
 				return 1;
 			} 
 		}
-		ptr1 = strtok(NULL, delimiter1);		
+		ptr1 = strtok_r(NULL, delimiter1, &saveptr1);		
 	}
 	return 0;
 }
@@ -90,6 +96,7 @@ static int parse_query_int(char *query, char *key, int *val) {
 	char valstr[32];
 	char *str = strdup(query);
 	int ret=parse_query(str, key, valstr, sizeof(valstr));
+	ESP_LOGI(tag, "parse_query_int: %s %s -> %s", str, key,  valstr);
 	if(ret) {
 		*val = atoi(valstr); 
 	} else {
@@ -203,9 +210,10 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 	#ifdef CONFIG_OAP_GPIO_0_ENABLED
 	if(last_env_data[5].timestamp) {
 		cJSON *envobj5 = cJSON_CreateObject();
-		cJSON_AddItemToObject(data, "env6", envobj5);
+		cJSON_AddItemToObject(data, "env5", envobj5);
 		cJSON_AddItemToObject(envobj5, "GPIlastLow", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPIlastLow));
 		cJSON_AddItemToObject(envobj5, "GPIlastHigh", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPIlastHigh));
+		cJSON_AddItemToObject(envobj5, "GPICounter", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPICounter));
 		cJSON_AddItemToObject(envobj5, "GPOlastOut", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPOlastOut));
 		cJSON_AddItemToObject(envobj5, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[5].timestamp));	
 	}
@@ -213,13 +221,37 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 	#ifdef CONFIG_OAP_GPIO_1_ENABLED
 	if(last_env_data[6].timestamp) {
 		cJSON *envobj6 = cJSON_CreateObject();
-		cJSON_AddItemToObject(data, "env7", envobj6);
+		cJSON_AddItemToObject(data, "env6", envobj6);
 		cJSON_AddItemToObject(envobj6, "GPIlastLow", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPIlastLow));
+		cJSON_AddItemToObject(envobj6, "GPICounter", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPICounter));
 		cJSON_AddItemToObject(envobj6, "GPIlastHigh", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj6, "GPOlastOut", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPOlastOut));
 		cJSON_AddItemToObject(envobj6, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[6].timestamp));			
 	}
 	#endif
+	#ifdef CONFIG_OAP_GPIO_2_ENABLED
+	if(last_env_data[7].timestamp) {
+		cJSON *envobj7 = cJSON_CreateObject();
+		cJSON_AddItemToObject(data, "env7", envobj7);
+		cJSON_AddItemToObject(envobj7, "GPIlastLow", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPIlastLow));
+		cJSON_AddItemToObject(envobj7, "GPIlastHigh", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPIlastHigh));
+		cJSON_AddItemToObject(envobj7, "GPICounter", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPICounter));
+		cJSON_AddItemToObject(envobj7, "GPOlastOut", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPOlastOut));
+		cJSON_AddItemToObject(envobj7, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[7].timestamp));	
+	}
+	#endif
+	#ifdef CONFIG_OAP_GPIO_3_ENABLED
+	if(last_env_data[8].timestamp) {
+		cJSON *envobj8 = cJSON_CreateObject();
+		cJSON_AddItemToObject(data, "env8", envobj8);
+		cJSON_AddItemToObject(envobj8, "GPIlastLow", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPIlastLow));
+		cJSON_AddItemToObject(envobj8, "GPIlastHigh", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPIlastHigh));
+		cJSON_AddItemToObject(envobj8, "GPICounter", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPICounter));
+		cJSON_AddItemToObject(envobj8, "GPOlastOut", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPOlastOut));
+		cJSON_AddItemToObject(envobj8, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[8].timestamp));			
+	}
+	#endif
+	#ifdef CONFIG_OAP_PM_UART_ENABLE
 	if(pm_data_array.timestamp) {
 		cJSON *pmobj0 = cJSON_CreateObject();
 		cJSON_AddItemToObject(data, "pm0", pmobj0);
@@ -227,14 +259,15 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(pmobj0, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[0].pm2_5));
 		cJSON_AddItemToObject(pmobj0, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[0].pm10));
 		cJSON_AddItemToObject(pmobj0, "timestamp", cJSON_CreateNumber(sysTime - pm_data_array.timestamp));
-		if(CONFIG_OAP_PM_ENABLED_AUX) {
-			cJSON *pmobj1 = cJSON_CreateObject();
-			cJSON_AddItemToObject(data, "pm1", pmobj1);
-			cJSON_AddItemToObject(pmobj1, "pm1_0", cJSON_CreateNumber(pm_data_array.pm_data[1].pm1_0));
-			cJSON_AddItemToObject(pmobj1, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[1].pm2_5));
-			cJSON_AddItemToObject(pmobj1, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[1].pm10));
-		}
+	#ifdef CONFIG_OAP_PM_UART_AUX_ENABLE
+		cJSON *pmobj1 = cJSON_CreateObject();
+		cJSON_AddItemToObject(data, "pm1", pmobj1);
+		cJSON_AddItemToObject(pmobj1, "pm1_0", cJSON_CreateNumber(pm_data_array.pm_data[1].pm1_0));
+		cJSON_AddItemToObject(pmobj1, "pm2_5", cJSON_CreateNumber(pm_data_array.pm_data[1].pm2_5));
+		cJSON_AddItemToObject(pmobj1, "pm10", cJSON_CreateNumber(pm_data_array.pm_data[1].pm10));
+	#endif
 	}
+	#endif
 	char* json = cJSON_Print(root);
 	mg_send(nc, json, strlen(json));
 	free(json);
@@ -267,10 +300,6 @@ static void handler_set_config(struct mg_connection *nc, struct http_message *me
  * GET /set - Set the connection info (REST request).
  * POST /ssidSelected - Set the connection info (HTML FORM).
  */
-extern mhz19_config_t mhz19_cfg;
-extern hw_gpio_config_t hw_gpio_cfg[2];
-
-esp_err_t mhz19_calibrate(mhz19_config_t* config);
 
 void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 	ESP_LOGV(tag, "- Event: %d", ev);
@@ -313,7 +342,7 @@ void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 				}
 			}
 			if(strcmp(uri, "/calibrate") == 0) {
-				mhz19_calibrate(&mhz19_cfg);
+				mhz19_calibrate(&mhz19_cfg[0]);
 				mg_send(nc,"ok", 2);
 				handled = 1;
 			}
@@ -324,7 +353,7 @@ void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 				parse_query_int(query_string, "delay", &delay);
 				parse_query_int(query_string, "value", &value);
 				parse_query_int(query_string, "gpio", &gpio);
-				if(gpio == 0 || gpio ==1) {
+				if(gpio >= 0 && gpio < HW_GPIO_DEVICES_MAX) {
 					hw_gpio_send_trigger(&hw_gpio_cfg[gpio], value, delay);
 				}
 				mg_send(nc,"ok", 2);

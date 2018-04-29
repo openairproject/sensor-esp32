@@ -27,18 +27,4 @@ config OAP_MH_UART_TXD_PIN
     help
         GPIO pin connected to sensor TX line.
         
-config OAP_MH_UART_RTS_PIN
-    int "RTS gpio"
-    depends on OAP_MH_ENABLED
-    default 18
-    help
-        Any gpio pin (no need to connect this line)
-
-config OAP_MH_UART_CTS_PIN
-    int "CTS gpio"
-    depends on OAP_MH_ENABLED
-    default 19
-    help
-        Any gpio pin (no need to connect this line)
-
 endmenu

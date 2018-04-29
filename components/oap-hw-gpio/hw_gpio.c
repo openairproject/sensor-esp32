@@ -50,6 +50,7 @@ static void publish(hw_gpio_config_t* config) {
 					.sensor_type = sensor_gpio,
 					.gpio.GPIlastHigh=config->GPIlastHigh,
 					.gpio.GPIlastLow=config->GPIlastLow,
+					.gpio.GPICounter=config->GPICounter,
 					.gpio.GPOlastOut=config->GPOlastOut
 				};
 		config->callback(&result);
@@ -58,11 +59,9 @@ static void publish(hw_gpio_config_t* config) {
 
 esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay) {
 	gpio_set_level(config->output_pin, value);
-	if(delay) {
-		ets_delay_us(delay);
-		gpio_set_level(config->output_pin, !value);
-	}
-	config->GPOlastOut=time(NULL);
+	config->GPOtriggerLength=delay;
+	config->GPOlastval=value;
+	config->GPOlastOut=esp_log_timestamp();
 	publish(config);
 	return ESP_OK;
 }
@@ -74,7 +73,7 @@ static void IRAM_ATTR hw_gpio_isr_handler(void* arg)
 	gpio_event_t hw_gpio_evt = {
     	.gpio_num = config->input_pin,
         .gpio_val = gpio_get_level(config->input_pin),
-	.timestamp = system_get_time(),
+	.timestamp = esp_log_timestamp(),
 	.sensor_idx = config->sensor_idx
     };
     xQueueSendFromISR(config->gpio_evt_queue, &hw_gpio_evt, NULL);
@@ -82,22 +81,27 @@ static void IRAM_ATTR hw_gpio_isr_handler(void* arg)
 
 static void hw_gpio_task(hw_gpio_config_t* config) {
     gpio_event_t hw_gpio_evt;
-//    send_trigger(config);
     while(1) {
 	if(config->enabled) {
-		if (xQueueReceive(config->gpio_evt_queue, &hw_gpio_evt, 	100)) {
-			ESP_LOGD(TAG, "%d/%d v:%d t:%d", config->sensor_idx, hw_gpio_evt.sensor_idx, hw_gpio_evt.gpio_val, hw_gpio_evt.timestamp);
+		if (xQueueReceive(config->gpio_evt_queue, &hw_gpio_evt, 10)) {
+//			ESP_LOGD(TAG, "%d/%d v:%d t:%d", config->sensor_idx, hw_gpio_evt.sensor_idx, hw_gpio_evt.gpio_val, hw_gpio_evt.timestamp);
 			if (config->callback) {
 				if(hw_gpio_evt.gpio_val) {
-					config->GPIlastHigh=time(NULL);
+					config->GPIlastHigh=esp_log_timestamp();
+					config->GPICounter++;
 				} else {
-					config->GPIlastLow=time(NULL);
+					config->GPIlastLow=esp_log_timestamp();
 				}
 				publish(config);
 			}
 		}
+//		if(config->sensor_idx==5)
+//			ESP_LOGD(TAG, "%d dings %d %d-%d>%d", config->sensor_idx, config->GPOtriggerLength, esp_log_timestamp(), config->GPOlastOut, config->GPOtriggerLength);
+		if(config->GPOtriggerLength && (esp_log_timestamp()-config->GPOlastOut) >= config->GPOtriggerLength) {
+			gpio_set_level(config->output_pin, !config->GPOlastval);
+			config->GPOtriggerLength=0;
+		}
 	}
-
 	if (config->interval > 0) {
 		delay(config->interval);
 	} else {
@@ -129,7 +133,6 @@ esp_err_t hw_gpio_init(hw_gpio_config_t* config) {
 	gpio_set_direction(config->output_pin, GPIO_MODE_OUTPUT);
 	gpio_set_level(config->output_pin, 0);
 
-	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	ESP_LOGD(TAG, "init output pin: %d input pin: %d", config->output_pin, config->input_pin);
 	gpio_isr_handler_add(config->input_pin, hw_gpio_isr_handler, config);
 
@@ -142,15 +145,35 @@ esp_err_t hw_gpio_set_hardware_config(hw_gpio_config_t* config, uint8_t sensor_i
 	config->sensor_idx = sensor_idx;
 	switch(sensor_idx) {
 		case 5:
-#if CONFIG_OAP_GPIO_0_ENABLED
+#ifdef CONFIG_OAP_GPIO_0_ENABLED
 			config->output_pin = CONFIG_OAP_GPIO_OUTPUT0_PIN;
 			config->input_pin = CONFIG_OAP_GPIO_INPUT0_PIN;
+#else 
+			return ESP_FAIL;
 #endif
 			break;
 		case 6:
-#if CONFIG_OAP_GPIO_1_ENABLED
+#ifdef CONFIG_OAP_GPIO_1_ENABLED
 			config->output_pin = CONFIG_OAP_GPIO_OUTPUT1_PIN;
-			config->input_pin = CONFIG_OAP_GPIO_OUTPUT1_PIN;
+			config->input_pin = CONFIG_OAP_GPIO_INPUT1_PIN;
+#else 
+			return ESP_FAIL;
+#endif
+			break;
+		case 7:
+#ifdef CONFIG_OAP_GPIO_2_ENABLED
+			config->output_pin = CONFIG_OAP_GPIO_OUTPUT2_PIN;
+			config->input_pin = CONFIG_OAP_GPIO_INPUT2_PIN;
+#else 
+			return ESP_FAIL;
+#endif
+			break;
+		case 8:
+#ifdef CONFIG_OAP_GPIO_3_ENABLED
+			config->output_pin = CONFIG_OAP_GPIO_OUTPUT3_PIN;
+			config->input_pin = CONFIG_OAP_GPIO_INPUT3_PIN;
+#else 
+			return ESP_FAIL;
 #endif
 			break;
 	}
