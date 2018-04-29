@@ -38,12 +38,12 @@ typedef struct {
 	uint8_t output_pin;
 	uint8_t input_pin;
 	QueueHandle_t gpio_evt_queue;
-	uint32_t GPIlastLow;
-	uint32_t GPIlastHigh;
-	uint32_t GPOlastOut;
-	int32_t GPICounter;
-	uint32_t GPOtriggerLength;
-	uint8_t GPOlastval;
+	int64_t GPIlastLow;
+	int64_t GPIlastHigh;
+	int64_t GPOlastOut;
+	int64_t GPICounter;
+	int32_t GPOtriggerLength;
+	int8_t GPOlastval;
 } hw_gpio_config_t;
 
 extern hw_gpio_config_t hw_gpio_cfg[];

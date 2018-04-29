@@ -51,10 +51,10 @@ typedef struct {
 		} hcsr04;
 		struct {
 			int val;
-			time_t GPIlastLow;
-			time_t GPIlastHigh;
-			int GPICounter;
-			time_t GPOlastOut;
+			int64_t GPIlastLow;
+			int64_t GPIlastHigh;
+			int64_t GPICounter;
+			int64_t GPOlastOut;
 		} gpio;
 	};
 } env_data_t;

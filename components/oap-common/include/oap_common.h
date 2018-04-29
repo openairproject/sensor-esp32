@@ -81,4 +81,5 @@ void set_gpio(uint8_t gpio, uint8_t enabled);
 void configure_gpio(uint8_t gpio);
 void req_set_user_agent(request_t* req);
 double sma_generator (sma_data_t *sma, double value);
+int64_t get_time_millis();
 #endif /* MAIN_COMMON_COMMON_H_ */
