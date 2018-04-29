@@ -1,8 +1,8 @@
 menu "OpenAirProject"
 		
 config OAP_CONTROL_PANEL
-	int "enable control panel"
-	default 1
+	bool "enable control panel"
+	default y
 	help
 		Enable web-based control panel where you can configure various parameters of the sensor,
 		including wifi and data publishing settings		

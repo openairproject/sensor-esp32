@@ -26,6 +26,8 @@
 #include "oap_common.h"
 #include "oap_data_env.h"
 
+#define HW_GPIO_DEVICES_MAX 4
+
 typedef void(*env_callback)(env_data_t*);
 
 typedef struct {
@@ -36,14 +38,16 @@ typedef struct {
 	uint8_t output_pin;
 	uint8_t input_pin;
 	QueueHandle_t gpio_evt_queue;
-	time_t GPIlastLow;
-	time_t GPIlastHigh;
-	time_t GPOlastOut;
+	uint32_t GPIlastLow;
+	uint32_t GPIlastHigh;
+	uint32_t GPOlastOut;
+	int32_t GPICounter;
+	uint32_t GPOtriggerLength;
+	uint8_t GPOlastval;
 } hw_gpio_config_t;
 
-/**
- * pm samples data is send to the queue.
- */
+extern hw_gpio_config_t hw_gpio_cfg[];
+
 esp_err_t hw_gpio_init(hw_gpio_config_t* config);
 
 /**

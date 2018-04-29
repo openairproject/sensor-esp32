@@ -240,7 +240,7 @@ esp_err_t BME280_verify_chip(bme280_sensor_t* bme280_sensor) {
 	uint8_t chipID = 0;
 	uint8_t attempt = 0;
 	while (read_i2c(&bme280_sensor->i2c_comm, BME280_CHIP_ID_REG, &chipID,1) != ESP_OK && attempt++ < 5) {
-		ESP_LOGW(TAG, "[%x] failed to read chip id (attempt %d)", bme280_sensor->i2c_comm.device_addr, attempt)
+		ESP_LOGW(TAG, "[%x] failed to read chip id (attempt %d)", bme280_sensor->i2c_comm.device_addr, attempt);
 		vTaskDelay(20/portTICK_PERIOD_MS);
 	}
 

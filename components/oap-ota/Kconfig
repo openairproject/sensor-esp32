@@ -1,8 +1,8 @@
 menu "OAP OTA updates"
 
 config OAP_OTA_ENABLED
-    int "enable OTA updates"
-    default 1
+    bool "enable OTA updates"
+    default y
     help
         enable automatic over-the-air updates
 

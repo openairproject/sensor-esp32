@@ -53,6 +53,7 @@ typedef struct {
 			int val;
 			time_t GPIlastLow;
 			time_t GPIlastHigh;
+			int GPICounter;
 			time_t GPOlastOut;
 		} gpio;
 	};

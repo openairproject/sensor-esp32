@@ -27,6 +27,8 @@
 #include "oap_data_env.h"
 #include "driver/uart.h"
 
+#define HW_MHZ19_DEVICES_MAX 1
+
 typedef void(*env_callback)(env_data_t*);
 
 typedef struct {
@@ -38,14 +40,11 @@ typedef struct {
 	uart_port_t uart_num;
 	uint8_t uart_txd_pin;
 	uint8_t uart_rxd_pin;
-	uint8_t uart_rts_pin;
-	uint8_t uart_cts_pin;
 	sma_data_t sma;
 } mhz19_config_t;
 
-/**
- * pm samples data is send to the queue.
- */
+extern mhz19_config_t mhz19_cfg[];
+
 esp_err_t mhz19_init(mhz19_config_t* config);
 
 /**
@@ -53,6 +52,8 @@ esp_err_t mhz19_init(mhz19_config_t* config);
  */
 esp_err_t mhz19_enable(mhz19_config_t* config, uint8_t enabled);
 
+
+esp_err_t mhz19_calibrate(mhz19_config_t* config);
 
 /**
  * fill config based on hardware configuration

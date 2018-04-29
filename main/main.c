@@ -220,11 +220,14 @@ static esp_err_t pm_meter_init() {
 
 //--------- ENV -----------
 
-static hcsr04_config_t hcsr04_cfg[2];
-hw_gpio_config_t hw_gpio_cfg[2];
-env_data_record_t last_env_data[7];
-static bmx280_config_t bmx280_config[2];
-mhz19_config_t mhz19_cfg;
+static hcsr04_config_t hcsr04_cfg[HW_HCSR04_DEVICES_MAX];
+hw_gpio_config_t hw_gpio_cfg[HW_GPIO_DEVICES_MAX];
+static bmx280_config_t bmx280_config[HW_BMX280_DEVICES_MAX];
+mhz19_config_t mhz19_cfg[HW_MHZ19_DEVICES_MAX];
+
+env_data_record_t last_env_data[HW_HCSR04_DEVICES_MAX+HW_GPIO_DEVICES_MAX+HW_BMX280_DEVICES_MAX+HW_MHZ19_DEVICES_MAX];
+
+
 static SemaphoreHandle_t envSemaphore = NULL;
 
 static void env_sensor_callback(env_data_t* env_data) {
@@ -238,7 +241,7 @@ static void env_sensor_callback(env_data_t* env_data) {
 	        		case sensor_hcsr04:
 					ESP_LOGI(TAG, "env (%d): dist: %dcm", env_data->sensor_idx, env_data->hcsr04.distance);break;
 	        		case sensor_gpio:
-					ESP_LOGI(TAG, "env (%d): GPIlastLow: %d, GPIlastHigh: %d, GPOlastOut: %d", env_data->sensor_idx, (int)env_data->gpio.GPIlastLow, (int)env_data->gpio.GPIlastHigh, (int)env_data->gpio.GPOlastOut);break;
+					ESP_LOGI(TAG, "env (%d): GPIlastLow: %d, GPIlastHigh: %d, GPICounter: %d, GPOlastOut: %d", env_data->sensor_idx, (int)env_data->gpio.GPIlastLow, (int)env_data->gpio.GPIlastHigh, (int)env_data->gpio.GPICounter, (int)env_data->gpio.GPOlastOut);break;
 			}
 			env_data_record_t* r = last_env_data + env_data->sensor_idx;
 			r->timestamp = oap_epoch_sec();
@@ -256,8 +259,8 @@ static void env_sensors_init() {
 	memset(&last_env_data, 0, sizeof(env_data_record_t)*2);
 	memset(bmx280_config, 0, sizeof(bmx280_config_t)*2);
 	envSemaphore = xSemaphoreCreateRecursiveMutex();
-
-	if (bmx280_set_hardware_config(&bmx280_config[0], 0) == ESP_OK) {
+#ifdef CONFIG_OAP_BMX280_ENABLED
+	if (oap_sensor_config.bmx280_enabled && bmx280_set_hardware_config(&bmx280_config[0], 0) == ESP_OK) {
 		bmx280_config[0].interval = 5000;
 		bmx280_config[0].callback = &env_sensor_callback;
 		bmx280_config[0].altitude = oap_sensor_config.altitude;
@@ -268,8 +271,9 @@ static void env_sensors_init() {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 0);
 		}
 	}
-
-	if (bmx280_set_hardware_config(&bmx280_config[1], 1) == ESP_OK) {
+#endif
+#ifdef CONFIG_OAP_BMX280_ENABLED_AUX
+	if (oap_sensor_config.bmx280_enabled && bmx280_set_hardware_config(&bmx280_config[1], 1) == ESP_OK) {
 		bmx280_config[1].interval = 5000;
 		bmx280_config[1].callback = &env_sensor_callback;
 		bmx280_config[1].altitude = oap_sensor_config.altitude;
@@ -280,44 +284,61 @@ static void env_sensors_init() {
 			ESP_LOGE(TAG, "couldn't initialise bmx280 sensor %d", 1);
 		}
 	}
-#if CONFIG_OAP_MH_ENABLED
-	if (mhz19_set_hardware_config(&mhz19_cfg, 2) == ESP_OK) {
-		mhz19_cfg.interval = 5000;
-		mhz19_cfg.callback = &env_sensor_callback;
-		mhz19_init(&mhz19_cfg);
-		mhz19_enable(&mhz19_cfg, 1);
+#endif
+#ifdef CONFIG_OAP_MH_ENABLED
+	if (mhz19_set_hardware_config(&mhz19_cfg[0], 2) == ESP_OK) {
+		mhz19_cfg[0].interval = 5000;
+		mhz19_cfg[0].callback = &env_sensor_callback;
+		mhz19_init(&mhz19_cfg[0]);
+		mhz19_enable(&mhz19_cfg[0], oap_sensor_config.mhz19_enabled);
 	}
 #endif
-#if CONFIG_OAP_HCSR04_0_ENABLED
+#ifdef CONFIG_OAP_HCSR04_0_ENABLED
 	if(hcsr04_set_hardware_config(&hcsr04_cfg[0], 3) == ESP_OK) {
 		hcsr04_cfg[0].interval = 1000;
 		hcsr04_cfg[0].callback = &env_sensor_callback;
 		hcsr04_init(&hcsr04_cfg[0]);
-		hcsr04_enable(&hcsr04_cfg[0], 1);
+		hcsr04_enable(&hcsr04_cfg[0], oap_sensor_config.hcsr04_enabled);
  	}
 #endif
-#if CONFIG_OAP_HCSR04_1_ENABLED
+#ifdef CONFIG_OAP_HCSR04_1_ENABLED
 	if(hcsr04_set_hardware_config(&hcsr04_cfg[1], 4) == ESP_OK) {
-		hcsr04_cfg[1].interval = 1000;
+		hcsr04_cfg[1].interval = 100;
 		hcsr04_cfg[1].callback = &env_sensor_callback;
 		hcsr04_init(&hcsr04_cfg[1]);
-		hcsr04_enable(&hcsr04_cfg[1], 1);
+		hcsr04_enable(&hcsr04_cfg[1], oap_sensor_config.hcsr04_enabled);
  	}
 #endif
-#if CONFIG_OAP_GPIO_0_ENABLED
+#ifdef CONFIG_OAP_GPIO_0_ENABLED
 	if(hw_gpio_set_hardware_config(&hw_gpio_cfg[0], 5) == ESP_OK) {
-		hw_gpio_cfg[0].interval = 1000;
+		hw_gpio_cfg[0].interval = 100;
 		hw_gpio_cfg[0].callback = &env_sensor_callback;
 		hw_gpio_init(&hw_gpio_cfg[0]);
-		hw_gpio_enable(&hw_gpio_cfg[0], 1);
+		hw_gpio_enable(&hw_gpio_cfg[0], oap_sensor_config.gpio_enabled);
  	}
 #endif
-#if CONFIG_OAP_GPIO_1_ENABLED
+#ifdef CONFIG_OAP_GPIO_1_ENABLED
 	if(hw_gpio_set_hardware_config(&hw_gpio_cfg[1], 6) == ESP_OK) {
-		hw_gpio_cfg[1].interval = 1000;
+		hw_gpio_cfg[1].interval = 100;
 		hw_gpio_cfg[1].callback = &env_sensor_callback;
 		hw_gpio_init(&hw_gpio_cfg[1]);
-		hw_gpio_enable(&hw_gpio_cfg[1], 1);
+		hw_gpio_enable(&hw_gpio_cfg[1], oap_sensor_config.gpio_enabled);
+ 	}
+#endif
+#ifdef CONFIG_OAP_GPIO_2_ENABLED
+	if(hw_gpio_set_hardware_config(&hw_gpio_cfg[2], 7) == ESP_OK) {
+		hw_gpio_cfg[2].interval = 100;
+		hw_gpio_cfg[2].callback = &env_sensor_callback;
+		hw_gpio_init(&hw_gpio_cfg[2]);
+		hw_gpio_enable(&hw_gpio_cfg[2], oap_sensor_config.gpio_enabled);
+ 	}
+#endif
+#ifdef CONFIG_OAP_GPIO_3_ENABLED
+	if(hw_gpio_set_hardware_config(&hw_gpio_cfg[3], 8) == ESP_OK) {
+		hw_gpio_cfg[3].interval = 100;
+		hw_gpio_cfg[3].callback = &env_sensor_callback;
+		hw_gpio_init(&hw_gpio_cfg[3]);
+		hw_gpio_enable(&hw_gpio_cfg[3], oap_sensor_config.gpio_enabled);
  	}
 #endif
 }
@@ -349,7 +370,7 @@ static void publish_loop() {
 			log_task_stack(TAG);
 			last_published = sysTime;
 			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
-#if CONFIG_OAP_RGB_LED
+#ifdef CONFIG_OAP_RGB_LED
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
 			ledc_set_color(aqi,(1-aqi), 0);
 #endif
@@ -364,6 +385,10 @@ static void publish_loop() {
 				.co2 = sysTime - last_env_data[2].timestamp < 60 ? &last_env_data[2].env_data : NULL,
 				.distance1 =  sysTime - last_env_data[3].timestamp < 60 ? &last_env_data[3].env_data : NULL,
 				.distance2 =  sysTime - last_env_data[4].timestamp < 60 ? &last_env_data[4].env_data : NULL,
+				.gpio1 = sysTime - last_env_data[5].timestamp < 60 ? &last_env_data[5].env_data : NULL,
+				.gpio2 = sysTime - last_env_data[6].timestamp < 60 ? &last_env_data[6].env_data : NULL,
+				.gpio3 = sysTime - last_env_data[7].timestamp < 60 ? &last_env_data[7].env_data : NULL,
+				.gpio4 = sysTime - last_env_data[8].timestamp < 60 ? &last_env_data[8].env_data : NULL,
 				.local_time = localTime
 			};
 
@@ -388,6 +413,12 @@ static oap_sensor_config_t sensor_config_from_json(cJSON* sconfig) {
 	if ((field = cJSON_GetObjectItem(sconfig, "altitude"))) sensor_config.altitude = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "tempOffset"))) sensor_config.tempOffset = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "humidityOffset"))) sensor_config.humidityOffset = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "mhz19_enabled"))) sensor_config.mhz19_enabled = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "hcsr04_enabled"))) sensor_config.hcsr04_enabled = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "ssd1306_enabled"))) sensor_config.ssd1306_enabled = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "gpio_enabled"))) sensor_config.gpio_enabled = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "pms_enabled"))) sensor_config.pms_enabled = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "bmx280_enabled"))) sensor_config.bmx280_enabled = field->valueint;
 	return sensor_config;
 }
 
@@ -467,7 +498,7 @@ void app_main() {
 	//a sec to start flashing
 	delay(1000);
 	ESP_LOGI(TAG,"starting app... firmware %s", oap_version_str());
-
+	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	//130kb is a nice cap to test against alloc fails
 	//reduce_heap_size_to(130000);
 	storage_init();
@@ -481,14 +512,17 @@ void app_main() {
 	start_ota_task(storage_get_config("ota"));
 
 	ledc_init();
-#if CONFIG_OAP_PM_UART_ENABLE || CONFIG_OAP_PM_UART_AUX_ENABLE
+#if defined CONFIG_OAP_PM_UART_ENABLE || defined CONFIG_OAP_PM_UART_AUX_ENABLE
 	pm_meter_result_queue = xQueueCreate(1, sizeof(pm_data_pair_t));
-	pm_meter_init();
+	if(oap_sensor_config.pms_enabled) {
+		pm_meter_init();
+	}
 #endif
 	env_sensors_init();
-#if CONFIG_OAP_SDD1306_ENABLED
-	//2kb leaves ~ 240 bytes free (depend on logs, printfs etc)
-	xTaskCreate((TaskFunction_t)display_task, "display task", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
+#ifdef CONFIG_OAP_SDD1306_ENABLED
+	if(oap_sensor_config.ssd1306_enabled) {
+		xTaskCreate((TaskFunction_t)display_task, "display task", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	}
 #endif
 	publishers_init();
 

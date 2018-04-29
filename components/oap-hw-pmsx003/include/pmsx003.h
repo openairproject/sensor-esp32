@@ -36,8 +36,6 @@ typedef struct {
 	uart_port_t uart_num;
 	uint8_t uart_txd_pin;
 	uint8_t uart_rxd_pin;
-	uint8_t uart_rts_pin;
-	uint8_t uart_cts_pin;
 } pmsx003_config_t;
 
 /**

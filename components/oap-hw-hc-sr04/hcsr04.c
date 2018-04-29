@@ -145,7 +145,6 @@ esp_err_t hcsr04_init(hcsr04_config_t* config) {
 	gpio_set_direction(config->trigger_pin, GPIO_MODE_OUTPUT);
 	gpio_set_level(config->trigger_pin, 0);
 
-	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	config->state = IDLE;
 	ESP_LOGD(TAG, "init Trigger: %d Echo: %d", config->trigger_pin, config->echo_pin);
 	gpio_isr_handler_add(config->echo_pin, hcsr04_isr_handler, config);
@@ -160,15 +159,19 @@ esp_err_t hcsr04_set_hardware_config(hcsr04_config_t* config, uint8_t sensor_idx
 	config->sensor_idx = sensor_idx;
 	switch(sensor_idx) {
 		case 3:
-#if CONFIG_OAP_HCSR04_0_ENABLED
+#ifdef CONFIG_OAP_HCSR04_0_ENABLED
 			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER0_PIN;
 			config->echo_pin = CONFIG_OAP_HCSR04_ECHO0_PIN;
+#else
+			return ESP_FAIL;
 #endif
 			break;
 		case 4:
-#if CONFIG_OAP_HCSR04_1_ENABLED
+#ifdef CONFIG_OAP_HCSR04_1_ENABLED		
 			config->trigger_pin = CONFIG_OAP_HCSR04_TRIGGER1_PIN;
 			config->echo_pin = CONFIG_OAP_HCSR04_ECHO1_PIN;
+#else
+			return ESP_FAIL;
 #endif
 			break;
 	}

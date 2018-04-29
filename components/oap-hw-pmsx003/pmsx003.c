@@ -53,15 +53,20 @@ esp_err_t pms_init_uart(pmsx003_config_t* config) {
     };
     esp_err_t ret;
     if ((ret = uart_param_config(config->uart_num, &uart_config)) != ESP_OK) {
+    	ESP_LOGE(TAG,"uart_param_config: %d", ret);
     	return ret;
     }
 
-    if ((ret = uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, config->uart_rts_pin, config->uart_cts_pin)) != ESP_OK) {
+    if ((ret = uart_set_pin(config->uart_num, config->uart_txd_pin, config->uart_rxd_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)) != ESP_OK) {
+    	ESP_LOGE(TAG,"uart_set_pin: %d", ret);
     	return ret;
     }
     //Install UART driver( We don't need an event queue here)
 
     ret = uart_driver_install(config->uart_num, OAP_PM_UART_BUF_SIZE * 2, 0, 0, NULL,0);
+    if(ret != ESP_OK) {
+    	ESP_LOGE(TAG,"uart_driver_install: %d", ret);
+    }
     return ret;
 }
 
@@ -109,8 +114,8 @@ esp_err_t pmsx003_enable(pmsx003_config_t* config, uint8_t enabled) {
 	ESP_LOGI(TAG,"enable(%d)",enabled);
 	config->enabled = enabled;
 	set_gpio(config->set_pin, enabled);
-	//if (config->heater_enabled) set_gpio(config->heater_pin, enabled);
-	//if (config->fan_enabled) set_gpio(config->fan_pin, enabled);
+//	if (config->heater_enabled) set_gpio(config->heater_pin, enabled);
+//	if (config->fan_enabled) set_gpio(config->fan_pin, enabled);
 	return ESP_OK; //todo
 }
 
@@ -129,23 +134,27 @@ esp_err_t pmsx003_init(pmsx003_config_t* config) {
 
 esp_err_t pmsx003_set_hardware_config(pmsx003_config_t* config, uint8_t sensor_idx) {
 	if (sensor_idx == 0) {
+#ifdef CONFIG_OAP_PM_UART_ENABLE
 		config->sensor_idx = 0;
 		config->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN;
 		config->uart_num = CONFIG_OAP_PM_UART_NUM;
 		config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN;
 		config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN;
-		config->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN;
-		config->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN;
 		return ESP_OK;
-	} else if (sensor_idx == 1 && CONFIG_OAP_PM_ENABLED_AUX) {
+#else
+		return ESP_FAIL;
+#endif
+	} else if (sensor_idx == 1) {
+#ifdef CONFIG_OAP_PM_UART_AUX_ENABLE
 		config->sensor_idx = 1;
 		config->set_pin = CONFIG_OAP_PM_SENSOR_CONTROL_PIN_AUX;
 		config->uart_num = CONFIG_OAP_PM_UART_NUM_AUX;
 		config->uart_txd_pin = CONFIG_OAP_PM_UART_TXD_PIN_AUX;
 		config->uart_rxd_pin = CONFIG_OAP_PM_UART_RXD_PIN_AUX;
-		config->uart_rts_pin = CONFIG_OAP_PM_UART_RTS_PIN_AUX;
-		config->uart_cts_pin = CONFIG_OAP_PM_UART_CTS_PIN_AUX;
 		return ESP_OK;
+#else
+		return ESP_FAIL;
+#endif
 	} else {
 		return ESP_FAIL;
 	}
