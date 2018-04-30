@@ -9,13 +9,13 @@ config OAP_PM_SAMPLE_BUF_SIZE
 
 config OAP_HEATER_CONTROL_PIN
     int "external heater gpio"
-    default 21
+    default -1
     help
         optional GPIO pin to control a heater. It mirrors state of SET gpio. (0 = none)
 
 config OAP_FAN_CONTROL_PIN
     int "external fan gpio"
-    default 22
+    default -1
     help
         optional GPIO pin to control an additional fan. It mirrors state of SET gpio. (0 = none)
 
