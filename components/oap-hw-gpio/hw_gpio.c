@@ -27,6 +27,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+#include "driver/pcnt.h"
 #include "esp_log.h"
 #include "hw_gpio.h"
 #include "oap_debug.h"
@@ -73,30 +74,86 @@ static void IRAM_ATTR hw_gpio_isr_handler(void* arg)
 	gpio_event_t hw_gpio_evt = {
     	.gpio_num = config->input_pin,
         .gpio_val = gpio_get_level(config->input_pin),
-	.timestamp = get_time_millis(),
 	.sensor_idx = config->sensor_idx
     };
     xQueueSendFromISR(config->gpio_evt_queue, &hw_gpio_evt, NULL);
+}
+
+typedef struct {
+    int unit;  // the PCNT unit that originated an interrupt
+    uint32_t status; // information on the event type that caused the interrupt
+} pcnt_evt_t;
+
+static void IRAM_ATTR pcnt_intr_handler(void *arg)
+{
+    hw_gpio_config_t* config=(hw_gpio_config_t*) arg;
+    uint32_t intr_status = PCNT.int_st.val;
+    int i;
+    pcnt_evt_t evt;
+    portBASE_TYPE HPTaskAwoken = pdFALSE;
+
+    for (i = 0; i < PCNT_UNIT_MAX; i++) {
+        if (intr_status & (BIT(i))) {
+            evt.unit = i;
+            /* Save the PCNT event type that caused an interrupt
+               to pass it to the main program */
+            evt.status = PCNT.status_unit[i].val;
+            PCNT.int_clr.val = BIT(i);
+            xQueueSendFromISR(config->pcnt_evt_queue, &evt, &HPTaskAwoken);
+            if (HPTaskAwoken == pdTRUE) {
+                portYIELD_FROM_ISR();
+            }
+        }
+    }
 }
 
 static void hw_gpio_task(hw_gpio_config_t* config) {
     gpio_event_t hw_gpio_evt;
     while(1) {
 	if(config->enabled) {
-		if (xQueueReceive(config->gpio_evt_queue, &hw_gpio_evt, 10)) {
+		if (xQueueReceive(config->gpio_evt_queue, &hw_gpio_evt, 10 / portTICK_PERIOD_MS)) {
 //			ESP_LOGD(TAG, "%d/%d v:%d t:%d", config->sensor_idx, hw_gpio_evt.sensor_idx, hw_gpio_evt.gpio_val, hw_gpio_evt.timestamp);
 			if (config->callback) {
+				int64_t ms=get_time_millis();
 				if(hw_gpio_evt.gpio_val) {
-					config->GPIlastHigh=get_time_millis();
+					config->GPIlastHigh=ms;
 					config->GPICounter++;
 				} else {
-					config->GPIlastLow=get_time_millis();
+					config->GPIlastLow=ms;
 				}
-				publish(config);
+				if((ms - config->lastPublish) > 1000) {
+					config->lastPublish = ms;
+					publish(config);
+				}
 			}
 		}
-//		if(config->sensor_idx==5)
-//			ESP_LOGD(TAG, "%d dings %d %d-%d>%d", config->sensor_idx, config->GPOtriggerLength, get_time_millis(), config->GPOlastOut, config->GPOtriggerLength);
+#ifdef PCNT
+		pcnt_evt_t evt;
+	        portBASE_TYPE res = xQueueReceive(config->pcnt_evt_queue, &evt, 10 / portTICK_PERIOD_MS);
+	        if (res == pdTRUE) {
+			int16_t count = 0;
+	        	pcnt_get_counter_value(PCNT_UNIT_0, &count);
+	        	ESP_LOGD(TAG, "Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
+	        	if (evt.status & PCNT_STATUS_THRES1_M) {
+	        		ESP_LOGD(TAG, "THRES1 EVT\n");
+			}
+			if (evt.status & PCNT_STATUS_THRES0_M) {
+				ESP_LOGD(TAG, "THRES0 EVT\n");
+			}
+			if (evt.status & PCNT_STATUS_L_LIM_M) {
+				ESP_LOGD(TAG, "L_LIM EVT\n");
+			}
+			if (evt.status & PCNT_STATUS_H_LIM_M) {
+				ESP_LOGD(TAG, "H_LIM EVT\n");
+			}
+			if (evt.status & PCNT_STATUS_ZERO_M) {
+				ESP_LOGD(TAG, "ZERO EVT\n");
+			}
+ 	       } else {
+ 	       		pcnt_get_counter_value(PCNT_UNIT_0, &count);
+ 	       		printf("Current counter value :%d\n", count);
+		}
+#endif
 		if(config->GPOtriggerLength && (get_time_millis()-config->GPOlastOut) >= config->GPOtriggerLength) {
 			gpio_set_level(config->output_pin, !config->GPOlastval);
 			config->GPOtriggerLength=0;
@@ -129,6 +186,46 @@ esp_err_t hw_gpio_init(hw_gpio_config_t* config) {
 	gpio_set_pull_mode(config->input_pin, GPIO_PULLDOWN_ONLY);
 	gpio_set_intr_type(config->input_pin, GPIO_INTR_ANYEDGE);
 
+#ifdef PCNT
+	config->pcnt_evt_queue = xQueueCreate(10, sizeof(pcnt_evt_t));
+	pcnt_config_t pcnt_config = {
+        	.pulse_gpio_num = config->input_pin,
+        	.ctrl_gpio_num = -1,
+        	.channel = PCNT_CHANNEL_0,
+        	.unit = PCNT_UNIT_0,
+        	.pos_mode = PCNT_COUNT_INC,
+        	.neg_mode = PCNT_COUNT_INC,
+        	.lctrl_mode = PCNT_MODE_KEEP,
+        	.hctrl_mode = PCNT_MODE_KEEP,
+        	.counter_h_lim = 32767,
+        	.counter_l_lim = 0,
+        };
+        pcnt_unit_config(&pcnt_config);
+
+        pcnt_set_filter_value(PCNT_UNIT_0, 100);
+        pcnt_filter_enable(PCNT_UNIT_0);
+
+        pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, 20);
+	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1);
+	pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, 10);
+	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_0);
+    
+	/* Enable events on zero, maximum and minimum limit values */
+    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
+    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
+    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
+
+    	/* Initialize PCNT's counter */
+    	pcnt_counter_pause(PCNT_UNIT_0);
+    	pcnt_counter_clear(PCNT_UNIT_0);
+
+    	/* Register ISR handler and enable interrupts for PCNT unit */
+    	pcnt_isr_register(pcnt_intr_handler, config, 0, NULL);
+    	pcnt_intr_enable(PCNT_UNIT_0);
+
+    	/* Everything is set up, now go to counting */
+    	pcnt_counter_resume(PCNT_UNIT_0);
+#endif
 	gpio_pad_select_gpio(config->output_pin);
 	gpio_set_direction(config->output_pin, GPIO_MODE_OUTPUT);
 	gpio_set_level(config->output_pin, 0);
