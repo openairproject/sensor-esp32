@@ -76,9 +76,13 @@ static void IRAM_ATTR hw_gpio_isr_handler(void* arg)
         .gpio_val = gpio_get_level(config->input_pin),
 	.sensor_idx = config->sensor_idx
     };
+    if(hw_gpio_evt.gpio_val) {
+    	config->GPICounter++;
+    }
     xQueueSendFromISR(config->gpio_evt_queue, &hw_gpio_evt, NULL);
 }
 
+#ifdef PCNT
 typedef struct {
     int unit;  // the PCNT unit that originated an interrupt
     uint32_t status; // information on the event type that caused the interrupt
@@ -98,6 +102,9 @@ static void IRAM_ATTR pcnt_intr_handler(void *arg)
             /* Save the PCNT event type that caused an interrupt
                to pass it to the main program */
             evt.status = PCNT.status_unit[i].val;
+            if(evt.status == PCNT_STATUS_H_LIM_M) {
+            	pcnt_counter_clear(PCNT_UNIT_0);
+	    }
             PCNT.int_clr.val = BIT(i);
             xQueueSendFromISR(config->pcnt_evt_queue, &evt, &HPTaskAwoken);
             if (HPTaskAwoken == pdTRUE) {
@@ -106,7 +113,7 @@ static void IRAM_ATTR pcnt_intr_handler(void *arg)
         }
     }
 }
-
+#endif
 static void hw_gpio_task(hw_gpio_config_t* config) {
     gpio_event_t hw_gpio_evt;
     while(1) {
@@ -117,7 +124,6 @@ static void hw_gpio_task(hw_gpio_config_t* config) {
 				int64_t ms=get_time_millis();
 				if(hw_gpio_evt.gpio_val) {
 					config->GPIlastHigh=ms;
-					config->GPICounter++;
 				} else {
 					config->GPIlastLow=ms;
 				}
@@ -205,15 +211,15 @@ esp_err_t hw_gpio_init(hw_gpio_config_t* config) {
         pcnt_set_filter_value(PCNT_UNIT_0, 100);
         pcnt_filter_enable(PCNT_UNIT_0);
 
-        pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, 20);
-	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1);
+//	pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_1, 20);
+//	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_1);
 	pcnt_set_event_value(PCNT_UNIT_0, PCNT_EVT_THRES_0, 10);
 	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_THRES_0);
     
 	/* Enable events on zero, maximum and minimum limit values */
-    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
+//    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_ZERO);
     	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_H_LIM);
-    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
+//    	pcnt_event_enable(PCNT_UNIT_0, PCNT_EVT_L_LIM);
 
     	/* Initialize PCNT's counter */
     	pcnt_counter_pause(PCNT_UNIT_0);
