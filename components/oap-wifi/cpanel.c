@@ -342,25 +342,30 @@ void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 				}
 			}
 			if(strcmp(uri, "/calibrate") == 0) {
+				char *str="ok\n";
+				int len=strlen(str);
+				mg_send_head(nc, 200, len, "Content-Type: text/plain");
 				mhz19_calibrate(&mhz19_cfg[0]);
-				mg_send(nc,"ok", 2);
+				mg_send(nc, str, len);
 				handled = 1;
 			}
 			if(strcmp(uri, "/trigger") == 0) {
 				int delay;
 				int value;
 				int gpio; 
+				char *str="ok\n";
+				int len=strlen(str);
+				mg_send_head(nc, 200, len, "Content-Type: text/plain");
 				parse_query_int(query_string, "delay", &delay);
 				parse_query_int(query_string, "value", &value);
 				parse_query_int(query_string, "gpio", &gpio);
 				if(gpio >= 0 && gpio < HW_GPIO_DEVICES_MAX) {
 					hw_gpio_send_trigger(&hw_gpio_cfg[gpio], value, delay);
 				}
-				mg_send(nc,"ok", 2);
+				mg_send(nc,str, len);
 				handled = 1;
 			}
 			if (!handled) {
-				mg_send_head(nc, 404, 0, "Content-Type: text/plain");
 			}
 			nc->flags |= MG_F_SEND_AND_CLOSE;
 			free(uri);
