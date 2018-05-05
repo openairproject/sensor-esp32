@@ -44,7 +44,7 @@ typedef struct {
 	int64_t GPOlastOut;
 	int64_t GPICounter;
 	int32_t GPOtriggerLength;
-	int8_t GPOlastval;
+	int8_t GPOlastVal;
 	int64_t lastPublish;
 } hw_gpio_config_t;
 

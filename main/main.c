@@ -241,7 +241,7 @@ static void env_sensor_callback(env_data_t* env_data) {
 	        		case sensor_hcsr04:
 					ESP_LOGI(TAG, "env (%d): dist: %dcm", env_data->sensor_idx, env_data->hcsr04.distance);break;
 	        		case sensor_gpio:
-					ESP_LOGI(TAG, "env (%d): GPIlastLow: %llu, GPIlastHigh: %llu, GPICounter: %llu, GPOlastOut: %llu", env_data->sensor_idx, env_data->gpio.GPIlastLow, env_data->gpio.GPIlastHigh, env_data->gpio.GPICounter, env_data->gpio.GPOlastOut);break;
+					ESP_LOGI(TAG, "env (%d): GPIlastLow: %llu, GPIlastHigh: %llu, GPICounter: %llu, GPOlastOut: %llu, GPOlastVal: %d ", env_data->sensor_idx, env_data->gpio.GPIlastLow, env_data->gpio.GPIlastHigh, env_data->gpio.GPICounter, env_data->gpio.GPOlastOut, env_data->gpio.GPOlastVal);break;
 			}
 			env_data_record_t* r = last_env_data + env_data->sensor_idx;
 			r->timestamp = oap_epoch_sec();
