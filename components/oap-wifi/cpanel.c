@@ -215,6 +215,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj5, "GPIlastHigh", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj5, "GPICounter", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPICounter));
 		cJSON_AddItemToObject(envobj5, "GPOlastOut", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPOlastOut));
+		cJSON_AddItemToObject(envobj5, "GPOlastVal", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj5, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[5].timestamp));	
 	}
 	#endif
@@ -226,6 +227,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj6, "GPICounter", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPICounter));
 		cJSON_AddItemToObject(envobj6, "GPIlastHigh", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj6, "GPOlastOut", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPOlastOut));
+		cJSON_AddItemToObject(envobj6, "GPOlastVal", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj6, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[6].timestamp));			
 	}
 	#endif
@@ -237,6 +239,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj7, "GPIlastHigh", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj7, "GPICounter", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPICounter));
 		cJSON_AddItemToObject(envobj7, "GPOlastOut", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPOlastOut));
+		cJSON_AddItemToObject(envobj7, "GPOlastVal", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj7, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[7].timestamp));	
 	}
 	#endif
@@ -248,6 +251,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj8, "GPIlastHigh", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj8, "GPICounter", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPICounter));
 		cJSON_AddItemToObject(envobj8, "GPOlastOut", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPOlastOut));
+		cJSON_AddItemToObject(envobj8, "GPOlastVal", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj8, "timestamp", cJSON_CreateNumber(sysTime - last_env_data[8].timestamp));			
 	}
 	#endif

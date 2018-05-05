@@ -52,7 +52,8 @@ static void publish(hw_gpio_config_t* config) {
 					.gpio.GPIlastHigh=config->GPIlastHigh,
 					.gpio.GPIlastLow=config->GPIlastLow,
 					.gpio.GPICounter=config->GPICounter,
-					.gpio.GPOlastOut=config->GPOlastOut
+					.gpio.GPOlastOut=config->GPOlastOut,
+					.gpio.GPOlastVal=config->GPOlastVal
 				};
 		config->callback(&result);
 	}
@@ -61,7 +62,7 @@ static void publish(hw_gpio_config_t* config) {
 esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay) {
 	gpio_set_level(config->output_pin, value);
 	config->GPOtriggerLength=delay;
-	config->GPOlastval=value;
+	config->GPOlastVal=value;
 	config->GPOlastOut=get_time_millis();
 	publish(config);
 	return ESP_OK;
@@ -161,7 +162,9 @@ static void hw_gpio_task(hw_gpio_config_t* config) {
 		}
 #endif
 		if(config->GPOtriggerLength && (get_time_millis()-config->GPOlastOut) >= config->GPOtriggerLength) {
-			gpio_set_level(config->output_pin, !config->GPOlastval);
+			config->GPOlastVal=!config->GPOlastVal;
+			config->GPOlastOut=get_time_millis();
+			gpio_set_level(config->output_pin, config->GPOlastVal);
 			config->GPOtriggerLength=0;
 		}
 	}
