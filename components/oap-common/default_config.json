@@ -21,11 +21,11 @@
 	},
 	"sensor" : {
 		"config" : {
-			"pms_enabled"   :       1,
-			"bmx280_enabled":       1,
-			"mhz19_enabled" :       1,
-			"hcsr04_enabled":       1,
-			"ssd1306_enabled":      1,
+			"pms_enabled"   :       0,
+			"bmx280_enabled":       0,
+			"mhz19_enabled" :       0,
+			"hcsr04_enabled":       0,
+			"ssd1306_enabled":      0,
 			"gpio_enabled"  :       1,
 			"indoor" 	: 	1,
 			"led"		:	1,
@@ -43,6 +43,6 @@
 	},
 	"http_get_publisher": {
 		"enabled": 0,
-		"url": "https://ota-sensor:MohD5lew@stb.42u.de/pushvals.cgi"
+		"url": "https://<myurl>/pushvals.cgi"
 	}
 }
