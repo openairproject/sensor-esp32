@@ -428,7 +428,7 @@
 </script>
 <script>
     function getCurrent() {
-		$.getJSON( "/status", function( json ) {
+		$.getJSON( "status", function( json ) {
 		        var status=json.status;
 		        var data=json.data;
 		        str = 'Version: '+status.version+
