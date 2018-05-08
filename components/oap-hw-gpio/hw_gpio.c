@@ -53,7 +53,8 @@ static void publish(hw_gpio_config_t* config) {
 					.gpio.GPIlastLow=config->GPIlastLow,
 					.gpio.GPICounter=config->GPICounter,
 					.gpio.GPOlastOut=config->GPOlastOut,
-					.gpio.GPOlastVal=config->GPOlastVal
+					.gpio.GPOlastVal=config->GPOlastVal,
+					.gpio.GPOtriggerLength=config->GPOtriggerLength
 				};
 		config->callback(&result);
 	}
