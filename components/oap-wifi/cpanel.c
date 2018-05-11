@@ -214,6 +214,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj5, "GPIlastLow", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPIlastLow));
 		cJSON_AddItemToObject(envobj5, "GPIlastHigh", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj5, "GPICounter", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPICounter));
+		cJSON_AddItemToObject(envobj5, "GPICountDelta", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPICountDelta));
 		cJSON_AddItemToObject(envobj5, "GPOlastOut", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPOlastOut));
 		cJSON_AddItemToObject(envobj5, "GPOlastVal", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj5, "GPOtriggerLength", cJSON_CreateNumber(last_env_data[5].env_data.gpio.GPOtriggerLength));
@@ -226,6 +227,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(data, "env6", envobj6);
 		cJSON_AddItemToObject(envobj6, "GPIlastLow", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPIlastLow));
 		cJSON_AddItemToObject(envobj6, "GPICounter", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPICounter));
+		cJSON_AddItemToObject(envobj6, "GPICountDelta", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPICountDelta));
 		cJSON_AddItemToObject(envobj6, "GPIlastHigh", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj6, "GPOlastOut", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPOlastOut));
 		cJSON_AddItemToObject(envobj6, "GPOlastVal", cJSON_CreateNumber(last_env_data[6].env_data.gpio.GPOlastVal));
@@ -240,6 +242,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj7, "GPIlastLow", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPIlastLow));
 		cJSON_AddItemToObject(envobj7, "GPIlastHigh", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj7, "GPICounter", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPICounter));
+		cJSON_AddItemToObject(envobj7, "GPICountDelta", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPICountDelta));
 		cJSON_AddItemToObject(envobj7, "GPOlastOut", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPOlastOut));
 		cJSON_AddItemToObject(envobj7, "GPOlastVal", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj7, "GPOtriggerLength", cJSON_CreateNumber(last_env_data[7].env_data.gpio.GPOtriggerLength));
@@ -253,6 +256,7 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 		cJSON_AddItemToObject(envobj8, "GPIlastLow", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPIlastLow));
 		cJSON_AddItemToObject(envobj8, "GPIlastHigh", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPIlastHigh));
 		cJSON_AddItemToObject(envobj8, "GPICounter", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPICounter));
+		cJSON_AddItemToObject(envobj8, "GPICountDelta", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPICountDelta));
 		cJSON_AddItemToObject(envobj8, "GPOlastOut", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPOlastOut));
 		cJSON_AddItemToObject(envobj8, "GPOlastVal", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPOlastVal));
 		cJSON_AddItemToObject(envobj8, "GPOtriggerLength", cJSON_CreateNumber(last_env_data[8].env_data.gpio.GPOtriggerLength));

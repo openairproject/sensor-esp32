@@ -83,13 +83,13 @@ static void ledc_update() {
 static void ledc_set_mode(led_mode_t mode) {
 	ledc_state.mode = mode;
 }
-
+#ifdef CONFIG_OAP_RGB_LED
 static void ledc_set_color(float r, float g, float b) {
 	ledc_state.color.v[0] = r;
 	ledc_state.color.v[1] = g;
 	ledc_state.color.v[2] = b;
 }
-
+#endif
 static void ledc_init() {
 	ledc_queue = xQueueCreate(10, sizeof(led_cmd_t));
 	led_init(oap_sensor_config.led, ledc_queue);
@@ -369,8 +369,8 @@ static void publish_loop() {
 		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000) || (sysTime - last_published) > oap_sensor_config.meas_interval) {
 			log_task_stack(TAG);
 			last_published = sysTime;
-			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 #ifdef CONFIG_OAP_RGB_LED
+			float aqi = fminf(pm_data_pair.pm_data[0].pm2_5 / 100.0, 1.0);
 			//ESP_LOGI(TAG, "AQI=%f",aqi);
 			ledc_set_color(aqi,(1-aqi), 0);
 #endif

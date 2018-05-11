@@ -52,10 +52,12 @@ static void publish(hw_gpio_config_t* config) {
 					.gpio.GPIlastHigh=config->GPIlastHigh,
 					.gpio.GPIlastLow=config->GPIlastLow,
 					.gpio.GPICounter=config->GPICounter,
+					.gpio.GPICountDelta=config->GPICounter-config->GPICountLast,
 					.gpio.GPOlastOut=config->GPOlastOut,
 					.gpio.GPOlastVal=config->GPOlastVal,
 					.gpio.GPOtriggerLength=config->GPOtriggerLength
 				};
+		config->GPICountLast=config->GPICounter;
 		config->callback(&result);
 	}
 }
@@ -167,6 +169,7 @@ static void hw_gpio_task(hw_gpio_config_t* config) {
 			config->GPOlastOut=get_time_millis();
 			gpio_set_level(config->output_pin, config->GPOlastVal);
 			config->GPOtriggerLength=0;
+			publish(config);
 		}
 	}
 	if (config->interval > 0) {

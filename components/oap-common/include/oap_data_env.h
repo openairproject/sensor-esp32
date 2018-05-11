@@ -54,6 +54,7 @@ typedef struct {
 			int64_t GPIlastLow;
 			int64_t GPIlastHigh;
 			int64_t GPICounter;
+			int64_t GPICountDelta;
 			int64_t GPOlastOut;
 			int64_t GPOtriggerLength;
 			int8_t GPOlastVal;
