@@ -39,6 +39,7 @@ typedef struct {
 	uint8_t input_pin;
 	QueueHandle_t gpio_evt_queue;
 	QueueHandle_t pcnt_evt_queue;
+	QueueHandle_t cmd_evt_queue;
 	int64_t GPIlastLow;
 	int64_t GPIlastHigh;
 	int64_t GPOlastOut;
@@ -65,6 +66,6 @@ esp_err_t hw_gpio_set_hardware_config(hw_gpio_config_t* config, uint8_t sensor_i
 /**
  * trigger output of gpio
  */
-esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay);
+esp_err_t hw_gpio_queue_trigger(int sensor_idx, int value, int delay);
 
 #endif /* MAIN_MHZ19_H_ */

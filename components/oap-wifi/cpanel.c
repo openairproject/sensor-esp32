@@ -371,9 +371,7 @@ void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
 				parse_query_int(query_string, "delay", &delay);
 				parse_query_int(query_string, "value", &value);
 				parse_query_int(query_string, "gpio", &gpio);
-				if(gpio >= 0 && gpio < HW_GPIO_DEVICES_MAX) {
-					hw_gpio_send_trigger(&hw_gpio_cfg[gpio], value, delay);
-				}
+				hw_gpio_queue_trigger(gpio, value, delay);
 				mg_send(nc,str, len);
 				handled = 1;
 			}

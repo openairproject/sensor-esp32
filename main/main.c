@@ -54,6 +54,7 @@
 #include "ssd1366.h"
 #include "hcsr04.h"
 #include "hw_gpio.h"
+#include "udp_server.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -341,6 +342,11 @@ static void env_sensors_init() {
 		hw_gpio_enable(&hw_gpio_cfg[3], oap_sensor_config.gpio_enabled);
  	}
 #endif
+#ifdef CONFIG_OAP_GPIO_UDP_ENABLED
+	if(oap_sensor_config.gpio_udp_enabled) {
+		xTaskCreate((TaskFunction_t)udp_server, "GPIO udp server", 1024*3, NULL, DEFAULT_TASK_PRIORITY, NULL);
+	}
+#endif
 }
 
 //--------- MAIN -----------
@@ -366,7 +372,14 @@ static void publish_loop() {
 
 		log_heap_size("publish_loop");
 
-		if (xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000) || (sysTime - last_published) > oap_sensor_config.meas_interval) {
+		if (
+#if defined CONFIG_OAP_PM_UART_ENABLE || defined CONFIG_OAP_PM_UART_AUX_ENABLE
+			xQueueReceive(pm_meter_result_queue, &pm_data_pair, 10000) || 
+#endif			
+			(sysTime - last_published) > oap_sensor_config.meas_interval) {
+#if !defined CONFIG_OAP_PM_UART_ENABLE && !defined CONFIG_OAP_PM_UART_AUX_ENABL
+			delay(100000);
+#endif	
 			log_task_stack(TAG);
 			last_published = sysTime;
 #ifdef CONFIG_OAP_RGB_LED
@@ -419,6 +432,7 @@ static oap_sensor_config_t sensor_config_from_json(cJSON* sconfig) {
 	if ((field = cJSON_GetObjectItem(sconfig, "gpio_enabled"))) sensor_config.gpio_enabled = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "pms_enabled"))) sensor_config.pms_enabled = field->valueint;
 	if ((field = cJSON_GetObjectItem(sconfig, "bmx280_enabled"))) sensor_config.bmx280_enabled = field->valueint;
+	if ((field = cJSON_GetObjectItem(sconfig, "gpio_udp_enabled"))) sensor_config.gpio_udp_enabled = field->valueint;
 	return sensor_config;
 }
 

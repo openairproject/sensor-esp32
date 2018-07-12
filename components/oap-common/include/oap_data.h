@@ -62,6 +62,7 @@ typedef struct {
 	int gpio_enabled;
 	int ssd1306_enabled;
 	int mhz19_enabled;
+	int gpio_udp_enabled;
 } oap_sensor_config_t;
 
 typedef struct {

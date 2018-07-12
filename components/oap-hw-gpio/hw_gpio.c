@@ -44,7 +44,21 @@ typedef struct {
 	int sensor_idx;
 } gpio_event_t;
 
-static void publish(hw_gpio_config_t* config) {
+typedef struct {
+	uint8_t value;
+	int64_t delay;
+} cmd_event_t;
+
+static hw_gpio_config_t *hw_gpio_get_config(int idx) 
+{
+	if(idx >= 0 && idx < HW_GPIO_DEVICES_MAX) {
+		return hw_gpio_cfg+idx;
+	}
+	return NULL;
+}
+
+static void publish(hw_gpio_config_t* config) 
+{
 	if (config->callback) {
 		env_data_t result = {
 					.sensor_idx = config->sensor_idx,
@@ -62,13 +76,26 @@ static void publish(hw_gpio_config_t* config) {
 	}
 }
 
-esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay) {
+esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay) 
+{
 	gpio_set_level(config->output_pin, value);
 	config->GPOtriggerLength=delay;
 	config->GPOlastVal=value;
 	config->GPOlastOut=get_time_millis();
 	publish(config);
 	return ESP_OK;
+}
+
+esp_err_t hw_gpio_queue_trigger(int sensor_idx, int value, int delay) 
+{
+	ESP_LOGI(TAG,"hw_gpio_queue_trigger: %d %d %d\n", sensor_idx, value, delay); 
+	hw_gpio_config_t *config=hw_gpio_get_config(sensor_idx);
+	if(config) {
+		cmd_event_t cmd={.value = value, .delay =delay};
+		xQueueSend(config->cmd_evt_queue, &cmd, 10 / portTICK_RATE_MS);
+		return ESP_OK;
+	}
+	return ESP_FAIL;
 }
 
 static void IRAM_ATTR hw_gpio_isr_handler(void* arg)
@@ -120,6 +147,7 @@ static void IRAM_ATTR pcnt_intr_handler(void *arg)
 #endif
 static void hw_gpio_task(hw_gpio_config_t* config) {
     gpio_event_t hw_gpio_evt;
+    cmd_event_t cmd_evt;
     while(1) {
 	if(config->enabled) {
 		if (xQueueReceive(config->gpio_evt_queue, &hw_gpio_evt, 10 / portTICK_PERIOD_MS)) {
@@ -136,6 +164,9 @@ static void hw_gpio_task(hw_gpio_config_t* config) {
 					publish(config);
 				}
 			}
+		}
+		if (xQueueReceive(config->cmd_evt_queue, &cmd_evt, 10 / portTICK_PERIOD_MS)) {
+			hw_gpio_send_trigger(config, cmd_evt.value, cmd_evt.delay);
 		}
 #ifdef PCNT
 		pcnt_evt_t evt;
@@ -193,6 +224,7 @@ esp_err_t hw_gpio_init(hw_gpio_config_t* config) {
 	char task_name[100];
 	sprintf(task_name, "gpio_sensor_%d", config->sensor_idx);
 	config->gpio_evt_queue = xQueueCreate(10, sizeof(gpio_event_t));
+	config->cmd_evt_queue = xQueueCreate(10, sizeof(cmd_event_t));
 
 	gpio_pad_select_gpio(config->input_pin);
 	gpio_set_direction(config->input_pin, GPIO_MODE_INPUT);

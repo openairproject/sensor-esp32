@@ -80,4 +80,10 @@ config OAP_GPIO_INPUT3_PIN
     help
         todo
 
+config OAP_GPIO_UDP_ENABLED
+    bool "enable GPIO UDP Server"
+    default n
+    help
+        todo   
+
 endmenu
