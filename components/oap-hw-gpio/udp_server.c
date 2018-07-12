@@ -59,15 +59,24 @@ static void XMLCALL startElement(void *userData, const XML_Char *name, const XML
 {
     gpio_vals_t *gpiovals = (gpio_vals_t *)userData;
     
-    for (int i = 0; attr[i]; i += 2) {
-        const char *an=attr[i];
-        const char *av=attr[i+1];
-        if(!strcasecmp(an, "num")) {
-            gpiovals->gpio=atoi(av);
-        }else if(!strcasecmp(an, "delay")) {
-            gpiovals->delay=atoi(av);
-        }else if(!strcasecmp(an, "value")) {
-            gpiovals->value=atoi(av);
+    if(!strcasecmp(name, "gpio")) {
+        int valid=0;
+        for (int i = 0; attr[i]; i += 2) {
+            const char *an=attr[i];
+            const char *av=attr[i+1];
+            if(!strcasecmp(an, "num")) {
+                gpiovals->gpio=atoi(av);
+                valid++;
+            }else if(!strcasecmp(an, "delay")) {
+                gpiovals->delay=atoi(av);
+                valid++;
+            }else if(!strcasecmp(an, "value")) {
+                gpiovals->value=atoi(av);
+                valid++;
+            }
+        }
+        if(valid==3) {
+            hw_gpio_queue_trigger(gpiovals->gpio, gpiovals->value, gpiovals->delay);
         }
     }
 //    ESP_LOGI(tag, "gpio: %d delay: %d value: %d", gpiovals->gpio, gpiovals->delay, gpiovals->value);
@@ -128,7 +137,6 @@ esp_err_t udp_server()
                         XML_GetCurrentLineNumber(parser),
                         XML_ErrorString(XML_GetErrorCode(parser)));
                 } else {
-                    hw_gpio_queue_trigger(gpiovals.gpio, gpiovals.value, gpiovals.delay);
                 }
                 XML_ParserFree(parser);
             }
