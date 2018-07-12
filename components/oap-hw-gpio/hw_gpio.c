@@ -88,7 +88,7 @@ esp_err_t hw_gpio_send_trigger(hw_gpio_config_t* config, int value, int delay)
 
 esp_err_t hw_gpio_queue_trigger(int sensor_idx, int value, int delay) 
 {
-	ESP_LOGI(TAG,"hw_gpio_queue_trigger: %d %d %d\n", sensor_idx, value, delay); 
+	ESP_LOGI(TAG,"hw_gpio_queue_trigger: %d %d %d", sensor_idx, value, delay); 
 	hw_gpio_config_t *config=hw_gpio_get_config(sensor_idx);
 	if(config) {
 		cmd_event_t cmd={.value = value, .delay =delay};
@@ -174,25 +174,25 @@ static void hw_gpio_task(hw_gpio_config_t* config) {
 	        if (res == pdTRUE) {
 			int16_t count = 0;
 	        	pcnt_get_counter_value(PCNT_UNIT_0, &count);
-	        	ESP_LOGD(TAG, "Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
+	        	ESP_LOGD(TAG, "Event PCNT unit[%d]; cnt: %d", evt.unit, count);
 	        	if (evt.status & PCNT_STATUS_THRES1_M) {
-	        		ESP_LOGD(TAG, "THRES1 EVT\n");
+	        		ESP_LOGD(TAG, "THRES1 EVT");
 			}
 			if (evt.status & PCNT_STATUS_THRES0_M) {
-				ESP_LOGD(TAG, "THRES0 EVT\n");
+				ESP_LOGD(TAG, "THRES0 EVT");
 			}
 			if (evt.status & PCNT_STATUS_L_LIM_M) {
-				ESP_LOGD(TAG, "L_LIM EVT\n");
+				ESP_LOGD(TAG, "L_LIM EVT");
 			}
 			if (evt.status & PCNT_STATUS_H_LIM_M) {
-				ESP_LOGD(TAG, "H_LIM EVT\n");
+				ESP_LOGD(TAG, "H_LIM EVT");
 			}
 			if (evt.status & PCNT_STATUS_ZERO_M) {
-				ESP_LOGD(TAG, "ZERO EVT\n");
+				ESP_LOGD(TAG, "ZERO EVT");
 			}
  	       } else {
  	       		pcnt_get_counter_value(PCNT_UNIT_0, &count);
- 	       		printf("Current counter value :%d\n", count);
+ 	       		printf("Current counter value :%d", count);
 		}
 #endif
 		if(config->GPOtriggerLength && (get_time_millis()-config->GPOlastOut) >= config->GPOtriggerLength) {

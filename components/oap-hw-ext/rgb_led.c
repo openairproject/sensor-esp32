@@ -45,7 +45,7 @@ static ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE;
 
 static ledc_timer_config_t ledc_timer = {
         //set timer counter bit number
-        .bit_num = LEDC_TIMER_10_BIT,
+        .duty_resolution = LEDC_TIMER_10_BIT,
         //set frequency of pwm
         .freq_hz = 5000,
         //timer mode,
@@ -99,7 +99,7 @@ void fade_to_color(rgb_color_t color, int time) {
 }
 
 static void setup_ledc() {
-	MAX_DUTY = pow(2,ledc_timer.bit_num)-1;
+	MAX_DUTY = pow(2,ledc_timer.duty_resolution)-1;
 	    ledc_timer_config(&ledc_timer);
 
 	    ledc_channel_config_t ledc_channel = {
