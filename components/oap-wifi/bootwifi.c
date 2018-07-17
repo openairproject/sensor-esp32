@@ -74,8 +74,6 @@ wifi_config_t ap_config = {
 
 // Forward declarations
 static int _sntp_initialised = 0;
-static void become_access_point();
-static void restore_wifi_setup();
 
 static char tag[] = "wifi";
 static char *hostname = NULL;
@@ -286,6 +284,24 @@ esp_err_t wifi_configure(cJSON* wifi, wifi_state_callback_f wifi_state_callback)
 	return ESP_OK;
 }
 
+static void station_watcher() {
+	int retry_counter=0;	
+	ESP_LOGI(tag, "station_watcher started"); 
+	while(1) {
+		if(retry_counter < 6) {
+			if(wifi_disconnected_wait_for(10) == ESP_OK) {
+				retry_counter++;
+				ESP_LOGW(tag, "WIFI disconnected since %ds, retry #%d", retry_counter * 10, retry_counter);
+			} else {
+				retry_counter=0;
+			}
+		} else {
+			oap_reboot("WIFI disconnected, retries exceeded, restarting");
+		}
+		delay(10000);
+	}
+}
+
 static void become_station() {
 	ESP_LOGD(tag, "- Connecting to access point \"%s\" ...", oap_wifi_config.ssid);
 	assert(strlen(oap_wifi_config.ssid) > 0);
@@ -310,6 +326,7 @@ static void become_station() {
 	if (err){
 		ESP_LOGI(tag, "tcpip_adapter_set_hostname failed, rc=%d", err);
 	}
+	xTaskCreate(station_watcher, "station_watcher", 2*1024, NULL, DEFAULT_TASK_PRIORITY, NULL);
 }
 
 static void become_access_point() {
@@ -322,21 +339,12 @@ static void become_access_point() {
 	ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-static void restore_wifi_setup() {
-	if (oap_wifi_config.ap_mode) {
-		become_access_point();
-	} else {
-		become_station();
-	}
-}
-
 static void init_wifi() {
 	tcpip_adapter_init();
 	ESP_ERROR_CHECK(esp_event_loop_init(esp32_wifi_eventHandler, NULL));
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-	restore_wifi_setup();
 }
 
 void wifi_boot() {
@@ -347,7 +355,11 @@ void wifi_boot() {
 		init_wifi();
 	}
 
-	restore_wifi_setup();
+	if (oap_wifi_config.ap_mode) {
+		become_access_point();
+	} else {
+		become_station();
+	}
 }
 
 esp_err_t wifi_disconnected_wait_for(uint32_t ms) {
