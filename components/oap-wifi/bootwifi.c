@@ -30,7 +30,7 @@
 #include "cJSON.h"
 #include "bootwifi.h"
 #include "sdkconfig.h"
-#include "apps/sntp/sntp.h"
+#include <lwip/apps/sntp.h>
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "freertos/event_groups.h"

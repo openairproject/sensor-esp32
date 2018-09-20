@@ -113,6 +113,7 @@ static esp_err_t main_loop(void *mongoose_event_handler) {
 		//maybe we should reboot?
 		ESP_LOGW(tag, "No connection from the mg_bind().");
 		mg_mgr_free(&mgr);
+		oap_reboot("No connection from the mg_bind().");
 		return ESP_FAIL;
 	}
 	//use http
