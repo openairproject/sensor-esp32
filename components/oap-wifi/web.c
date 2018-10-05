@@ -42,7 +42,7 @@ static esp_err_t reboot_handler(httpd_req_t *req)
 
 httpd_uri_t reboot_desc = {
     .uri       = "/reboot",
-    .method    = HTTP_GET,
+    .method    = HTTP_POST,
     .handler   = reboot_handler
 };
 
@@ -275,7 +275,7 @@ static esp_err_t trigger_handler(httpd_req_t *req)
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
             ESP_LOGI(TAG, "Found URL query => %s", buf);
             char param[32];
-            int delay = 1000;
+            int delay = 0;
             int value = 0;
             int gpio = -1;
             /* Get value of expected key from query string */
