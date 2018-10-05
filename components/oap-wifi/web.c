@@ -1,139 +1,108 @@
-/*
- * cpanel.c
- *
- *  Created on: Oct 5, 2017
- *      Author: kris
- *
- *  This file is part of OpenAirProject-ESP32.
- *
- *  OpenAirProject-ESP32 is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  OpenAirProject-ESP32 is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
- */
+#include <esp_log.h>
+#include <esp_system.h>
+#include <nvs_flash.h>
+#include <sys/param.h>
 
 #include "oap_common.h"
-#include "mongoose.h"
+#undef HTTP_GET
+#undef HTTP_POST
 #include "cJSON.h"
 #include "oap_storage.h"
 #include "pm_meter.h"
 #include "mhz19.h"
 #include "hw_gpio.h"
 
-#define tag "cpanel"
+#include "web.h"
 
+static const char *TAG="web";
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
-inline int ishex(int x) {
-	return	(x >= '0' && x <= '9')	||
-		(x >= 'a' && x <= 'f')	||
-		(x >= 'A' && x <= 'F');
-}
- 
-static int decode(const char *s, char *dec) {
-	char *o;
-	const char *end = s + strlen(s);
-	int c;
- 
-	for (o = dec; s <= end; o++) {
-		c = *s++;
-		if (c == '+') c = ' ';
-		else if (c == '%' && (	!ishex(*s++)	||
-					!ishex(*s++)	||
-					!sscanf(s - 2, "%2x", &c)))
-			return -1;
- 
-		if (dec) *o = c;
-	}
- 
-	return o - dec;
+static esp_err_t index_handler(httpd_req_t *req)
+{
+    size_t resp_size = index_html_end-index_html_start;
+    httpd_resp_set_type(req, HTTPD_TYPE_TEXT);
+    httpd_resp_send(req, (const char *)index_html_start, resp_size);
+    return ESP_OK;
 }
 
-static int parse_query(char *str, char *key, char *val, size_t szval) {
-	char *delimiter1 = "&\r\n ";
-	char *delimiter2 = "=";
-	
-	char *ptr1;
-	char *ptr2;
-	char *saveptr1;
-	char *saveptr2;
-	ptr1 = strtok_r(str, delimiter1, &saveptr1);
-//	ESP_LOGD(tag, "-->parse_query: str:%s key:%s ptr1:%s", str, key, ptr1);
-	while(ptr1 != NULL) {
-		ptr2 = strtok_r(ptr1, delimiter2, &saveptr2);
-		if(ptr1 && ptr2) {
-//			ESP_LOGD(tag, "ptr1: %s ptr2: %s", ptr1, ptr2);
-		}
-		while(ptr2 != NULL) {
-			char *tmp=ptr2;
-			ptr2=strtok_r(NULL, delimiter2, &saveptr2);
-			if(ptr2) {
-//				ESP_LOGD(tag, "ptr2: %s", ptr2);
-			}
-			if(!strcmp(tmp, key)) {
-//				ESP_LOGD(tag, "parse_query: %s == %s", tmp, key);
-				memset(val, 0, szval);
-				decode(ptr2, val);
-//				ESP_LOGD(tag, "parse_query: val:%s", val);				
-				return 1;
-			} 
-		}
-		ptr1 = strtok_r(NULL, delimiter1, &saveptr1);		
-	}
-	return 0;
+httpd_uri_t index_desc = {
+    .uri       = "/",
+    .method    = HTTP_GET,
+    .handler   = index_handler
+};
+
+static esp_err_t reboot_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, HTTPD_TYPE_TEXT);
+    httpd_resp_send(req, "", 0);
+    oap_reboot("requested by user");
+    return ESP_OK;
 }
 
-static int parse_query_int(char *query, char *key, int *val) {
-	char valstr[32];
-	char *str = strdup(query);
-	int ret=parse_query(str, key, valstr, sizeof(valstr));
-	ESP_LOGI(tag, "parse_query_int: %s %s -> %s", str, key,  valstr);
-	if(ret) {
-		*val = atoi(valstr); 
+httpd_uri_t reboot_desc = {
+    .uri       = "/reboot",
+    .method    = HTTP_GET,
+    .handler   = reboot_handler
+};
+
+static esp_err_t handler_get_config(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, HTTPD_TYPE_JSON);
+    httpd_resp_set_hdr(req, "X-Version", oap_version_str());
+
+    cJSON* config = storage_get_config_to_update();
+    char* json = cJSON_Print(config);
+    httpd_resp_send(req, json, strlen(json));
+    free(json);
+    return ESP_OK;
+}
+
+httpd_uri_t get_config_desc = {
+    .uri       = "/config",
+    .method    = HTTP_GET,
+    .handler   = handler_get_config
+};
+
+static esp_err_t handler_post_config(httpd_req_t *req)
+{
+    /* Read request bod */
+    char content[1000];
+
+    /* Truncate if content length larger than the buffer */
+    size_t recv_size = MIN(req->content_len, sizeof(content));
+
+    int ret = httpd_req_recv(req, content, recv_size);
+    if (ret < 0) {
+        /* In case of recv error, returning ESP_FAIL will
+         * ensure that the underlying socket is closed */
+        return ESP_FAIL;
+    }
+    cJSON* config = cJSON_Parse(content);
+	if (config) {
+		storage_update_config(config);
+		handler_get_config(req);
 	} else {
-		*val=0;
+		httpd_resp_set_status(req, HTTPD_500);
 	}
-	free(str);
-	return ret;
+	cJSON_Delete(config);
+
+    /* Send a simple response */
+    const char *resp = "URI POST Response";
+    httpd_resp_send(req, resp, strlen(resp));
+ 
+    return ESP_OK;
 }
 
-static char *mgStrToStr(struct mg_str mgStr) {
-	char *retStr = (char *) malloc(mgStr.len + 1);
-	memcpy(retStr, mgStr.p, mgStr.len);
-	retStr[mgStr.len] = 0;
-	return retStr;
-} // mgStrToStr
+httpd_uri_t post_config_desc = {
+    .uri       = "/config",
+    .method    = HTTP_POST,
+    .handler   = handler_post_config
+};
 
-static void handler_index(struct mg_connection *nc) {
-	size_t resp_size = index_html_end-index_html_start;
-	mg_send_head(nc, 200, resp_size, "Content-Type: text/html");
-	mg_send(nc, index_html_start, resp_size);
-	ESP_LOGD(tag, "served %d bytes", resp_size);
-}
-
-static void handler_get_config(struct mg_connection *nc, struct http_message *message) {
-	ESP_LOGD(tag, "handler_get_config");
-	cJSON* config = storage_get_config_to_update();
-	char* json = cJSON_Print(config);
-	char* headers = malloc(200);
-	sprintf(headers, "Content-Type: application/json\r\nX-Version: %s", oap_version_str());
-	mg_send_head(nc, 200, strlen(json), headers);
-	mg_send(nc, json, strlen(json));
-	free(headers);
-	free(json);
-}
-
-static void handler_get_status(struct mg_connection *nc, struct http_message *message) {
-	ESP_LOGD(tag, "handler_get_status");
+static esp_err_t handler_get_status(httpd_req_t *req)
+{
+        httpd_resp_set_type(req, HTTPD_TYPE_JSON);
 	cJSON *root, *status, *data;
 
 	root = cJSON_CreateObject();
@@ -281,107 +250,122 @@ static void handler_get_status(struct mg_connection *nc, struct http_message *me
 	}
 	#endif
 	char* json = cJSON_Print(root);
-	mg_send(nc, json, strlen(json));
+        httpd_resp_send(req, json, strlen(json));
+
 	free(json);
 	cJSON_Delete(root);
+    return ESP_OK;
 }
 
-static void handler_reboot(struct mg_connection *nc) {
-	mg_send_head(nc, 200, 0, "Content-Type: text/plain");
-	oap_reboot("requested by user");
-}
+httpd_uri_t get_status_desc = {
+    .uri       = "/status",
+    .method    = HTTP_GET,
+    .handler   = handler_get_status
+};
 
-static void handler_set_config(struct mg_connection *nc, struct http_message *message) {
-	ESP_LOGD(tag, "handler_set_config");
-	char *body = mgStrToStr(message->body);
-	cJSON* config = cJSON_Parse(body);
-	free(body);
-	if (config) {
-		storage_update_config(config);
-		handler_get_config(nc, message);
-	} else {
-		mg_http_send_error(nc, 500, "invalid config");
-	}
-	cJSON_Delete(config);
-}
-
-/**
- * Handle mongoose events.  These are mostly requests to process incoming
- * browser requests.  The ones we handle are:
- * GET / - Send the enter details page.
- * GET /set - Set the connection info (REST request).
- * POST /ssidSelected - Set the connection info (HTML FORM).
- */
-
-void cpanel_event_handler(struct mg_connection *nc, int ev, void *evData) {
-	ESP_LOGV(tag, "- Event: %d", ev);
-	uint8_t handled = 0;
-	switch (ev) {
-		case MG_EV_HTTP_REQUEST: {
-			struct http_message *message = (struct http_message *) evData;
-
-			//mg_str is not terminated with '\0'
-			char *uri = mgStrToStr(message->uri);
-			char *method = mgStrToStr(message->method);
-			char *query_string = mgStrToStr(message->query_string);
-			
-			ESP_LOGD(tag, "%s %s %s", method, uri, query_string);
-
-			if (strcmp(uri, "/") == 0) {
-				handler_index(nc);
-				handled = 1;
-			}
-			if (strcmp(uri, "/reboot") == 0) {
-				handler_reboot(nc);
-				handled = 1;
-			}
-			if(strcmp(uri, "/config") == 0) {
-				if (strcmp(method, "GET") == 0) {
-					handler_get_config(nc, message);
-					handled = 1;
-				} else if (strcmp(method, "POST") == 0) {
-					handler_set_config(nc, message);
-					handled = 1;
-				}
-			}
-			if(strcmp(uri, "/status") == 0) {
-				if (strcmp(method, "GET") == 0) {
-					handler_get_status(nc, message);
-					handled = 1;
-				} else if (strcmp(method, "POST") == 0) {
-					handler_get_status(nc, message);
-					handled = 1;
-				}
-			}
-			if(strcmp(uri, "/calibrate") == 0) {
-				char *str="ok\n";
-				int len=strlen(str);
-				mg_send_head(nc, 200, len, "Content-Type: text/plain");
-				mhz19_calibrate(&mhz19_cfg[0]);
-				mg_send(nc, str, len);
-				handled = 1;
-			}
-			if(strcmp(uri, "/trigger") == 0) {
-				int delay;
-				int value;
-				int gpio; 
-				char *str="ok\n";
-				int len=strlen(str);
-				mg_send_head(nc, 200, len, "Content-Type: text/plain");
-				parse_query_int(query_string, "delay", &delay);
-				parse_query_int(query_string, "value", &value);
-				parse_query_int(query_string, "gpio", &gpio);
-				hw_gpio_queue_trigger(gpio, value, delay);
-				mg_send(nc,str, len);
-				handled = 1;
-			}
-			if (!handled) {
-			}
-			nc->flags |= MG_F_SEND_AND_CLOSE;
-			free(uri);
-			free(method);
-			free(query_string);
-			break;
+static esp_err_t trigger_handler(httpd_req_t *req)
+{
+    char*  buf;
+    size_t buf_len;
+    char *str = "ok\n";
+    httpd_resp_set_type(req, HTTPD_TYPE_TEXT);
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            ESP_LOGI(TAG, "Found URL query => %s", buf);
+            char param[32];
+            int delay = 1000;
+            int value = 0;
+            int gpio = -1;
+            /* Get value of expected key from query string */
+            if (httpd_query_key_value(buf, "delay", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => delay=%s", param);
+                delay=atoi(param);
+            }
+            if (httpd_query_key_value(buf, "value", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => value=%s", param);
+                value=atoi(param);
+            }
+            if (httpd_query_key_value(buf, "gpio", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => gpio=%s", param);
+                gpio=atoi(param);
+            }
+            if (httpd_query_key_value(buf, "func", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => func=%s", param);
+                if(!strcasecmp(param, "calibrate")) {
+			mhz19_calibrate(&mhz19_cfg[0]);
 		}
-	}
+            } else if(gpio >= 0) {
+	        hw_gpio_queue_trigger(gpio, value, delay);
+	    }
+        }
+        free(buf);
+    }
+    httpd_resp_send(req, str, strlen(str));
+    return ESP_OK;
 }
+
+httpd_uri_t trigger_desc = {
+    .uri       = "/trigger",
+    .method    = HTTP_GET,
+    .handler   = trigger_handler
+};
+
+httpd_handle_t start_webserver(void)
+{
+    httpd_handle_t server = NULL;
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.stack_size = 6*1024;
+    config.lru_purge_enable = true;
+    config.backlog_conn = 25;
+    config.max_open_sockets = 12;
+    config.max_uri_handlers = 6;
+    
+    // Start the httpd server
+    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
+    if (httpd_start(&server, &config) == ESP_OK) {
+        // Set URI handlers
+        ESP_LOGI(TAG, "Registering URI handlers");
+        httpd_register_uri_handler(server, &index_desc);
+        httpd_register_uri_handler(server, &reboot_desc);
+        httpd_register_uri_handler(server, &get_config_desc);
+        httpd_register_uri_handler(server, &post_config_desc);
+        httpd_register_uri_handler(server, &get_status_desc);
+        httpd_register_uri_handler(server, &trigger_desc);
+        esp_log_level_set("httpd_parse", ESP_LOG_WARN);
+        esp_log_level_set("httpd_txrx", ESP_LOG_WARN);
+        esp_log_level_set("httpd_uri", ESP_LOG_WARN);
+        esp_log_level_set("httpd_sess", ESP_LOG_WARN);
+        esp_log_level_set("httpd", ESP_LOG_WARN);
+        return server;
+    }
+
+    ESP_LOGI(TAG, "Error starting server!");
+    return NULL;
+}
+
+void stop_webserver(httpd_handle_t server)
+{
+    // Stop the httpd server
+    httpd_stop(server);
+}
+
+
+static httpd_handle_t server = NULL;
+
+void web_wifi_handler(bool connected, bool ap_mode)
+{
+        if (connected) {
+                if (server == NULL) {
+                        server = start_webserver();
+                }
+        } else {
+        
+                if (server) {
+                        stop_webserver(server);
+                        server = NULL;
+                }
+        }
+}
+

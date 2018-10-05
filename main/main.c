@@ -50,11 +50,11 @@
 #include "awsiot.h"
 #include "ota.h"
 #include "oap_data.h"
-#include "server_cpanel.h"
 #include "ssd1366.h"
 #include "hcsr04.h"
 #include "hw_gpio.h"
 #include "udp_server.h"
+#include "web.h"
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -521,7 +521,7 @@ void app_main() {
 
 	//wifi/mongoose requires plenty of mem, start it here
 	btn_configure(&btn_handler);
-	wifi_configure(is_ap_mode_pressed() ? NULL : storage_get_config("wifi"), CONFIG_OAP_CONTROL_PANEL ? cpanel_wifi_handler : NULL);
+	wifi_configure(is_ap_mode_pressed() ? NULL : storage_get_config("wifi"), CONFIG_OAP_CONTROL_PANEL ? web_wifi_handler : NULL);
 	wifi_boot();
 	start_ota_task(storage_get_config("ota"));
 

@@ -34,8 +34,6 @@
 #include "oap_common.h"
 #include "oap_storage.h"
 #include "freertos/event_groups.h"
-#include "server.h"
-#include "cpanel.h"
 
 /**
  * based on https://github.com/nkolban/esp32-snippets/tree/master/networking/bootwifi
