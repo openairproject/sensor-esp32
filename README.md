@@ -5,7 +5,7 @@ hardware like:
 
 - CO2 sensor: MH-Z19 (can be calibrated via 
 
-		http://<sensor>/calibrate
+		http://<sensor>/trigger?func=calibrate
 
 - OLED display: SSD 1306
 
