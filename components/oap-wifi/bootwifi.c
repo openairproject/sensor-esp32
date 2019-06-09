@@ -314,7 +314,7 @@ static void become_station() {
 	}
 
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-	wifi_config_t sta_config;
+	wifi_config_t sta_config = {0};
 	sta_config.sta.bssid_set = 0;
 	memcpy(sta_config.sta.ssid, oap_wifi_config.ssid, SSID_SIZE);
 	memcpy(sta_config.sta.password, oap_wifi_config.password, PASSWORD_SIZE);
