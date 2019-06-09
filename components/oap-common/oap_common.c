@@ -30,6 +30,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/task.h"
+#include "driver/gpio.h"
 
 static const long FEB22_2017 = 1487795557;
 static const char *TAG="oap";
