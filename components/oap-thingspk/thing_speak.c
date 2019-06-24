@@ -36,13 +36,6 @@ static const char *TAG = "thingspk";
 static char* apikey = NULL;
 static int _configured = 0;
 
-static void set_config_str_field(char** field, char* value) {
-	if (*field) {
-		free(*field);
-	}
-	*field = str_dup(value);
-}
-
 static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
 	char* payload = malloc(512);
 	if (!payload) return NULL;
@@ -57,9 +50,9 @@ static char* prepare_thingspeak_payload(oap_measurement_t* meas) {
 
 	if (meas->env) {
 		sprintf(payload, "%s&field4=%.2f&field5=%.2f&field6=%.2f", payload,
-			meas->env->temp,
-			meas->env->pressure,
-			meas->env->humidity);
+			meas->env->bmx280.temp,
+			meas->env->bmx280.pressure,
+			meas->env->bmx280.humidity);
 	}
 
 	//memory metrics

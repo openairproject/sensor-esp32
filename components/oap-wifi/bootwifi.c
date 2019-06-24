@@ -27,13 +27,13 @@
 #include <esp_wifi.h>
 #include <driver/gpio.h>
 #include <lwip/sockets.h>
+#include "cJSON.h"
 #include "bootwifi.h"
 #include "sdkconfig.h"
-#include "apps/sntp/sntp.h"
+#include <lwip/apps/sntp.h>
 #include "oap_common.h"
+#include "oap_storage.h"
 #include "freertos/event_groups.h"
-#include "server.h"
-#include "cpanel.h"
 
 /**
  * based on https://github.com/nkolban/esp32-snippets/tree/master/networking/bootwifi
@@ -72,10 +72,9 @@ wifi_config_t ap_config = {
 
 // Forward declarations
 static int _sntp_initialised = 0;
-static void become_access_point();
-static void restore_wifi_setup();
 
 static char tag[] = "wifi";
+static char *hostname = NULL;
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group = NULL;
@@ -177,6 +176,10 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 		}
 
 		//WARNING - we cannot rely on this event, sometimes it doesn't got triggered
+		case SYSTEM_EVENT_STA_START: {
+			esp_wifi_connect();
+			break;
+		}
 		case SYSTEM_EVENT_STA_DISCONNECTED: {
 			wifi_state_change(false, false);
 			/*
@@ -191,7 +194,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 			 */
 			if (!oap_wifi_config.ap_mode) {
 				ESP_LOGI(tag, "reconnect");
-				restore_wifi_setup();
+				 esp_wifi_connect();
 			}
 			break;
 		}
@@ -239,6 +242,7 @@ static esp_err_t esp32_wifi_eventHandler(void *ctx, system_event_t *event) {
 	return ESP_OK;
 }
 
+
 esp_err_t wifi_configure(cJSON* wifi, wifi_state_callback_f wifi_state_callback) {
 	memset(&oap_wifi_config, 0, sizeof(oc_wifi_t));
 	oap_wifi_config.callback = wifi_state_callback;
@@ -263,7 +267,9 @@ esp_err_t wifi_configure(cJSON* wifi, wifi_state_callback_f wifi_state_callback)
 		if ((field = cJSON_GetObjectItem(wifi, "netmask"))) {
 			inet_pton(AF_INET, field->valuestring, &oap_wifi_config.ipInfo.netmask);
 		}
-
+		if ((field = cJSON_GetObjectItem(wifi, "sensorId")) && field->valuestring && strlen(field->valuestring)) {
+			set_config_str_field(&hostname, field->valuestring);
+		}
 		ESP_LOGD(tag, "wifi.ssid: %s", oap_wifi_config.ssid);
 		ESP_LOGD(tag, "wifi.pass.lenght: [%d]", strlen(oap_wifi_config.password));
 
@@ -274,6 +280,24 @@ esp_err_t wifi_configure(cJSON* wifi, wifi_state_callback_f wifi_state_callback)
 		oap_wifi_config.ap_mode = 1;
 	}
 	return ESP_OK;
+}
+
+static void station_watcher() {
+	int retry_counter=0;	
+	ESP_LOGI(tag, "station_watcher started"); 
+	while(1) {
+		if(retry_counter < 6) {
+			if(wifi_disconnected_wait_for(10) == ESP_OK) {
+				retry_counter++;
+				ESP_LOGW(tag, "WIFI disconnected since %ds, retry #%d", retry_counter * 10, retry_counter);
+			} else {
+				retry_counter=0;
+			}
+		} else {
+			oap_reboot("WIFI disconnected, retries exceeded, restarting");
+		}
+		delay(10000);
+	}
 }
 
 static void become_station() {
@@ -289,37 +313,28 @@ static void become_station() {
 		tcpip_adapter_dhcpc_start(TCPIP_ADAPTER_IF_STA);
 	}
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  wifi_config_t sta_config;
-  sta_config.sta.bssid_set = 0;
-  memcpy(sta_config.sta.ssid, oap_wifi_config.ssid, SSID_SIZE);
-  memcpy(sta_config.sta.password, oap_wifi_config.password, PASSWORD_SIZE);
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
-  ESP_ERROR_CHECK(esp_wifi_start());
-  ESP_ERROR_CHECK(esp_wifi_connect());//FIXERR 0x3006 : ESP_ERR_WIFI_CONN (happens after reboot via control panel)
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	wifi_config_t sta_config = {0};
+	sta_config.sta.bssid_set = 0;
+	memcpy(sta_config.sta.ssid, oap_wifi_config.ssid, SSID_SIZE);
+	memcpy(sta_config.sta.password, oap_wifi_config.password, PASSWORD_SIZE);
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+	ESP_ERROR_CHECK(esp_wifi_start());
+	esp_err_t err = tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, hostname);
+	if (err){
+		ESP_LOGI(tag, "tcpip_adapter_set_hostname failed, rc=%d", err);
+	}
+	xTaskCreate(station_watcher, "station_watcher", 2*1024, NULL, DEFAULT_TASK_PRIORITY, NULL);
 }
 
 static void become_access_point() {
 	ESP_LOGD(tag, "- Starting being an access point ...");
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
 
-	//generate unique SSID
-	uint8_t mac[6];
-	esp_efuse_mac_get_default(mac);
-	//ESP_LOGD(tag, "MAC= %02X:%02X:%02X:%02X:%02X:%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
-	//using full MAC would be the best but I'm not sure if it is safe (if someone has wifi with MAC filtering)
-	sprintf((char*)ap_config.ap.ssid, "OpenAirProject-%02X%02X%02X%02X", mac[0], mac[1], mac[4], mac[5]);
+	get_generic_name((char *)ap_config.ap.ssid);
 
 	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
 	ESP_ERROR_CHECK(esp_wifi_start());
-}
-
-static void restore_wifi_setup() {
-	if (oap_wifi_config.ap_mode) {
-		become_access_point();
-	} else {
-		become_station();
-	}
 }
 
 static void init_wifi() {
@@ -328,6 +343,7 @@ static void init_wifi() {
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+	ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 }
 
 void wifi_boot() {
@@ -338,7 +354,11 @@ void wifi_boot() {
 		init_wifi();
 	}
 
-	restore_wifi_setup();
+	if (oap_wifi_config.ap_mode) {
+		become_access_point();
+	} else {
+		become_station();
+	}
 }
 
 esp_err_t wifi_disconnected_wait_for(uint32_t ms) {

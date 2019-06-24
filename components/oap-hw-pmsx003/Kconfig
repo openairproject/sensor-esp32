@@ -1,81 +1,71 @@
 menu "OAP PMSx003 Sensor"
 
+config OAP_PM_UART_ENABLE
+    bool "PM0 enable"
+    default y
+    help
+        todo
+
 config OAP_PM_UART_NUM
     hex "uart num"
+    depends on OAP_PM_UART_ENABLE
     default 1
     help
         todo
 
 config OAP_PM_SENSOR_CONTROL_PIN
     int "sensor set gpio"
+    depends on OAP_PM_UART_ENABLE
     default 10
     help
         R/W GPIO pin connected to sensor SET line - it enables/disables sensor.
 
 config OAP_PM_UART_RXD_PIN
     int "RX gpio"
+    depends on OAP_PM_UART_ENABLE
     default 13
     help
         GPIO pin connected to sensor RX line. This pin can be R/O (>=34).
         
 config OAP_PM_UART_TXD_PIN
     int "TX gpio"
+    depends on OAP_PM_UART_ENABLE
     default 5
     help
         Any gpio pin (no need to connect this line)
         
-config OAP_PM_UART_RTS_PIN
-    int "RTS gpio"
-    default 18
-    help
-        Any gpio pin (no need to connect this line)
-
-config OAP_PM_UART_CTS_PIN
-    int "CTS gpio"
-    default 19
-    help
-        Any gpio pin (no need to connect this line)
-
-config OAP_PM_ENABLED_AUX
-    int "enable secondary PM sensor"
-    default 0
+config OAP_PM_UART_AUX_ENABLE
+    bool "PM1 enable"
+    default n
     help
         todo
 
 config OAP_PM_UART_NUM_AUX
     hex "AUX uart num"
+    depends on OAP_PM_UART_AUX_ENABLE
     default 2
     help
         todo
 
 config OAP_PM_SENSOR_CONTROL_PIN_AUX
     int "AUX sensor set gpio"
+    depends on OAP_PM_UART_AUX_ENABLE
     default 2
     help
         R/W GPIO pin connected to sensor SET line - it enables/disables sensor.
 
 config OAP_PM_UART_RXD_PIN_AUX
     int "AUX RX gpio"
+    depends on OAP_PM_UART_AUX_ENABLE
     default 15
     help
         GPIO pin connected to sensor RX line. This pin can be R/O (>=34).
         
 config OAP_PM_UART_TXD_PIN_AUX
     int "AUX TX gpio"
+    depends on OAP_PM_UART_AUX_ENABLE
     default 5
     help
         Any gpio pin (no need to connect this line)
         
-config OAP_PM_UART_RTS_PIN_AUX
-    int "AUX RTS gpio"
-    default 18
-    help
-        Any gpio pin (no need to connect this line)
-
-config OAP_PM_UART_CTS_PIN_AUX
-    int "AUX CTS gpio"
-    default 19
-    help
-        Any gpio pin (no need to connect this line)
-
 endmenu

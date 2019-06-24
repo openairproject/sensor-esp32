@@ -26,11 +26,19 @@
 #include "oap_data_pm.h"
 #include "oap_data_env.h"
 
+// FIXME this stuff has to be generalized
 typedef struct {
 	pm_data_t* pm;
 	pm_data_t* pm_aux;
 	env_data_t* env;
 	env_data_t* env_int;
+	env_data_t* co2;
+	env_data_t* distance1;
+	env_data_t* distance2;
+	env_data_t* gpio1;
+	env_data_t* gpio2;
+	env_data_t* gpio3;
+	env_data_t* gpio4;
 	long int local_time;
 } oap_measurement_t;
 
@@ -45,7 +53,23 @@ typedef struct {
 	int meas_interval;
 	int meas_strategy;	//interval, continuos, etc
 	int test;
+	int altitude;
+	int tempOffset;
+	int humidityOffset;
+	int pms_enabled;
+	int hcsr04_enabled;
+	int bmx280_enabled;
+	int gpio_enabled;
+	int ssd1306_enabled;
+	int mhz19_enabled;
+	int gpio_udp_enabled;
 } oap_sensor_config_t;
 
+typedef struct {
+	env_data_t env_data;
+	long timestamp;
+} env_data_record_t;
+
+extern env_data_record_t last_env_data[];
 
 #endif /* COMPONENTS_OAP_COMMON_INCLUDE_OAP_DATA_H_ */

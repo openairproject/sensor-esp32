@@ -1,0 +1,89 @@
+menu "OAP Generic GPIO"
+
+config OAP_GPIO_0_ENABLED
+    bool "enable GPIO #0"
+    default n
+    help
+        todo   
+
+config OAP_GPIO_OUTPUT0_PIN
+    int "GPIO #0 output PIN"
+    depends on OAP_GPIO_0_ENABLED
+    default 5
+    help
+        todo
+
+config OAP_GPIO_INPUT0_PIN
+    int "GPIO #0 input PIN"
+    depends on OAP_GPIO_0_ENABLED
+    default 21
+    help
+        todo
+
+config OAP_GPIO_1_ENABLED
+    bool "enable GPIO #1"
+    default n
+    help
+        todo   
+
+config OAP_GPIO_OUTPUT1_PIN
+    int "GPIO #1 output PIN"
+    depends on OAP_GPIO_1_ENABLED
+    default 12
+    help
+        todo
+
+config OAP_GPIO_INPUT1_PIN
+    int "GPIO #1 input PIN"
+    depends on OAP_GPIO_1_ENABLED
+    default 22
+    help
+        todo
+
+config OAP_GPIO_2_ENABLED
+    bool "enable GPIO #2"
+    default n
+    help
+        todo   
+
+config OAP_GPIO_OUTPUT2_PIN
+    int "GPIO #2 output PIN"
+    depends on OAP_GPIO_2_ENABLED
+    default 18
+    help
+        todo
+
+config OAP_GPIO_INPUT2_PIN
+    int "GPIO #2 input PIN"
+    depends on OAP_GPIO_2_ENABLED
+    default 36
+    help
+        todo
+
+config OAP_GPIO_3_ENABLED
+    bool "enable GPIO #3"
+    default n
+    help
+        todo   
+
+config OAP_GPIO_OUTPUT3_PIN
+    int "GPIO #3 output PIN"
+    depends on OAP_GPIO_3_ENABLED
+    default 19
+    help
+        todo
+
+config OAP_GPIO_INPUT3_PIN
+    int "GPIO #3 input PIN"
+    depends on OAP_GPIO_3_ENABLED
+    default 39
+    help
+        todo
+
+config OAP_GPIO_UDP_ENABLED
+    bool "enable GPIO UDP Server"
+    default n
+    help
+        todo   
+
+endmenu

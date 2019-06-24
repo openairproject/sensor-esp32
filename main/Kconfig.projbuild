@@ -1,10 +1,16 @@
 menu "OpenAirProject"
 		
 config OAP_CONTROL_PANEL
-	int "enable control panel"
-	default 1
+	bool "enable control panel"
+	default y
 	help
 		Enable web-based control panel where you can configure various parameters of the sensor,
 		including wifi and data publishing settings		
 		
+config OAP_RGB_LED
+	bool "enable air quality RGB-LED"
+	default y
+	help
+		Enable air quality RGB-LED. If set to disable the only the blue channel is being used.
 endmenu
+

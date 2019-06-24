@@ -30,15 +30,17 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/task.h"
+#include "driver/gpio.h"
 
 static const long FEB22_2017 = 1487795557;
+static const char *TAG="oap";
 
 static int _reboot_in_progress = 0;
 int is_reboot_in_progress() {
 	return _reboot_in_progress;
 }
 void oap_reboot(char* cause) {
-	ESP_LOGW("oap", "REBOOT ON DEMAND (%s)", cause);
+	ESP_LOGW(TAG, "REBOOT ON DEMAND (%s)", cause);
 	_reboot_in_progress = 1;
 	esp_restart();
 }
@@ -105,4 +107,43 @@ void IRAM_ATTR delayMicroseconds(uint32_t us)
     }
 }
 
+void set_gpio(uint8_t gpio, uint8_t enabled) {
+	if (gpio > 0) {
+		ESP_LOGD(TAG, "set pin %d => %d", gpio, enabled);
+		gpio_set_level(gpio, enabled);
+	}
+}
 
+void configure_gpio(uint8_t gpio) {
+	if (gpio > 0) {
+		ESP_LOGD(TAG, "configure pin %d as output", gpio);
+		gpio_pad_select_gpio(gpio);
+		ESP_ERROR_CHECK(gpio_set_direction(gpio, GPIO_MODE_OUTPUT));
+		ESP_ERROR_CHECK(gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY));
+	}
+}
+
+void req_set_user_agent(request_t* req) {
+    char agent[80];
+    sprintf(agent, "User-Agent: OAP-ESP32/%s", oap_version_str());
+    req_setopt(req, REQ_SET_HEADER, agent);
+}
+
+double sma_generator (sma_data_t *sma, double value) {
+	sma->sum += value;
+	sma->data[sma->lastpos%sma->size] = value;
+	sma->lastpos++;
+	unsigned int size=sma->size;
+	if(sma->lastpos >= sma->size) {
+		sma->sum -= sma->data[sma->lastpos%sma->size];
+	} else {
+		size=sma->lastpos;
+	}
+	return sma->sum/size;
+}
+
+int64_t get_time_millis() {
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   return (tv.tv_sec * 1000LL + (tv.tv_usec / 1000LL));
+}

@@ -43,8 +43,10 @@
 #define TAG "ota"
 
 
-extern const uint8_t _root_ca_pem_start[] asm("_binary_comodo_ca_pem_start");
-extern const uint8_t _root_ca_pem_end[]   asm("_binary_comodo_ca_pem_end");
+//extern const uint8_t _root_ca_pem_start[] asm("_binary_comodo_ca_pem_start");
+//extern const uint8_t _root_ca_pem_end[]   asm("_binary_comodo_ca_pem_end");
+extern const uint8_t _root_ca_pem_start[] asm("_binary_lets_encrypt_x3_cross_signed_pem_start");
+extern const uint8_t _root_ca_pem_end[]   asm("_binary_lets_encrypt_x3_cross_signed_pem_end");
 
 void sha_to_hexstr(unsigned char hash[32], unsigned char hex[64]) {
 	for (int i = 0; i < 32; i++) {
@@ -171,7 +173,8 @@ esp_err_t fetch_last_ota_info(ota_config_t* ota_config, ota_info_t* ota_info)
 
     req_setopt(req, REQ_SET_HEADER, HTTP_HEADER_CONNECTION_CLOSE);
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, get_ota_status_callback);
-
+    req_set_user_agent(req);
+    
     int status = req_perform(req);
     req_clean(req);
 
@@ -222,6 +225,7 @@ static esp_err_t download_ota_binary(ota_config_t* ota_config, ota_info_t* ota_i
 
     req_setopt(req, REQ_SET_HEADER, "Connection: close");
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_ota_binary_callback);
+    req_set_user_agent(req);
 
     mbedtls_sha256_context sha_context;
     mbedtls_sha256_init(&sha_context);

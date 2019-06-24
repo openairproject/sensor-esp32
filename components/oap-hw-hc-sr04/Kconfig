@@ -1,0 +1,43 @@
+menu "OAP HC-SR04 distance sensor"
+
+config OAP_HCSR04_0_ENABLED
+    bool "enable ultrasonic distance sensor #0 SR-HC04"
+    default y
+    help
+        todo   
+
+config OAP_HCSR04_TRIGGER0_PIN
+    int "Trigger 0 output PIN"
+    depends on OAP_HCSR04_0_ENABLED
+    default 32
+    help
+        todo
+
+config OAP_HCSR04_ECHO0_PIN
+    int "Echo 0 input PIN"
+    depends on OAP_HCSR04_0_ENABLED
+    default 34
+    help
+        todo
+
+config OAP_HCSR04_1_ENABLED
+    bool "enable ultrasonic dinstance sensor #1 SR-HC04"
+    default y
+    help
+        todo   
+
+config OAP_HCSR04_TRIGGER1_PIN
+    int "Trigger 1 output PIN"
+    depends on OAP_HCSR04_1_ENABLED
+    default 33
+    help
+        todo
+
+config OAP_HCSR04_ECHO1_PIN
+    int "Echo 1 input PIN"
+    depends on OAP_HCSR04_1_ENABLED
+    default 35
+    help
+        todo
+
+endmenu

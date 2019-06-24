@@ -12,3 +12,6 @@
 
 # openairproject.com (CloudFront)
 COMPONENT_EMBED_TXTFILES = comodo_ca.pem
+
+# lets encrypt signed sites
+# COMPONENT_EMBED_TXTFILES = lets-encrypt-x3-cross-signed.pem

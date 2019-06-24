@@ -1,0 +1,30 @@
+menu "OAP MH-Z19 CO2 Sensor"
+
+config OAP_MH_ENABLED
+    bool "enable MH-Z19 CO2 Sensor"
+    default y
+    help
+        todo   
+
+config OAP_MH_UART_NUM
+    hex "uart num"
+    depends on OAP_MH_ENABLED
+    default 2
+    help
+        todo
+
+config OAP_MH_UART_RXD_PIN
+    int "RX gpio"
+    depends on OAP_MH_ENABLED
+    default 16
+    help
+        GPIO pin connected to sensor RX line. This pin can be R/O (>=34).
+        
+config OAP_MH_UART_TXD_PIN
+    int "TX gpio"
+    depends on OAP_MH_ENABLED
+    default 17
+    help
+        GPIO pin connected to sensor TX line.
+        
+endmenu

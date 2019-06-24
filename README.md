@@ -1,4 +1,49 @@
-# OpenAirProject AirQuality / Dust Meter
+# OpenAirProject AirQuality / Dust / CO2 / Distance - Meter + GPIO and OLED Display
+
+The current implementation of this code contains support for additional
+hardware like:
+
+- CO2 sensor: MH-Z19 (can be calibrated via 
+
+		http://<sensor>/trigger?func=calibrate
+
+- OLED display: SSD 1306
+
+- Ultrasonic distance sensor: HC SR04
+
+- GPIO: 4 ports in with counter via
+
+		http://<sensor>/status
+
+- GPIO 4 ports out with trigger via 
+
+		http://<sensor>/trigger?delay=<0|ms>&gpio=<0-3>&value=<0|1>
+
+Further these changes and additions have been made:
+
+- FIX WIFI instability
+
+- Add Device ID to DHCP-Client-Hostname
+
+- Show collected values in realtime on web frontend
+
+- Add disable / enable single hardware components via web frontend
+
+- Add configurable offsets for humidity, temperature and altitude via web frontend
+
+- Add HTTP-GET publisher with basic auth
+
+- Some Pinouts have been changed:
+
+- - Button is now on Pin 0 (button on ESP32 board), low active (configurable)
+
+- - RGB LED has been reduced to channel blue on Pin 2 (LED on ESP32 board, configurable)
+
+- - Pins for heater and fan have been set to unused (-1) by default
+
+- - No need for RTS/CTS pin assignment on RS232 ports
+
+## The following description is outdated ##
 
 ## Features
 

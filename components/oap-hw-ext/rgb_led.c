@@ -45,7 +45,7 @@ static ledc_mode_t speed_mode = LEDC_HIGH_SPEED_MODE;
 
 static ledc_timer_config_t ledc_timer = {
         //set timer counter bit number
-        .bit_num = LEDC_TIMER_10_BIT,
+        .duty_resolution = LEDC_TIMER_10_BIT,
         //set frequency of pwm
         .freq_hz = 5000,
         //timer mode,
@@ -70,12 +70,14 @@ void set_color(rgb_color_t color) {
 	esp_err_t res;
 	int duty;
 	for (int c = 0; c < 3; c++) {
-		duty = calc_duty(color,c);
-		if ((res = ledc_set_duty(speed_mode, c, duty)) != ESP_OK) {
-			ESP_LOGW(TAG, "ledc_set_duty(%d,%d,%d) error %d", speed_mode, c, duty, res);
-		}
-		if ((res = ledc_update_duty(speed_mode, c)) != ESP_OK) {
-			ESP_LOGW(TAG, "ledc_update_duty(%d,%d) error %d", speed_mode, c, res);
+		if(led_gpio[c] != -1) {
+			duty = calc_duty(color,c);
+			if ((res = ledc_set_duty(speed_mode, c, duty)) != ESP_OK) {
+				ESP_LOGW(TAG, "ledc_set_duty(%d,%d,%d) error %d", speed_mode, c, duty, res);
+			}
+			if ((res = ledc_update_duty(speed_mode, c)) != ESP_OK) {
+				ESP_LOGW(TAG, "ledc_update_duty(%d,%d) error %d", speed_mode, c, res);
+			}
 		}
 	}
 }
@@ -84,18 +86,20 @@ void fade_to_color(rgb_color_t color, int time) {
 	esp_err_t res;
 	int duty;
 	for (int c = 0; c < 3; c++) {
-		duty = calc_duty(color,c);
-		if ((res = ledc_set_fade_with_time(speed_mode, c, duty,time)) != ESP_OK) {
-			ESP_LOGW(TAG, "ledc_set_fade_with_time(%d,%d,%d,%d) error %d", speed_mode, c, duty, time, res);
-		}
-		if ((res = ledc_fade_start(speed_mode, c, LEDC_FADE_NO_WAIT)) != ESP_OK) {
-			ESP_LOGW(TAG, "ledc_fade_start(%d,%d) error %d", c, LEDC_FADE_NO_WAIT, res);
+		if(led_gpio[c] != -1) {
+			duty = calc_duty(color,c);
+			if ((res = ledc_set_fade_with_time(speed_mode, c, duty,time)) != ESP_OK) {
+				ESP_LOGW(TAG, "ledc_set_fade_with_time(%d,%d,%d,%d) error %d", speed_mode, c, duty, time, res);
+			}
+			if ((res = ledc_fade_start(speed_mode, c, LEDC_FADE_NO_WAIT)) != ESP_OK) {
+				ESP_LOGW(TAG, "ledc_fade_start(%d,%d) error %d", c, LEDC_FADE_NO_WAIT, res);
+			}
 		}
 	}
 }
 
 static void setup_ledc() {
-	MAX_DUTY = pow(2,ledc_timer.bit_num)-1;
+	MAX_DUTY = pow(2,ledc_timer.duty_resolution)-1;
 	    ledc_timer_config(&ledc_timer);
 
 	    ledc_channel_config_t ledc_channel = {
@@ -112,11 +116,13 @@ static void setup_ledc() {
 	    };
 
 		for (int c = 0; c < 3; c++) {
-			ledc_channel.channel = c; //LEDC_CHANNEL_0 to LEDC_CHANNEL_2
-			ledc_channel.gpio_num = led_gpio[c];
-			ledc_channel.duty = 0;
-			gpio_intr_disable(led_gpio[c]);
-			ledc_channel_config(&ledc_channel);
+			if(led_gpio[c] != -1) { 
+				ledc_channel.channel = c; //LEDC_CHANNEL_0 to LEDC_CHANNEL_2
+				ledc_channel.gpio_num = led_gpio[c];
+				ledc_channel.duty = 0;
+				gpio_intr_disable(led_gpio[c]);
+				ledc_channel_config(&ledc_channel);
+			}
 		}
 	    //initialize fade service.
 	    ledc_fade_func_install(0);
@@ -169,7 +175,9 @@ void led_init(int enabled, xQueueHandle _cmd_queue)
     	xTaskCreate(led_cycle, "led_cycle", 1024*2, NULL, DEFAULT_TASK_PRIORITY+1, NULL);
     } else {
     	for (int c = 0; c < 3; c++) {
-    	    if (led_gpio[c] > 0) gpio_set_pull_mode(led_gpio[c], GPIO_PULLDOWN_ONLY);
+    	 	if (led_gpio[c] != -1) {
+    	    		gpio_set_pull_mode(led_gpio[c], GPIO_PULLDOWN_ONLY);
+    	    	}
     	}
     }
 }

@@ -154,3 +154,12 @@ void heap_log_free(heap_log* log) {
 		ESP_LOGD("debug", "----------> leaked : %d",  xPortGetFreeHeapSize() - initial_heap);
 	}
 }
+
+void hexdump(const unsigned char *data, int len) {
+	char str[80];
+	str[0]=0;
+	for(int i=0;i<len;i++){
+		sprintf(str, "%s %02x", str, data[i]);
+	}
+	ESP_LOGD("debug", "%s",str);
+}

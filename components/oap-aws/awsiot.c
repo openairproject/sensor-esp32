@@ -36,6 +36,7 @@
 #include "oap_common.h"
 #include "oap_debug.h"
 #include "oap_publisher.h"
+#include "oap_storage.h"
 #include "bootwifi.h"
 
 static const char *TAG = "awsiot";
@@ -102,9 +103,9 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	if (meas->env) {
 		cJSON* weather = cJSON_CreateObject();
 		cJSON_AddItemToObject(results, "weather", weather);
-		cJSON_AddNumberToObject(weather, "temp", meas->env->temp);
-		cJSON_AddNumberToObject(weather, "pressure", meas->env->pressure);
-		cJSON_AddNumberToObject(weather, "humidity", meas->env->humidity);
+		cJSON_AddNumberToObject(weather, "temp", meas->env->bmx280.temp);
+		cJSON_AddNumberToObject(weather, "pressure", meas->env->bmx280.pressure);
+		cJSON_AddNumberToObject(weather, "humidity", meas->env->bmx280.humidity);
 		cJSON_AddNumberToObject(weather, "sensor", meas->env->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "weather");
@@ -113,9 +114,9 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	if (meas->env_int) {
 		cJSON* internal = cJSON_CreateObject();
 		cJSON_AddItemToObject(results, "internal", internal);
-		cJSON_AddNumberToObject(internal, "temp", meas->env_int->temp);
-		cJSON_AddNumberToObject(internal, "pressure", meas->env_int->pressure);
-		cJSON_AddNumberToObject(internal, "humidity", meas->env_int->humidity);
+		cJSON_AddNumberToObject(internal, "temp", meas->env_int->bmx280.temp);
+		cJSON_AddNumberToObject(internal, "pressure", meas->env_int->bmx280.pressure);
+		cJSON_AddNumberToObject(internal, "humidity", meas->env_int->bmx280.humidity);
 		cJSON_AddNumberToObject(internal, "sensor", meas->env_int->sensor_idx);
 	} else {
 		cJSON_AddNullToObject(results, "internal");
@@ -130,13 +131,6 @@ static esp_err_t awsiot_rest_post(oap_measurement_t* meas, oap_sensor_config_t *
 	free(body);
 	config_sent = config_sent || res == ESP_OK;
 	return res;
-}
-
-static void set_config_str_field(char** field, char* value) {
-	if (*field) {
-		free(*field);
-	}
-	*field = str_dup(value);
 }
 
 static esp_err_t awsiot_configure(cJSON* awsiot) {

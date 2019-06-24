@@ -1,8 +1,8 @@
 /*
- * server.h
+ * http.h
  *
- *  Created on: Oct 4, 2017
- *      Author: kris
+ *  Created on: Jan 4, 2018
+ *      Author: Deti
  *
  *  This file is part of OpenAirProject-ESP32.
  *
@@ -20,15 +20,13 @@
  *  along with OpenAirProject-ESP32.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMPONENTS_BOOTWIFI_SERVER_H_
-#define COMPONENTS_BOOTWIFI_SERVER_H_
+#ifndef COMPONENTS_HTTP_GET_PUBLISHER_H_
+#define COMPONENTS_HTTP_GET_PUBLISHER_H_
 
-#include "mongoose.h"
-
-void server_restart();
-void server_stop();
-void server_start(void *event_handler);
+#include "esp_err.h"
+#include "oap_publisher.h"
 
 
+oap_publisher_t http_get_publisher;
 
-#endif /* COMPONENTS_BOOTWIFI_SERVER_H_ */
+#endif

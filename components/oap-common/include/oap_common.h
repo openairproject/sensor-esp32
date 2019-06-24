@@ -34,6 +34,8 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
+#include "esp_request.h"
+
 //to silence eclipse errors
 typedef unsigned short uint16_t;
 
@@ -46,6 +48,14 @@ void oap_reboot(char* cause);
 
 long oap_epoch_sec();
 long oap_epoch_sec_valid();
+
+typedef struct {
+	double *data;
+	size_t size;
+	unsigned int lastpos;
+	double sum;
+} sma_data_t;
+
 
 //from esp-arduino
 
@@ -67,5 +77,9 @@ uint32_t micros();
 uint32_t millis();
 void delay(uint32_t);
 void delayMicroseconds(uint32_t us);
-
+void set_gpio(uint8_t gpio, uint8_t enabled);
+void configure_gpio(uint8_t gpio);
+void req_set_user_agent(request_t* req);
+double sma_generator (sma_data_t *sma, double value);
+int64_t get_time_millis();
 #endif /* MAIN_COMMON_COMMON_H_ */

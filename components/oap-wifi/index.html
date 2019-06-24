@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    
     <meta charset="UTF-8">
     <title>OAP Sensor</title>
 
@@ -96,7 +98,12 @@
 </head>
 <body>
 <h1 class="header"><div class="logo64-grey"></div><span>OpenAirProject Sensor</span><span id="ver"></span></h1>
+
 <div class="cnt">
+<fieldset>
+    <legend>Current Data</legend>
+    <span id="current"></span>
+</fieldset>
 <form>
         <fieldset>
             <legend>WiFi</legend>
@@ -124,6 +131,11 @@
             <label>Netmask</label>
             <input type="text" name="wifi.netmask" class="short"/>
             </row>
+
+            <row>
+                <label>Hostname / Sensor ID *</label>
+                <input type="text" name="wifi.sensorId" required autocorrect="off" autocapitalize="off" spellcheck="false">
+            </row>
         </fieldset>
         
         <fieldset>
@@ -136,6 +148,35 @@
 
         <fieldset>
             <legend>Measurement</legend>
+            <row>
+                <label>PMS Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.pms_enabled" checked>
+            </row>
+            <row>
+                <label>BMX 280 Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.bmx280_enabled" checked>
+            </row>
+            <row>
+                <label>MH-Z19 Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.mhz19_enabled" checked>
+            </row>
+            <row>
+                <label>HC-SR04 Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.hcsr04_enabled" checked>
+            </row>
+            <row>
+                <label>SSD1306 Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.ssd1306_enabled" checked>
+            </row>
+            <row>
+                <label>GPIO Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.gpio_enabled" checked>
+            </row>
+
+            <row>
+                <label>GPIO UDP Server Enabled</label>
+                <input type="checkbox" value="1" name="sensor.config.gpio_udp_enabled" checked>
+            </row>
 
             <row>
                 <label>Indoor</label>
@@ -180,6 +221,32 @@
             <row>
                 <label>Measurement strategy (adv)</label>
                 <input type="number" name="sensor.config.measStrategy" class="short"/>
+            </row>
+
+            <row>
+                <label>Altitude (m)</label>
+                <input type="number" name="sensor.config.altitude" class="short"/>
+            </row>
+            <row>
+                <label>Temperature offset (K)</label>
+                <input type="number" name="sensor.config.tempOffset" class="short"/>
+            </row>
+            <row>
+                <label>Humidity offset (%)</label>
+                <input type="number" name="sensor.config.humidityOffset" class="short"/>
+            </row>
+        </fieldset>
+
+        <fieldset>
+            <legend>HTTP-Get-Publisher</legend>
+            <row>
+                <label>Enabled</label>
+                <input type="checkbox" value="1" name="http_get_publisher.enabled" checked>
+            </row>
+
+            <row>
+                <label>URL *</label>
+                <input type="text" name="http_get_publisher.url" required autocorrect="off" autocapitalize="off" spellcheck="false">
             </row>
         </fieldset>
 
@@ -364,6 +431,66 @@
     //TODO document onload
     oap.load();
 </script>
+<script>
+    function getCurrent() {
+		$.getJSON( "status", function( json ) {
+		        var status=json.status;
+		        var data=json.data;
+		        str = 'Version: '+status.version+
+                                            ' - UTC: '+status.utctime+
+			                    ' - Uptime: '+status.uptime+
+			                    ' - Heap: '+status.heap;
+                        if(data.env0) {
+                            str += '<p>Env0: Temp: '+parseFloat(data.env0.temp).toFixed(2)+
+                                    '°C - Pressure: '+parseFloat(data.env0.pressure).toFixed(2)+
+                                    'hPa - Humidity: '+parseFloat(data.env0.humidity).toFixed(2)+'% ('+data.env0.timestamp+'s ago)';
+                        }
+                        if(data.env1) {
+                            str += '<p>Env1: Temp: '+parseFloat(data.env1.temp).toFixed(2)+
+                                    '°C - Pressure: '+parseFloat(data.env1.pressure).toFixed(2)+
+                                    'hPa - Humidity: '+parseFloat(data.env1.humidity).toFixed(2)+'% ('+data.env1.timestamp+'s ago)';
+                        }
+                        if(data.env2) {
+                            str += '<p>Env2: CO2: '+parseFloat(data.env2.co2).toFixed(2)+'ppm ('+data.env2.timestamp+'s ago)';
+                        }
+                        if(data.env3) {
+                            str += '<p>Env3: Distance: '+parseFloat(data.env3.distance).toFixed(0)+'cm ('+data.env3.timestamp+'s ago)';;
+                        }
+                        if(data.env4) {
+                            str += '<p>Env4: Distance: '+parseFloat(data.env4.distance).toFixed(0)+'cm ('+data.env4.timestamp+'s ago)';
+                        }
+                        if(data.env5) {
+                            str += '<p>Env5: GPIlastLow: '+parseFloat(data.env5.GPIlastLow).toFixed(0)+' GPIlastHigh: '+parseFloat(data.env5.GPIlastHigh).toFixed(0)+' GPICounter: '+ parseFloat(data.env5.GPICounter).toFixed(0)+' GPICountDelta: '+parseFloat(data.env5.GPICountDelta).toFixed(0)+' GPOlastOut: '+parseFloat(data.env5.GPOlastOut).toFixed(0)+' GPOlastVal: '+parseFloat(data.env5.GPOlastVal).toFixed(0)+' GPOtriggerLength: '+parseFloat(data.env5.GPOtriggerLength).toFixed(0)+' ('+data.env5.timestamp+'s ago)';
+                        }
+                        if(data.env6) {
+                            str += '<p>Env6: GPIlastLow: '+parseFloat(data.env6.GPIlastLow).toFixed(0)+' GPIlastHigh: '+parseFloat(data.env6.GPIlastHigh).toFixed(0)+' GPICounter: '+ parseFloat(data.env6.GPICounter).toFixed(0)+' GPICountDelta: '+parseFloat(data.env6.GPICountDelta).toFixed(0)+' GPOlastOut: '+parseFloat(data.env6.GPOlastOut).toFixed(0)+' GPOlastVal: '+parseFloat(data.env6.GPOlastVal).toFixed(0)+' GPOtriggerLength: '+parseFloat(data.env6.GPOtriggerLength).toFixed(0)+' ('+data.env6.timestamp+'s ago)';
+                        }
+                        if(data.env7) {
+                            str += '<p>Env7: GPIlastLow: '+parseFloat(data.env7.GPIlastLow).toFixed(0)+' GPIlastHigh: '+parseFloat(data.env7.GPIlastHigh).toFixed(0)+' GPICounter: '+ parseFloat(data.env7.GPICounter).toFixed(0)+' GPICountDelta: '+parseFloat(data.env7.GPICountDelta).toFixed(0)+' GPOlastOut: '+parseFloat(data.env7.GPOlastOut).toFixed(0)+' GPOlastVal: '+parseFloat(data.env7.GPOlastVal).toFixed(0)+' GPOtriggerLength: '+parseFloat(data.env7.GPOtriggerLength).toFixed(0)+' ('+data.env7.timestamp+'s ago)';
+                        }
+                        if(data.env8) {
+                            str += '<p>Env8: GPIlastLow: '+parseFloat(data.env8.GPIlastLow).toFixed(0)+' GPIlastHigh: '+parseFloat(data.env8.GPIlastHigh).toFixed(0)+' GPICounter: '+ parseFloat(data.env8.GPICounter).toFixed(0)+' GPICountDelta: '+parseFloat(data.env8.GPICountDelta).toFixed(0)+' GPOlastOut: '+parseFloat(data.env8.GPOlastOut).toFixed(0)+' GPOlastVal: '+parseFloat(data.env8.GPOlastVal).toFixed(0)+' GPOtriggerLength: '+parseFloat(data.env8.GPOtriggerLength).toFixed(0)+' ('+data.env8.timestamp+'s ago)';
+                        }
+                        if(data.pm0) {
+                            str += '<p>PM0: pm1_0: '+parseInt(data.pm0.pm1_0)+  
+                                    ' - pm2_5: '+parseInt(data.pm0.pm2_5)+
+                                    ' - pm10: '+parseInt(data.pm0.pm10)+' ('+data.pm0.timestamp+'s ago)';
+                        }
+                        if(data.pm1) {
+                            str += '<p>PM1: pm1_0: '+parseInt(data.pm1.pm1_0)+  
+                                    ' - pm2_5: '+parseInt(data.pm1.pm2_5)+
+                                    ' - pm10: '+parseInt(data.pm1.pm10)+' ('+data.pm1.timestamp+'s ago)';
+                        }
+                        $("#current").html(str);
+                });
+    }
 
+    $(document).ready(function(){
+        getCurrent();
+	setInterval(getCurrent, 2000);
+    });
+    
+
+</script>
 </body>
 </html>

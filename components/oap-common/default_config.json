@@ -4,7 +4,8 @@
 		"password": "",
 		"ip": "",
 		"gw": "",
-		"netmask": ""
+		"netmask": "",
+		"sensorId": ""
 	},
 	"thingspeak": {
 		"enabled": 0,
@@ -20,15 +21,28 @@
 	},
 	"sensor" : {
 		"config" : {
-			"indoor" 	: 	0,
+			"pms_enabled"   :       0,
+			"bmx280_enabled":       0,
+			"mhz19_enabled" :       0,
+			"hcsr04_enabled":       0,
+			"ssd1306_enabled":      0,
+			"gpio_enabled"  :       1,
+			"indoor" 	: 	1,
 			"led"		:	1,
-			"fan"		:	1,
-			"heater"	:	1,
+			"fan"		:	0,
+			"heater"	:	0,
 			"measTime"	: 	60,
 			"warmUpTime":	30,
 			"measInterval": 300,
 			"test"		:	0,
-			"measStrategy":	0
+			"measStrategy"	:	0,
+			"altitude"	:	573,
+			"tempOffset"	:	0,
+			"humidityOffset"	:	0
 		}
+	},
+	"http_get_publisher": {
+		"enabled": 0,
+		"url": "https://<myurl>/pushvals.cgi"
 	}
 }

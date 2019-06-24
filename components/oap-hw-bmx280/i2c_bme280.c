@@ -77,7 +77,7 @@ static esp_err_t read_i2c(i2c_comm_t* comm, uint8_t reg, uint8_t* data, int len)
 		cmd = i2c_cmd_link_create();
 		CONT_IF_I2C_OK("r6", comm, i2c_master_start(cmd));
 		CONT_IF_I2C_OK("r7", comm, i2c_master_write_byte(cmd, (comm->device_addr << 1) | I2C_MASTER_READ, 1));
-		CONT_IF_I2C_OK("r8", comm, i2c_master_read(cmd,data+i,1,1)); //ACK is must!
+		CONT_IF_I2C_OK("r8", comm, i2c_master_read_byte(cmd,data+i,1)); //ACK is must!
 		CONT_IF_I2C_OK("r9", comm, i2c_master_stop(cmd));
 		CONT_IF_I2C_OK("r10",comm, i2c_master_cmd_begin(comm->i2c_num, cmd, 2000/portTICK_PERIOD_MS));
 		i2c_cmd_link_delete(cmd);
@@ -225,12 +225,12 @@ esp_err_t BME280_read(bme280_sensor_t* bme280_sensor, env_data_t* result){
 
 
     temp_reading_t temp_reading = BME280_compensate_T_double(&bme280_sensor->calib, temp_raw);
-    result->temp =  temp_reading.temp;//Celsius
-    result->pressure = BME280_compensate_P_double(&bme280_sensor->calib, temp_reading.t_fine, pres_raw) / 100.0;  //hPA
+    result->bmx280.temp =  temp_reading.temp;//Celsius
+    result->bmx280.pressure = BME280_compensate_P_double(&bme280_sensor->calib, temp_reading.t_fine, pres_raw) / 100.0;  //hPA
     if (bme280_sensor->chip_type == CHIP_TYPE_BME) {
-    	result->humidity = BME280_compensate_H_double(&bme280_sensor->calib, temp_reading.t_fine, hum_raw);// pct
+    	result->bmx280.humidity = BME280_compensate_H_double(&bme280_sensor->calib, temp_reading.t_fine, hum_raw);// pct
     } else {
-    	result->humidity = HUMIDITY_MEAS_UNSUPPORTED;
+    	result->bmx280.humidity = HUMIDITY_MEAS_UNSUPPORTED;
     }
 
     return ESP_OK;
@@ -240,7 +240,7 @@ esp_err_t BME280_verify_chip(bme280_sensor_t* bme280_sensor) {
 	uint8_t chipID = 0;
 	uint8_t attempt = 0;
 	while (read_i2c(&bme280_sensor->i2c_comm, BME280_CHIP_ID_REG, &chipID,1) != ESP_OK && attempt++ < 5) {
-		ESP_LOGW(TAG, "[%x] failed to read chip id (attempt %d)", bme280_sensor->i2c_comm.device_addr, attempt)
+		ESP_LOGW(TAG, "[%x] failed to read chip id (attempt %d)", bme280_sensor->i2c_comm.device_addr, attempt);
 		vTaskDelay(20/portTICK_PERIOD_MS);
 	}
 

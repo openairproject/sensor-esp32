@@ -36,6 +36,7 @@ pm_meter_aux_t pm_meter_aux;
 typedef struct {
   uint8_t count;
   pm_data_t pm_data[2];
+  long timestamp;
 } pm_data_pair_t;
 
 typedef enum {
@@ -74,6 +75,6 @@ typedef struct {
 	pm_meter_stop_f stop;
 } pm_meter_t;
 
-
+extern pm_data_pair_t pm_data_array;
 
 #endif /* MAIN_MEAS_H_ */

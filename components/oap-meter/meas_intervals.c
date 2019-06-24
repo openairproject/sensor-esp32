@@ -129,6 +129,7 @@ static void task() {
 		}
 
 		if (ok) {
+			pm_data_pair.timestamp = oap_epoch_sec();
 			_callback(PM_METER_RESULT,&pm_data_pair);
 		}
 
