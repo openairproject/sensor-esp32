@@ -43,7 +43,7 @@ properly (or cause side effects) when assigned to other interfaces.
 
 Firmware is pre-configured to use following GPIO which were tested with ESP32 DevKit board.
 
-These assignments can be changed via 'make menuconfig'.
+These assignments can be changed via `make menuconfig`.
 
 	PMSx003 TX  => 34
 	PMSx003 SET => 10
@@ -84,24 +84,24 @@ The procedure below was tested on Mac and Linux (Windows users, by now you shoul
 
 		ls -la /dev/tty*
 	
-	to find out what name of the serial port was assigned to our sensor (the easiest way is to list this folder with sensor disconnected and connected and compare results). Note it down. On my Mac it was "/dev/tty.SLAB_USBtoUART", on Linux - "/dev/ttyUSB0" or /dev/ttyUSB1" but it may be different depending on the system configuration.
+	to find out what name of the serial port was assigned to our sensor (the easiest way is to list this folder with sensor disconnected and connected and compare results). Note it down. On my Mac it was `/dev/tty.SLAB_USBtoUART`, on Linux - `/dev/ttyUSB0` or `/dev/ttyUSB1` but it may be different depending on the system configuration.
 
 4. Now download the firmware  (three *.bin files) for the latest stable release that you can find here <https://github.com/openairproject/sensor-esp32/releases>.
 
-5. Now it is time to install "esptool", which is a firmware uploader from the manufacturer of ESP32 chip (Espressif company). Detailed instructions can be found here: <https://github.com/espressif/esptool/blob/master/README.md>, but if you already have Python and pip installed, just do
+5. Now it is time to install `esptool`, which is a firmware uploader from the manufacturer of ESP32 chip (Espressif company). Detailed instructions can be found here: <https://github.com/espressif/esptool/blob/master/README.md>, but if you already have Python and pip installed, just do
 
 		pip install esptool
 	
-	By default it should be installed to "/usr/local/bin/".
+	By default it should be installed to `/usr/local/bin/`.
 
 6. It is time to perform the flashing:
 
 		esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -u --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 bootloader.bin 0x30000 sensor-esp32.bin 0x8000 partitions.bin
 	
-	Use --port from the step 3, and three bin files downloaded in step 4.
+	Use `--port` from the step 3, and three bin files downloaded in step 4.
 	
 	In most cases, esptool will be able to switch your sensor into 'flashing' mode automatically and reset it afterwords to make it ready to go - it takes a few seconds. Some boards however require manual operation to activate this mode (esptool connection will timeout).
-	To do so, disconnect the sensor from USB, press and hold small button labeled "EN" on esp32 board (next to micro usb port), connect the sensor, run the command above and then release the button. 
+	To do so, disconnect the sensor from USB, press and hold small button labeled `EN` on esp32 board (next to micro usb port), connect the sensor, run the command above and then release the button. 
 
 ## First run
 
@@ -144,7 +144,7 @@ During the first run, a menuconfig should appear where you need to configure som
 most notably - UART port.
 
 In components submenu there's a few configuration settings related to OAP hardware setup (e.g. gpio pin assignments),
-and "OAP Main" menu where you can change various functional parameters.
+and `OAP Main` menu where you can change various functional parameters.
 
 ** ATTENTION. main task stack should be increased to 10K if you're gonna use AWSIoT (via menuconfig) **	
 
